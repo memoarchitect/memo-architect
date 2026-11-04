@@ -126,6 +126,7 @@ export function ScenarioEditor({ explorerOnly = false }: { explorerOnly?: boolea
             byType('includesStep'),
             scoped?.workspaceMembership,
             id => byId[id]?.name ?? id,
+            id => model.operationalLevels?.[id],
         );
         const useCases = grouped.flatMap(group => group.entries.map((entry, index) => ({
             element: byId[entry.id], depth: entry.depth, group, firstInGroup: index === 0,
@@ -155,7 +156,7 @@ export function ScenarioEditor({ explorerOnly = false }: { explorerOnly?: boolea
                 const workflowElements = [...new Map(byType('RealizesUseCase')
                     .filter(r => r.targetId === useCase.id)
                     .map(r => byId[r.sourceId])
-                    .filter((el): el is MemoElement => Boolean(el) && el.kind === 'OperationalWorkflow')
+                    .filter((el): el is MemoElement => Boolean(el))
                     .map(workflow => [workflow.id, workflow] as const)).values()];
                 // A workflow owns its scenarios by nesting them, so each scenario can
                 // own the operative actions on its path. A workflow is the analysis of

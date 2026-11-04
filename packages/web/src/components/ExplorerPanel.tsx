@@ -23,7 +23,7 @@ import { OntologyBrowserTab } from './OntologyBrowserTab';
 import { DashboardSidebar } from './DashboardSidebar';
 import { ExplorerElementIdentity } from './ExplorerElementIdentity';
 import { ExplorerCountBadge } from './ExplorerCountBadge';
-import { isSysmlMetaclass, type MemoElement, type DiagramDTO, type KindDefinitionDTO, type MemoModelDTO, type ViewpointDTO, type ViewKind } from '@memoarchitect/tools/browser';
+import { isSysmlMetaclass, type OperationalLevel, type MemoElement, type DiagramDTO, type KindDefinitionDTO, type MemoModelDTO, type ViewpointDTO, type ViewKind } from '@memoarchitect/tools/browser';
 import type { OntologyPackageInfo } from '../types/ontology';
 import { getBuiltInTemplate } from '../dhf/built-in-templates';
 import { DHF_GROUPS, groupColorForLabel } from '../dhf/dhf-groups';
@@ -1216,6 +1216,8 @@ export function computeExplorerGroupTree(
         packageFolders?: boolean;
         /** The systems that hold an element (and Unassigned for none); the domains listed in SYSTEM_FIRST_DOMAINS group by it. */
         systemsOf?: (el: MemoElement) => ExplorerPartition[];
+        /** The operational level an element is at, from the model (see memo-tools `operationalLevels`); an element at none is listed as before. */
+        levelOf?: (el: MemoElement) => OperationalLevel | undefined;
     },
 ): { group: LayerGroup; subGroups: ExplorerSubGroup[] }[] {
     const lower = searchTerm.toLowerCase();
@@ -1619,7 +1621,7 @@ export function computeExplorerGroupTree(
             const typeOf = (node: TreeNode) => node.element?.attributes?.[REQUIREMENT_TYPE_ATTRIBUTE]?.split('::').pop();
             // The element type comes first and the package below it: a reader looks for "workflows", then for which
             // package they are in. With package folders off the forest already lists by kind alone.
-            const byKind = (members: TreeNode[]): TreeNode[] => {
+            const byKindOnly = (members: TreeNode[]): TreeNode[] => {
                 if (modes?.packageFolders === false) return forest(members);
                 const kinds = [...new Set(members.map(node => node.element?.kind ?? ''))]
                     .sort((a, b) => (kindOrder.get(a) ?? Number.MAX_SAFE_INTEGER) - (kindOrder.get(b) ?? Number.MAX_SAFE_INTEGER) || a.localeCompare(b));
@@ -1627,6 +1629,21 @@ export function computeExplorerGroupTree(
                     const ofKind = members.filter(node => (node.element?.kind ?? '') === kind);
                     return { id: `kt:${kind}`, name: kindFolderLabel(kind, ofKind.length), type: 'folder' as const, children: forest(ofKind, kind) };
                 });
+            };
+            // A use case or workflow is clinical or system by its type, and what sits in a workflow is at that
+            // level too (the model says which). Clinical comes first, then System, above the element type;
+            // what is at neither level is listed as before.
+            const byKind = (members: TreeNode[]): TreeNode[] => {
+                const levelOf = modes?.levelOf;
+                if (!levelOf) return byKindOnly(members);
+                const at = (level: OperationalLevel) => members.filter(node => node.element && levelOf(node.element) === level);
+                const clinical = at('clinical');
+                const system = at('system');
+                if (clinical.length + system.length === 0) return byKindOnly(members);
+                const rest = members.filter(node => !clinical.includes(node) && !system.includes(node));
+                const level = (id: string, name: string, of: TreeNode[]): TreeNode[] =>
+                    of.length === 0 ? [] : [{ id: `lv:${id}`, name, type: 'folder' as const, children: byKindOnly(of) }];
+                return [...level('clinical', 'Clinical', clinical), ...level('system', 'System', system), ...byKindOnly(rest)];
             };
             const typed = roots.filter(node => typeOf(node));
             if (typed.length === 0) return byKind(roots);
@@ -1907,6 +1924,7 @@ function ModelExplorerContent({ searchTerm }: { searchTerm: string }) {
                 groupBy: groupBy || undefined,
                 packageFolders,
                 systemsOf: el => partitionsOf(el, { mode: 'system', membership, workspace }) ?? [],
+                levelOf: el => model.operationalLevels?.[el.id],
             },
         ) : [],
         [model, shownElements, searchTerm, availableOntologies, kindFilter, explorerMode, membership, workspace, groupBy, packageFolders],

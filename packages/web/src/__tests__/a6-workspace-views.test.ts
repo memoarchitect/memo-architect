@@ -116,9 +116,10 @@ describe('use case groups', () => {
         { sourceId: 'ucProcedure', targetId: 'ucMap' }, { sourceId: 'ucProcedure', targetId: 'ucRecord' },
     ];
 
-    it('lists the procedure first, with the system use cases it includes nested, and the rest under their system', () => {
-        const groups = groupUseCases(ids, includes, membership, id => id);
-        expect(groups.map(g => g.label)).toEqual(['Procedures', 'Recording']);
+    it('lists the clinical case first, with the system use cases it includes nested, and the rest under their system', () => {
+        const level = (id: string) => (id === 'ucProcedure' ? 'clinical' : 'system') as 'clinical' | 'system';
+        const groups = groupUseCases(ids, includes, membership, id => id, level);
+        expect(groups.map(g => g.label)).toEqual(['Clinical', 'Recording']);
         expect(groups[0].entries).toEqual([
             { id: 'ucProcedure', depth: 0 }, { id: 'ucMap', depth: 1 }, { id: 'ucRecord', depth: 1 },
         ]);
@@ -126,11 +127,25 @@ describe('use case groups', () => {
         expect(groups[1].entries).toEqual([{ id: 'ucStandalone', depth: 0 }]);
     });
 
+    it('lists a case that only the system of systems holds under that system of systems, not as a clinical case', () => {
+        // No level is declared here: the level comes from the type, and membership only says where a case is held.
+        const groups = groupUseCases(ids, includes, membership, id => id);
+        expect(groups.map(g => g.label)).toEqual(['Lab', 'Recording']);
+        expect(groups[0].entries[0]).toEqual({ id: 'ucProcedure', depth: 0 });
+    });
+
     it('is one flat group in a model with no System', () => {
         const groups = groupUseCases(ids, includes, { ...membership, missingSystem: true }, id => id);
         expect(groups).toHaveLength(1);
         expect(groups[0].label).toBeUndefined();
         expect(groups[0].entries.map(e => e.id)).toEqual(['ucProcedure', 'ucMap', 'ucRecord', 'ucStandalone']);
+    });
+
+    it('puts the clinical group first, then the system cases, in a model with no System', () => {
+        const level = (id: string) => (id === 'ucProcedure' ? 'clinical' : 'system') as 'clinical' | 'system';
+        const groups = groupUseCases(ids, includes, { ...membership, missingSystem: true }, id => id, level);
+        expect(groups.map(g => g.label)).toEqual(['Clinical', 'System']);
+        expect(groups[1].entries.map(e => e.id)).toEqual(['ucStandalone']);
     });
 
     it('lists a nested catalog once each when nothing holds it, as one tree', () => {
