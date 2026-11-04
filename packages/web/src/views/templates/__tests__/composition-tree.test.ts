@@ -7,7 +7,7 @@ import {
     COMPOSITION_REL_TYPES, validateSingleTree, isPortUsage, portCompartmentEntries,
     definitionIndex, definitionLevelElements, definitionLevelComposition, resolveDefinition,
     buildOwnershipTest, warnIfMixedKindFamilies,
-    declaredSubject, subtreeOf, dominantRoot,
+    declaredSubject, subtreeOf, dominantRoot, mixedKindsIssue,
 
 } from '../composition-tree';
 import { generalViewFilter, hierarchyTypesFor, resolveGeneralMode } from '../general-view';
@@ -542,5 +542,16 @@ describe('warnIfMixedKindFamilies', () => {
         );
         warnIfMixedKindFamilies(tree, undefined, 'GEN-3');
         expect(spy).not.toHaveBeenCalled();
+    });
+});
+
+describe('mixedKindsIssue', () => {
+    const tree = (kinds: string[]) => buildCompositionTree(kinds.map((kind, i) => el(`e${i}`, { kind })), []);
+    it('is null for one kind', () => {
+        expect(mixedKindsIssue(tree(['SystemFunction', 'SystemFunction']))).toBeNull();
+    });
+    it('lists each kind, most common first', () => {
+        expect(mixedKindsIssue(tree(['ComponentFunction', 'SystemFunction', 'SystemFunction']))?.kinds)
+            .toEqual([{ kind: 'SystemFunction', count: 2 }, { kind: 'ComponentFunction', count: 1 }]);
     });
 });

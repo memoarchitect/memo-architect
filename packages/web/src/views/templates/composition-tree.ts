@@ -399,6 +399,24 @@ export function validateSingleTree(tree: CompositionTree): SingleTreeIssue | nul
         : { rootIds: tree.roots, disconnectedIds };
 }
 
+export interface MixedKindsIssue {
+    /** Each kind present, most common first. */
+    kinds: Array<{ kind: string; count: number }>;
+}
+
+/**
+ * A block definition diagram is of one kind of thing: every element in it has
+ * the same kind. A diagram of parts that also holds a function, or of
+ * system functions that also holds component functions, reads as one
+ * hierarchy but is several. Null when the tree is uniform.
+ */
+export function mixedKindsIssue(tree: CompositionTree): MixedKindsIssue | null {
+    const counts = new Map<string, number>();
+    for (const el of tree.elements.values()) counts.set(el.kind, (counts.get(el.kind) ?? 0) + 1);
+    if (counts.size < 2) return null;
+    return { kinds: [...counts].map(([kind, count]) => ({ kind, count })).sort((a, b) => b.count - a.count) };
+}
+
 /**
  * Coarse content family for a kind, used only by `warnIfMixedKindFamilies`
  * below. Not a modeling concept — SysML does not distinguish "structural"

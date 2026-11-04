@@ -67,7 +67,7 @@ import {
     GENERAL_VIEW_MODES, type GeneralViewMode,
 } from './templates/general-view';
 import {
-    validateSingleTree, COMPOSITION_REL_TYPES,
+    validateSingleTree, mixedKindsIssue, COMPOSITION_REL_TYPES,
 } from './templates/composition-tree';
 
 import {
@@ -2121,6 +2121,13 @@ function DiagramCanvasInner() {
         const hint = selectedDiagram.properties?.layoutHint;
         return validateSingleTree(buildGeneralViewTree(model, viewpointFilter, selectedDiagram.relationshipTypes, viewElementOf(model, selectedDiagram),
             hint === 'tree' || hint === 'containment'));
+    }, [model, selectedDiagram, viewpointFilter]);
+
+    const bddMixedKinds = useMemo(() => {
+        if (!model || !selectedDiagram || selectedDiagram.diagramType !== 'bdd') return null;
+        const hint = selectedDiagram.properties?.layoutHint;
+        return mixedKindsIssue(buildGeneralViewTree(model, viewpointFilter, selectedDiagram.relationshipTypes, viewElementOf(model, selectedDiagram),
+            hint === 'tree' || hint === 'containment' || hint === 'table'));
     }, [model, selectedDiagram, viewpointFilter]);
 
     // ─── Decomp callbacks ──────────────────────────────────────────────────────
@@ -4671,6 +4678,18 @@ function DiagramCanvasInner() {
                                 <span style={{ fontSize: 10, color: '#4B5563' }}>{entry.label}</span>
                             </div>
                         ))}
+                    </div>
+                )}
+                {bddMixedKinds && !isLayouting && (
+                    <div role="alert" data-bdd-mixed-kinds="true" className="absolute left-1/2 -translate-x-1/2 z-20 px-3 py-2"
+                        style={{
+                            top: bddTreeIssue ? 112 : 64, maxWidth: 720, background: '#FFFBEB', color: '#92400E',
+                            border: '1px solid #FCD34D', borderRadius: 4,
+                            boxShadow: '0 2px 8px rgba(31,41,55,0.10)', fontSize: FONT.xs,
+                        }}>
+                        <span style={{ fontWeight: 700 }}>BDD warning:</span>{' '}
+                        a block diagram should hold one kind of element, but this one mixes{' '}
+                        {bddMixedKinds.kinds.map(k => `${k.kind} (${k.count})`).join(', ')}.
                     </div>
                 )}
                 {bddTreeIssue && !isLayouting && (
