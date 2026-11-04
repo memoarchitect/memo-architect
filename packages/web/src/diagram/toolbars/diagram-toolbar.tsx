@@ -848,7 +848,7 @@ export class GeneralToolbar extends BaseDiagramToolbar {
                     <>
                         {this.renderCaption('Rows')}
                         <IconToggle icon={ctx.allExpanded ? <Icon.rowsCollapse /> : <Icon.rowsExpand />}
-                            label="Expand all" active={ctx.allExpanded}
+                            label={ctx.allExpanded ? 'Collapse all' : 'Expand all'} active={ctx.allExpanded}
                             onClick={ctx.allExpanded ? ctx.collapseAll : ctx.expandAll}
                             title={ctx.allExpanded ? 'Every branch is open. Click to close them back to the root.' : 'Open every branch'} />
                         {levels.length > 1 && (

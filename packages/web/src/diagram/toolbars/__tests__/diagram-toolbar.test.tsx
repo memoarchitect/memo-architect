@@ -185,6 +185,9 @@ describe('toolbar smoke render — every profile renders without throwing', () =
         // Expand and collapse are one toggle, and the level is a dropdown rather than a row of buttons.
         expect([...el.querySelectorAll('button[aria-pressed]')].filter(b => b.textContent?.includes('Expand all'))).toHaveLength(1);
         expect(el.textContent).not.toContain('Collapse all');
+        const open = renderToolbar(createElement('div', null, new GeneralToolbar().renderStrip({ ...ctx, allExpanded: true })));
+        expect(open.textContent).toContain('Collapse all');
+        expect(open.textContent).not.toContain('Expand all');
         expect(el.querySelector('select[aria-label="Level"]')).toBeTruthy();
         // the side dock gets nothing from a general view
         expect(new GeneralToolbar().renderProfileControls(ctx)).toBeNull();
