@@ -118,8 +118,8 @@ export function ScenarioEditor({ explorerOnly = false }: { explorerOnly?: boolea
         const byType = (...types: string[]) => relationshipsOfType(model, ...types);
         const rawUseCases = elements.filter(e => e.kind.endsWith('UseCase'));
         const useCaseIds = new Set(rawUseCases.map(useCase => useCase.id));
-        // O8: procedures first, the system use cases they include nested under them, then the rest
-        // under their system (lib/use-case-groups.ts). `include` lowers to an `includesStep`
+        // Clinical use cases first, the system use cases they include nested under them, then the rest
+        // under the system that holds them (lib/use-case-groups.ts). `include` lowers to an `includesStep`
         // relationship in the builder, not `Includes`, which the ontology never declared.
         const grouped = groupUseCases(
             [...useCaseIds],
