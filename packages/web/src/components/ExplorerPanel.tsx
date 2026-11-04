@@ -1,3 +1,4 @@
+import { explorerDisplayName } from '../lib/display-name';
 import { Fragment, createContext, lazy, Suspense, useContext, useState, useMemo, useCallback, useEffect, useRef, type PointerEvent as ReactPointerEvent } from 'react';
 import { alertDialog, askConfirm, askText } from './AppDialogs';
 import { groupParentPath, siblingGroups, waitForPackage } from '../lib/element-package';
@@ -533,6 +534,8 @@ export type ExplorerElement = MemoElement & {
     __displayId?: string;
     /** True for a definition, resolved once so rows need not re-derive it. */
     __isDef?: boolean;
+    /** The name the element is declared with; `name` is what the row shows. */
+    __identifier?: string;
 };
 
 /**
@@ -1312,7 +1315,6 @@ export function computeExplorerGroupTree(
         if (!earnsARow(el)) continue;
         const isDef = !!el.isDefinition;
         const resolvedKind = resolveOntologyKind(el.kind);
-        if (lower && !el.name.toLowerCase().includes(lower) && !resolvedKind.toLowerCase().includes(lower)) continue;
 
         // A usage with no id or name of its own inherits both from the
         // definition it is typed by, so the row reads as the thing rather than
@@ -1322,13 +1324,14 @@ export function computeExplorerGroupTree(
             ?? (typeName.includes('::') ? projectDefs.get(typeName.split('::').pop()!) : undefined);
         // The id a row shows is decided when the model is compiled; nothing here chooses one.
         const displayId = el.displayId ?? el.id;
-        const displayName = (el.name && el.name !== el.id)
-            ? el.name
-            : (el.attributes?.name || typeDef?.attributes?.name || el.name);
+        const displayName = explorerDisplayName(el, typeDef);
+        // Search matches what the row shows as well as the identifier behind it.
+        if (lower && !displayName.toLowerCase().includes(lower) && !el.name.toLowerCase().includes(lower) && !resolvedKind.toLowerCase().includes(lower)) continue;
 
         validElements.set(el.id, {
             ...el,
             name: displayName,
+            __identifier: el.name,
             kind: resolvedKind,
             __isDef: isDef,
             __displayId: displayId,
@@ -1341,7 +1344,7 @@ export function computeExplorerGroupTree(
     for (const el of validElements.values()) {
         const node: TreeNode = { id: el.id, name: el.name, type: 'element', element: el, children: [] };
         nodes.set(el.id, node);
-        for (const key of [el.id, el.shortId, el.name, el.attributes?.providedId]) {
+        for (const key of [el.id, el.shortId, el.__identifier, el.name, el.attributes?.providedId]) {
             if (key) lookup.set(key, node);
         }
     }
@@ -1380,7 +1383,7 @@ export function computeExplorerGroupTree(
     for (const node of nodes.values()) {
         if (!node.element?.__isDef) continue;
         // A usage names its type by the name the definition DECLARES, which is not `name` once a label is authored.
-        for (const key of [node.element.name, node.element.id, node.element.shortName]) if (key) definitionNodes.set(key, node);
+        for (const key of [node.element.__identifier, node.element.name, node.element.id, node.element.shortName]) if (key) definitionNodes.set(key, node);
     }
     const canonical = (node: TreeNode | undefined): TreeNode | undefined => {
         if (!node || node.element?.__isDef || modes?.flat) return node;

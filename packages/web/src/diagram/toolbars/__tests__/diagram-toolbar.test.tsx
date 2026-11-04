@@ -177,20 +177,23 @@ describe('toolbar smoke render — every profile renders without throwing', () =
         expect(captions[captions.length - 1]).toBe('Export');
     });
 
-    it('general toolbar keeps its controls in the strip, as named modes with outline controls', () => {
-        const ctx = makeContext({ viewKind: 'general', allowedGeneralModes: ['graph', 'tree', 'containment', 'table'] });
-        const el = renderToolbar(createElement('div', null, new GeneralToolbar().renderStrip(ctx)));
-        expect([...el.querySelectorAll('[role="tab"]')].map(tab => tab.textContent?.trim()))
-            .toEqual(['Graph', 'Tree', 'Nested', 'Table']);
-        // Expand and collapse are one toggle, and the level is a dropdown rather than a row of buttons.
-        expect([...el.querySelectorAll('button[aria-pressed]')].filter(b => b.textContent?.includes('Expand all'))).toHaveLength(1);
+    it('general toolbar offers named modes (no graph) with one expand toggle and a level dropdown, in the shared toolbar', () => {
+        const ctx = makeContext({ viewKind: 'general', generalMode: 'tree', allowedGeneralModes: ['tree', 'containment', 'table'] });
+        const toolbar = new GeneralToolbar();
+        const el = renderToolbar(createElement('div', null, toolbar.renderProfileControls(ctx)));
+        const modes = [...el.querySelectorAll('button[aria-pressed]')].map(b => b.textContent?.trim());
+        expect(modes.slice(0, 3)).toEqual(['Tree', 'Nested', 'Table']);
+        expect(modes).not.toContain('Graph');
+        expect(modes.filter(m => m?.includes('Expand all'))).toHaveLength(1);
         expect(el.textContent).not.toContain('Collapse all');
-        const open = renderToolbar(createElement('div', null, new GeneralToolbar().renderStrip({ ...ctx, allExpanded: true })));
+        expect(el.querySelector('select[aria-label="Level"]')).toBeTruthy();
+        const open = renderToolbar(createElement('div', null, toolbar.renderProfileControls({ ...ctx, allExpanded: true })));
         expect(open.textContent).toContain('Collapse all');
         expect(open.textContent).not.toContain('Expand all');
-        expect(el.querySelector('select[aria-label="Level"]')).toBeTruthy();
-        // the side dock gets nothing from a general view
-        expect(new GeneralToolbar().renderProfileControls(ctx)).toBeNull();
+        // and it still has the common layout and export groups every diagram's toolbar has
+        const captions = [...renderToolbar(createElement('div', null, toolbar.render(ctx))).querySelectorAll('.memo-diagram-tools__caption')].map(c => c.textContent);
+        expect(captions[0]).toBe('Layout');
+        expect(captions[captions.length - 1]).toBe('Export');
     });
 
     it('a profile whose supportsToolbarOperation gates are all closed renders no bespoke controls', () => {

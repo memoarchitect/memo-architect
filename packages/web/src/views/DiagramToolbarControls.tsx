@@ -237,7 +237,7 @@ export function ToolbarSelect({ value, options, onChange, title, ariaLabel }: {
             onChange={event => onChange(event.target.value)}
             className="text-xs font-semibold"
             style={{
-                padding: '5px 8px', borderRadius: 9, border: '1px solid #E2E1DB', background: '#FFFFFF',
+                padding: '5px 4px', borderRadius: 9, border: '1px solid #E2E1DB', background: '#FFFFFF', width: '100%', minWidth: 0,
                 color: IDLE_FG, cursor: 'pointer',
             }}
         >

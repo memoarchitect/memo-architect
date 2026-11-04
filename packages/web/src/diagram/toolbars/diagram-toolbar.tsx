@@ -390,13 +390,6 @@ export class BaseDiagramToolbar {
      */
     renderTrailingProfileControls(_ctx: DiagramToolbarContext): ReactNode { return null; }
 
-    /**
-     * Controls a profile keeps in the horizontal strip above the drawing
-     * rather than in the side dock; null for a profile that has none. The
-     * strip is a flex row of captioned groups (`memo-diagram-strip`).
-     */
-    renderStrip(_ctx: DiagramToolbarContext): ReactNode { return null; }
-
     /** Full toolbar content, for a caller that has no fixed slot to interleave
      *  (DiagramCanvas instead calls the pieces individually — see above). */
     render(ctx: DiagramToolbarContext): ReactNode {
@@ -832,45 +825,42 @@ export class GeneralToolbar extends BaseDiagramToolbar {
         { value: 'table', label: 'Table', icon: <Icon.modeTable />, title: 'Table: one row per block, with collapsible rows' },
     ];
 
-    override renderStrip(ctx: DiagramToolbarContext): ReactNode {
+    /** The modes, the outline controls and the layout reset, in the same toolbar as every other diagram's controls.
+     *  The mode tiles carry their names: the side dock shows the icons, the top strip shows the words as well. */
+    override renderProfileControls(ctx: DiagramToolbarContext): ReactNode {
         if (!ctx.supportsToolbarOperation('generalMode')) return null;
         const options = GeneralToolbar.MODES.filter(mode => ctx.allowedGeneralModes.includes(mode.value));
         const hierarchical = ctx.generalMode !== 'graph';
         const levels = Array.from({ length: ctx.outlineDepth }, (_, index) => index + 1);
         return (
             <>
-                {this.renderCaption('View as')}
-                <Segmented<GeneralViewMode>
-                    options={options.map(({ value, label, icon, title }) => ({ value, label, icon, title }))}
-                    value={ctx.generalMode}
-                    onChange={mode => { ctx.setGeneralMode(mode); ctx.clearPositionCache(); }} />
+                {options.map(({ value, label, icon, title }) => (
+                    <IconToggle key={value} icon={icon} label={label} title={title} active={ctx.generalMode === value}
+                        onClick={() => { ctx.setGeneralMode(value); ctx.clearPositionCache(); }} />
+                ))}
                 {hierarchical && (
                     <>
-                        {this.renderCaption('Rows')}
+                        {this.renderCaption('Outline')}
                         <IconToggle icon={ctx.allExpanded ? <Icon.rowsCollapse /> : <Icon.rowsExpand />}
                             label={ctx.allExpanded ? 'Collapse all' : 'Expand all'} active={ctx.allExpanded}
                             onClick={ctx.allExpanded ? ctx.collapseAll : ctx.expandAll}
                             title={ctx.allExpanded ? 'Every branch is open. Click to close them back to the root.' : 'Open every branch'} />
                         {levels.length > 1 && (
-                            <>
-                                {this.renderCaption('Level')}
+                            <div style={{ gridColumn: '1 / -1' }}>
                                 <ToolbarSelect ariaLabel="Level" value={ctx.outlineLevel ? String(ctx.outlineLevel) : 'custom'}
-                                    title="Show the outline down to this level"
+                                    title="Show the outline down to this level (Level 1 is the root only)"
                                     options={[
                                         ...(ctx.outlineLevel ? [] : [{ value: 'custom', label: 'Custom' }]),
-                                        ...levels.map(level => ({ value: String(level), label: level === 1 ? '1 (root only)' : String(level) })),
+                                        ...levels.map(level => ({ value: String(level), label: `Level ${level}` })),
                                     ]}
                                     onChange={value => { if (value !== 'custom') ctx.setOutlineLevel(Number(value)); }} />
-                            </>
+                            </div>
                         )}
                     </>
                 )}
                 {ctx.generalMode === 'tree' && (
-                    <>
-                        {this.renderCaption('Layout')}
-                        <IconButton icon={<Icon.arrange />} label="Reset layout" onClick={ctx.resetLayout}
-                            title="Re-lay the tree out from scratch" ariaLabel="Reset layout" />
-                    </>
+                    <IconButton icon={<Icon.arrange />} label="Reset layout" onClick={ctx.resetLayout}
+                        title="Re-lay the tree out from scratch" ariaLabel="Reset layout" />
                 )}
             </>
         );

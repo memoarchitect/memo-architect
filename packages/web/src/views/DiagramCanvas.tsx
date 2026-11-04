@@ -1083,6 +1083,14 @@ function DiagramCanvasInner() {
             // storage disabled — the choice still holds for this session
         }
     }, [toolbarCollapsed]);
+    // One toolbar, two placements: down the side as a dock, or along the top as a strip. The same controls
+    // either way; the person picks, and the choice is remembered.
+    const [toolbarPlacement, setToolbarPlacement] = useState<'side' | 'top'>(() => {
+        try { return localStorage.getItem('memo.diagram.toolbar.placement') === 'top' ? 'top' : 'side'; } catch { return 'side'; }
+    });
+    useEffect(() => {
+        try { localStorage.setItem('memo.diagram.toolbar.placement', toolbarPlacement); } catch { /* storage disabled */ }
+    }, [toolbarPlacement]);
     const [isCanvasFullscreen, setIsCanvasFullscreen] = useState(false);
     const actionFlowToolbarPlacement: 'left' = 'left';
 
@@ -1636,7 +1644,11 @@ function DiagramCanvasInner() {
     const diagramProfile = resolveDiagramProfile({
         viewKind, diagramType: selectedDiagram?.diagramType, generalMode,
     });
-    const activeToolbar = resolveDiagramToolbar(diagramProfile);
+    // A block diagram keeps its own toolbar even while it is the plain graph a view with no hierarchy opens as.
+    const activeToolbar = resolveDiagramToolbar(diagramProfile === 'standard' && viewKind === 'general' ? 'general' : diagramProfile);
+    // The toolbar holds a block diagram's modes, so it opens with one rather than hiding them behind a button.
+    const isBlockDiagram = activeToolbar.profile === 'general';
+    useEffect(() => { if (isBlockDiagram) setToolbarCollapsed(false); }, [isBlockDiagram, selectedDiagramId]);
     const [useCaseDisplayLevel, setUseCaseDisplayLevel] = useState<number | 'all'>('all');
     const [useCaseEdgeStyle, setUseCaseEdgeStyle] = useState<UseCaseEdgeStyle>('straight');
     const [hiddenUseCaseActorIds, setHiddenUseCaseActorIds] = useState<Set<string>>(new Set());
@@ -1645,11 +1657,14 @@ function DiagramCanvasInner() {
     // A view may restrict its presentation modes (e.g. the BDD sample is a
     // strict tree — no graph) via properties.modes = "tree,containment"
     const declaredModes = selectedDiagram?.properties?.modes;
+    // A block diagram is a hierarchy, so it is offered as a tree, nested or a table; the graph is only the fallback a
+    // view with no hierarchy opens as (see resolveGeneralMode), never a mode to choose.
     const allowedGeneralModes = useMemo(() => {
-        if (!declaredModes) return GENERAL_VIEW_MODES;
+        const hierarchical = GENERAL_VIEW_MODES.filter(m => m !== 'graph');
+        if (!declaredModes) return hierarchical;
         const wanted = new Set(declaredModes.split(',').map(s => s.trim()));
-        const filtered = GENERAL_VIEW_MODES.filter(m => wanted.has(m));
-        return filtered.length ? filtered : GENERAL_VIEW_MODES;
+        const filtered = hierarchical.filter(m => wanted.has(m));
+        return filtered.length ? filtered : hierarchical;
     }, [declaredModes]);
     const actionFlowDisplayLevels = useMemo(() => {
         if (!model || !selectedDiagram) return [];
@@ -4305,6 +4320,49 @@ function DiagramCanvasInner() {
         expandAll, collapseAll, resetLayout, outlineDepth, outlineLevel, allExpanded, setOutlineLevel,
     };
 
+    const placementButton = (
+        <button type="button" onClick={() => setToolbarPlacement(placement => placement === 'side' ? 'top' : 'side')}
+            title={toolbarPlacement === 'side' ? 'Move the toolbar to the top' : 'Move the toolbar to the side'}
+            aria-label={toolbarPlacement === 'side' ? 'Move the toolbar to the top' : 'Move the toolbar to the side'}
+            style={{ width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#FFFFFF', border: '1px solid #E5E5E0', borderRadius: 5, cursor: 'pointer', color: '#6B7280', fontSize: 14, lineHeight: 1 }}>
+            {toolbarPlacement === 'side' ? '⇱' : '⇲'}
+        </button>
+    );
+    const toolbarBody = (
+        <>
+        {/* The dock reads in groups, each under its caption: Layout (arranging the picture), Display
+            (what this kind of diagram shows), Source (editing the SysML), Export (taking it out). */}
+        {activeToolbar.renderCommon(toolbarCtx)}
+        {(() => {
+            const display = activeToolbar.renderProfileControls(toolbarCtx);
+            const trailing = activeToolbar.renderTrailingProfileControls(toolbarCtx);
+            return (hasToolbarContent(display) || hasToolbarContent(trailing)) && (
+                <>
+                    <div className="memo-diagram-tools__caption">Display</div>
+                    {display}
+                    {trailing}
+                </>
+            );
+        })()}
+
+        {selectedDiagramId && (
+            <>
+                <div className="memo-diagram-tools__caption memo-diagram-tools__caption--source">Source</div>
+                {/* The source editor mounts its compact controls
+                    here so every diagram action stays in the
+                    dedicated tools dock. */}
+                <div
+                    id="memo-diagram-editor-controls"
+                    data-compact-diagram-tools="true"
+                    style={{ display: 'contents' }}
+                />
+            </>
+        )}
+
+        {activeToolbar.renderExport(toolbarCtx)}
+        </>
+    );
+
     /** Fit and full screen: shared by the editor's controls and an embed's. */
     const viewControls = (
         <>
@@ -4357,82 +4415,44 @@ function DiagramCanvasInner() {
             {/* The dock is a sibling of the drawing surface.  Keeping controls
                 out of the canvas prevents it from covering nodes or edges. */}
             <div className="flex-1 flex min-w-0">
-                {/* Diagram controls */}
-                {!toolbarCollapsed && !readOnly && <aside
+                {/* Diagram controls: the same toolbar, down the side or along the top. */}
+                {!toolbarCollapsed && !readOnly && toolbarPlacement === 'side' && <aside
                     aria-label="Diagram tools"
                     className="flex shrink-0 flex-col border-r"
                     style={{ width: 126, background: '#FAFAF8', borderColor: '#E5E5E0' }}
                 >
                     <div className="flex items-center justify-between px-3 py-2" style={{ background: '#F0F0ED', borderBottom: '1px solid #E5E5E0' }}>
                         <span style={{ fontSize: FONT.xs, fontWeight: 600, color: '#374151' }}>Toolbar</span>
-                        <button type="button" onClick={() => setToolbarCollapsed(true)} title="Hide Toolbar" aria-label="Hide Toolbar"
-                            style={{ width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#FFFFFF', border: '1px solid #E5E5E0', borderRadius: 5, cursor: 'pointer', color: '#6B7280', fontSize: 20, lineHeight: 1 }}>×</button>
+                        <span className="flex items-center gap-1">
+                            {placementButton}
+                            <button type="button" onClick={() => setToolbarCollapsed(true)} title="Hide Toolbar" aria-label="Hide Toolbar"
+                                style={{ width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#FFFFFF', border: '1px solid #E5E5E0', borderRadius: 5, cursor: 'pointer', color: '#6B7280', fontSize: 20, lineHeight: 1 }}>×</button>
+                        </span>
                     </div>
-                {selectedDiagram && !isCanvasFullscreen && (toolbarCollapsed ? (
-                    <button
-                        type="button"
-                        className="m-3 flex items-center justify-center rounded-lg"
-                        onClick={() => setToolbarCollapsed(false)}
-                        title="Show diagram tools"
-                        aria-label="Show diagram tools"
-                        style={{ width: 36, height: 36, background: '#FFFFFF', color: '#1B3A4B', border: '1px solid #D8E0E4', boxShadow: '0 1px 4px rgba(0,0,0,0.10)' }}
-                    >
-                        <Icon.lanes />
-                    </button>
-                ) : (
-                    <div
-                        className="memo-diagram-tools memo-diagram-tools--left m-3 grid content-start items-stretch justify-items-stretch rounded-lg text-xs"
-                        style={{
-                            width: 94, padding: 6, gap: 6, overflow: 'visible', gridTemplateColumns: 'repeat(2, 38px)', gridAutoRows: 'min-content', gridAutoFlow: 'row',
-                            background: '#FFFFFF', border: '1px solid #E5E5E0', boxShadow: '0 1px 4px rgba(0,0,0,0.08)',
-                        }}
-                    >
-                        {/* The dock reads in groups, each under its caption: Layout (arranging the picture), Display
-                            (what this kind of diagram shows), Source (editing the SysML), Export (taking it out). */}
-                        {activeToolbar.renderCommon(toolbarCtx)}
-                        {(() => {
-                            const display = activeToolbar.renderProfileControls(toolbarCtx);
-                            const trailing = activeToolbar.renderTrailingProfileControls(toolbarCtx);
-                            return (hasToolbarContent(display) || hasToolbarContent(trailing)) && (
-                                <>
-                                    <div className="memo-diagram-tools__caption">Display</div>
-                                    {display}
-                                    {trailing}
-                                </>
-                            );
-                        })()}
-
-                        {selectedDiagramId && (
-                            <>
-                                <div className="memo-diagram-tools__caption memo-diagram-tools__caption--source">Source</div>
-                                {/* The source editor mounts its compact controls
-                                    here so every diagram action stays in the
-                                    dedicated tools dock. */}
-                                <div
-                                    id="memo-diagram-editor-controls"
-                                    data-compact-diagram-tools="true"
-                                    style={{ display: 'contents' }}
-                                />
-                            </>
-                        )}
-
-                        {activeToolbar.renderExport(toolbarCtx)}
-                    </div>
-                ))}
+                    {selectedDiagram && !isCanvasFullscreen && (
+                        <div
+                            className="memo-diagram-tools memo-diagram-tools--left m-3 grid content-start items-stretch justify-items-stretch rounded-lg text-xs"
+                            style={{
+                                width: 94, padding: 6, gap: 6, overflow: 'visible', gridTemplateColumns: 'repeat(2, 38px)', gridAutoRows: 'min-content', gridAutoFlow: 'row',
+                                background: '#FFFFFF', border: '1px solid #E5E5E0', boxShadow: '0 1px 4px rgba(0,0,0,0.08)',
+                            }}
+                        >
+                            {toolbarBody}
+                        </div>
+                    )}
                 </aside>}
 
                 <div className="flex-1 flex flex-col min-w-0 min-h-0">
-                {(() => {
-                    // A general view keeps its mode switcher in every mode, graph included; otherwise choosing
-                    // Graph hands the view to the standard profile, which has no strip, and the way back goes with it.
-                    const stripToolbar = diagramProfile === 'standard' ? resolveDiagramToolbar('general') : activeToolbar;
-                    const strip = !readOnly && isGeneralTemplate ? stripToolbar.renderStrip(toolbarCtx) : null;
-                    return hasToolbarContent(strip) && (
-                        <div className="memo-diagram-strip shrink-0 border-b bg-white px-3 py-2" aria-label="Block diagram controls">
-                            {strip}
-                        </div>
-                    );
-                })()}
+                {!toolbarCollapsed && !readOnly && toolbarPlacement === 'top' && selectedDiagram && !isCanvasFullscreen && (
+                    <div className="memo-diagram-strip memo-diagram-tools memo-diagram-tools--top shrink-0 border-b bg-white px-3 py-2" aria-label="Diagram tools">
+                        {toolbarBody}
+                        <span style={{ marginLeft: 'auto', display: 'flex', gap: 4 }}>
+                            {placementButton}
+                            <button type="button" onClick={() => setToolbarCollapsed(true)} title="Hide Toolbar" aria-label="Hide Toolbar"
+                                style={{ width: 28, height: 28, background: '#FFFFFF', border: '1px solid #E5E5E0', borderRadius: 5, cursor: 'pointer', color: '#6B7280', fontSize: 20, lineHeight: 1 }}>×</button>
+                        </span>
+                    </div>
+                )}
                 {viewKind === 'interconnection' && toolbarCollapsed && !readOnly && (
                     <div className="memo-ibd-strip shrink-0 border-b bg-white px-3 py-2" aria-label="IBD routing controls">
                         {toolbarCtx.ibdRoutingControls}
