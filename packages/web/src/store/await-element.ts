@@ -23,3 +23,13 @@ export async function awaitSavedElement(id: string, optimistic = useModelStore.g
     }
     throw new Error('The new element was saved, but the rebuilt model did not arrive.');
 }
+
+/** Wait for the server to publish a model after a write, so the next write is checked against the source it made. */
+export async function awaitModelAfter(previous = useModelStore.getState().model): Promise<void> {
+    const deadline = Date.now() + MODEL_ARRIVAL_TIMEOUT_MS;
+    while (Date.now() < deadline) {
+        if (useModelStore.getState().model !== previous) return;
+        await new Promise(resolve => setTimeout(resolve, 100));
+    }
+    throw new Error('The write was made, but the rebuilt model did not arrive.');
+}

@@ -13,15 +13,16 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { useCallback, useMemo, useState } from 'react';
-import type { MemoElement, MemoModelDTO, RelationshipDefinitionDTO, RelationshipDirection } from '@memoarchitect/tools/browser';
+import { relationshipsOfType, type MemoElement, type MemoModelDTO, type RelationshipDefinitionDTO, type RelationshipDirection } from '@memoarchitect/tools/browser';
 import { AddRelationshipDialog } from '../components/AddRelationshipDialog';
-import { awaitSavedElement } from '../store/await-element';
+import { awaitModelAfter, awaitSavedElement } from '../store/await-element';
+import { requestRelationshipUpdate } from '../store/ws-client';
 import { useModelStore } from '../store/model-store';
 import type { CompositionTree } from './templates/composition-tree';
 import { flattenBddRows } from './templates/bdd-table';
 import {
-    childKindOptions, declaredNameFor, linkCategory, linksByRow, rowLinkCategories, rowMayHold, targetMayHold,
-    viewInsertionPoint, type RowLink, type TableLinkCategory,
+    childKindOptions, declaredNameFor, defaultPlacement, linkCategory, linksByRow, placementWrites, rowLinkCategories,
+    rowMayHold, targetMayHold, viewInsertionPoint, type RowLink, type StepPlacement, type TableLinkCategory,
 } from './templates/table-authoring';
 
 const INDENT = 18;
@@ -41,7 +42,7 @@ const stickyEnd = { position: 'sticky' as const, right: 0, borderLeft: `1px soli
 type AddTarget = { parent?: MemoElement; packageName?: string; file?: string };
 
 export function BddTableView({
-    tree, expanded, definitions, onToggle, onInspect, model, diagramId, readOnly, childScope, onExpand, ariaLabel, notice,
+    tree, expanded, definitions, onToggle, onInspect, model, diagramId, readOnly, childScope, onExpand, ariaLabel, notice, unorderedIds,
 }: {
     tree: CompositionTree;
     expanded: ReadonlySet<string>;
@@ -57,6 +58,8 @@ export function BddTableView({
     ariaLabel?: string;
     /** Something the view reports about its rows, which its graph mode shows on the canvas. */
     notice?: string;
+    /** Steps the flow does not order yet; each can be placed from its row. */
+    unorderedIds?: ReadonlySet<string>;
 }) {
     const connected = useModelStore(s => s.connected);
     const endScopes = useModelStore(s => s.relationshipEndScopes);
@@ -67,6 +70,9 @@ export function BddTableView({
     const [adding, setAdding] = useState<AddTarget | null>(null);
     const [draftName, setDraftName] = useState('');
     const [draftKind, setDraftKind] = useState('');
+    // A step's place in its flow, encoded for a select: `none`, `start` or `after:<id>`.
+    const [draftOrder, setDraftOrder] = useState('none');
+    const [placing, setPlacing] = useState<MemoElement | null>(null);
     const [linking, setLinking] = useState<{ element: MemoElement; category: TableLinkCategory } | null>(null);
     const [status, setStatus] = useState<{ tone: 'info' | 'error'; text: string } | null>(null);
 
@@ -96,8 +102,57 @@ export function BddTableView({
         return anchor ? childKindOptions(anchor, childrenOf(adding.parent), registries, childScope ?? 'hierarchy') : [];
     }, [adding, registries, tree, childScope, childrenOf]);
 
+    const encode = (placement: StepPlacement) => (placement.kind === 'after' ? `after:${placement.afterId}` : placement.kind);
+    const decode = (value: string): StepPlacement => (value.startsWith('after:')
+        ? { kind: 'after', afterId: value.slice('after:'.length) } : { kind: value === 'start' ? 'start' : 'none' });
+    const parentOf = (id: string) => [...tree.childrenMap].find(([, children]) => children.includes(id))?.[0];
+    const stepSiblings = (parent: MemoElement | undefined, except?: string) =>
+        childrenOf(parent).map(element => element.id).filter(id => id !== except);
+
     const openAdd = (target: AddTarget) => {
-        setStatus(null); setDraftName(''); setDraftKind(''); setAdding(target);
+        setStatus(null); setDraftName(''); setDraftKind(''); setPlacing(null); setAdding(target);
+        setDraftOrder(encode(childScope === 'flow' ? defaultPlacement(stepSiblings(target.parent)) : { kind: 'none' }));
+    };
+
+    const openPlace = (step: MemoElement) => {
+        const parentId = parentOf(step.id);
+        setStatus(null); setAdding(null); setPlacing(step);
+        setDraftOrder(encode(defaultPlacement(stepSiblings(parentId ? tree.elements.get(parentId) : undefined, step.id))));
+    };
+
+    /** Write the successions that put a step in its place, each against the model the previous one produced. */
+    const placeStep = async (stepId: string, siblings: string[], placement: StepPlacement) => {
+        const current = useModelStore.getState().model;
+        const writes = placementWrites(stepId, siblings, current ? relationshipsOfType(current, 'succession') : [], placement);
+        if (writes.move) {
+            const before = useModelStore.getState().model;
+            const moved = await requestRelationshipUpdate({ ...writes.move, diagramId });
+            if (!moved.success) throw new Error(moved.error ?? 'The order could not be changed.');
+            await awaitModelAfter(before);
+        }
+        for (const link of writes.create) {
+            const before = useModelStore.getState().model;
+            const created = await createRelationship({
+                type: 'succession', ...link, direction: 'outgoing', selectedElementId: stepId, diagramId,
+            });
+            if (!created.success) throw new Error(created.error ?? 'The order could not be written.');
+            await awaitModelAfter(before);
+        }
+    };
+
+    const submitPlace = async () => {
+        const step = placing;
+        if (!step) return;
+        const parentId = parentOf(step.id);
+        const siblings = stepSiblings(parentId ? tree.elements.get(parentId) : undefined, step.id);
+        setPlacing(null);
+        setStatus({ tone: 'info', text: `Placing ${step.name}…` });
+        try {
+            await placeStep(step.id, siblings, decode(draftOrder));
+            setStatus({ tone: 'info', text: `Placed ${step.name} in the flow.` });
+        } catch (error) {
+            setStatus({ tone: 'error', text: error instanceof Error ? error.message : String(error) });
+        }
     };
 
     const submitAdd = async () => {
@@ -114,6 +169,8 @@ export function BddTableView({
             return;
         }
         const file = parent?.file ?? adding.file;
+        const siblings = stepSiblings(parent);
+        const placement = childScope === 'flow' ? decode(draftOrder) : { kind: 'none' as const };
         const id = createModelElement({
             id: qualify(shortName), shortName, name: label, kind: kind.name, construct: kind.construct.replace(/\s*def$/, '').trim() as MemoElement['construct'],
             layer: kind.layer, doc: '', attributes: {}, file: file ?? '',
@@ -127,6 +184,10 @@ export function BddTableView({
             // A view listing its elements explicitly does not gain a new one by itself.
             const diagram = useModelStore.getState().model?.diagrams?.find(candidate => candidate.id === diagramId);
             if (diagramId && diagram?.elementIds && !diagram.elementIds.includes(saved)) addElementToDiagram(diagramId, saved);
+            if (placement.kind !== 'none' && siblings.length > 0) {
+                setStatus({ tone: 'info', text: `Placing ${label} in the flow…` });
+                await placeStep(saved, siblings, placement);
+            }
             setStatus({ tone: 'info', text: `Added ${label} to ${file}.` });
         } catch (error) {
             setStatus({ tone: 'error', text: error instanceof Error ? error.message : String(error) });
@@ -153,6 +214,36 @@ export function BddTableView({
     const header = { padding: '6px 10px', textAlign: 'left' as const, fontWeight: 600, fontSize: 11, color: '#374151', background: '#F0F0ED', borderBottom: `1px solid ${LINE}`, borderRight: `1px solid ${LINE}`, position: 'sticky' as const, top: 0, zIndex: 1 };
     const cell = { padding: '4px 10px', fontSize: 12, borderBottom: `1px solid ${LINE}`, borderRight: `1px solid ${LINE}`, whiteSpace: 'nowrap' as const };
 
+    const orderSelect = (siblings: string[]) => (
+        <select aria-label={`Place the ${noun} in the flow`} value={draftOrder} onChange={event => setDraftOrder(event.target.value)}
+            title="Where the step goes in the order the flow runs"
+            style={{ fontSize: 12, padding: '2px 4px', border: '1px solid #C9CFD6', borderRadius: 3, maxWidth: 220 }}>
+            <option value="none">Not ordered</option>
+            <option value="start">First</option>
+            {siblings.map(id => (
+                <option key={id} value={`after:${id}`}>After {tree.elements.get(id)?.name ?? id}</option>
+            ))}
+        </select>
+    );
+
+    const placeForm = (step: MemoElement, depth: number) => {
+        const parentId = parentOf(step.id);
+        const siblings = stepSiblings(parentId ? tree.elements.get(parentId) : undefined, step.id);
+        return (
+            <tr key={`${step.id}:place`} data-table-place-form="true" style={{ background: '#F4FBF9' }}>
+                <td colSpan={COLUMNS} style={{ ...cell, paddingLeft: 10 + depth * INDENT + 22 }}>
+                    <form style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
+                        onSubmit={event => { event.preventDefault(); void submitPlace(); }}>
+                        <span style={{ fontSize: 12, color: MUTED }}>Place {step.name}</span>
+                        {orderSelect(siblings)}
+                        <button type="submit" disabled={draftOrder === 'none'} style={smallButton}>Place</button>
+                        <button type="button" onClick={() => setPlacing(null)} style={smallButton}>Cancel</button>
+                    </form>
+                </td>
+            </tr>
+        );
+    };
+
     const addForm = (depth: number, key: string) => (
         <tr key={key} data-table-add-form="true" style={{ background: '#F4FBF9' }}>
             <td colSpan={COLUMNS} style={{ ...cell, paddingLeft: 10 + depth * INDENT + 22 }}>
@@ -169,6 +260,7 @@ export function BddTableView({
                             <option key={option.name} value={option.name}>{option.label}{option.origin === 'project' ? ' (project)' : ''}</option>
                         ))}
                     </select>
+                    {childScope === 'flow' && stepSiblings(adding?.parent).length > 0 && orderSelect(stepSiblings(adding?.parent))}
                     <button type="submit" disabled={!draftName.trim() || kindOptions.length === 0} style={smallButton}>Add</button>
                     <button type="button" onClick={() => setAdding(null)} style={smallButton}>Cancel</button>
                 </form>
@@ -252,6 +344,10 @@ export function BddTableView({
                                                 <button type="button" style={smallButton} title={`Add a ${noun} under ${row.name}`}
                                                     aria-label={`Add ${noun} under ${row.name}`} onClick={() => openAdd({ parent: row.element })}>+ {noun}</button>
                                             )}
+                                            {writable && unorderedIds?.has(row.id) && (
+                                                <button type="button" style={smallButton} title={`Put ${row.name} in the order the flow runs`}
+                                                    aria-label={`Place ${row.name} in the flow`} onClick={() => openPlace(row.element)}>Place</button>
+                                            )}
                                             {categories.has('trace') && (
                                                 <button type="button" style={smallButton} title={`Trace ${row.name} to a requirement, a risk or another element the ontology allows`}
                                                     aria-label={`Add trace from ${row.name}`} onClick={() => { setStatus(null); setLinking({ element: row.element, category: 'trace' }); }}>Trace</button>
@@ -265,6 +361,7 @@ export function BddTableView({
                                 </td>
                             </tr>
                         );
+                        if (placing?.id === row.id) return [line, placeForm(row.element, row.depth)];
                         return adding?.parent?.id === row.id ? [line, addForm(row.depth + 1, `${row.id}:add`)] : [line];
                     })}
                     {rows.length === 0 && (

@@ -2113,8 +2113,17 @@ function DiagramCanvasInner() {
         () => (model ? resolveLegend(viewElementOf(model, selectedDiagram), model) : undefined),
         [model, selectedDiagram]);
 
+    // A general view may hold any definitions, linked however the model links
+    // them. Only one drawn as a decomposition (a tree, nested containment, or
+    // its table) states a hierarchy, so only that one is held to a single tree
+    // of a single kind.
+    const decompositionHint = (() => {
+        const hint = selectedDiagram?.properties?.layoutHint;
+        return hint === 'tree' || hint === 'containment' || hint === 'table' ? hint : undefined;
+    })();
+
     const bddTreeIssue = useMemo(() => {
-        if (!model || !selectedDiagram || selectedDiagram.diagramType !== 'bdd') return null;
+        if (!model || !selectedDiagram || selectedDiagram.diagramType !== 'bdd' || !decompositionHint) return null;
         const declaredTypes = selectedDiagram.relationshipTypes ?? [];
         const usesComposition = declaredTypes.length === 0 || declaredTypes.every(type =>
             COMPOSITION_REL_TYPES.has(type.charAt(0).toLowerCase() + type.slice(1)),
@@ -2123,17 +2132,15 @@ function DiagramCanvasInner() {
         // UseCase Includes). Those may intentionally have multiple roots, so
         // the strict single-composition-tree rule does not apply.
         if (!usesComposition) return null;
-        const hint = selectedDiagram.properties?.layoutHint;
         return validateSingleTree(buildGeneralViewTree(model, viewpointFilter, selectedDiagram.relationshipTypes, viewElementOf(model, selectedDiagram),
-            hint === 'tree' || hint === 'containment'));
-    }, [model, selectedDiagram, viewpointFilter]);
+            decompositionHint !== 'table'));
+    }, [model, selectedDiagram, viewpointFilter, decompositionHint]);
 
     const bddMixedKinds = useMemo(() => {
-        if (!model || !selectedDiagram || selectedDiagram.diagramType !== 'bdd') return null;
-        const hint = selectedDiagram.properties?.layoutHint;
+        if (!model || !selectedDiagram || selectedDiagram.diagramType !== 'bdd' || !decompositionHint) return null;
         return mixedKindsIssue(buildGeneralViewTree(model, viewpointFilter, selectedDiagram.relationshipTypes, viewElementOf(model, selectedDiagram),
-            hint === 'tree' || hint === 'containment' || hint === 'table'), model.registries?.kinds);
-    }, [model, selectedDiagram, viewpointFilter]);
+            true), model.registries?.kinds);
+    }, [model, selectedDiagram, viewpointFilter, decompositionHint]);
 
     // ─── Decomp callbacks ──────────────────────────────────────────────────────
     // The General template derives its tree from the view's own selection.
@@ -4864,8 +4871,9 @@ function DiagramCanvasInner() {
                     return (
                         <BddTableView tree={tableTree} expanded={expanded} ariaLabel="Flow steps table"
                             notice={floatingActions.length > 0
-                                ? `Not ordered in this flow yet, so the flow view reports ${floatingActions.length === 1 ? 'it' : 'them'} as floating: ${floatingActions.map(action => action.name).join(', ')}. Connect ${floatingActions.length === 1 ? 'it' : 'them'} in the flow view or in the source.`
+                                ? `Not ordered in this flow yet, so the flow view reports ${floatingActions.length === 1 ? 'it' : 'them'} as floating: ${floatingActions.map(action => action.name).join(', ')}. Use Place on the row to put ${floatingActions.length === 1 ? 'it' : 'them'} in order.`
                                 : undefined}
+                            unorderedIds={new Set(floatingActions.map(action => action.id))}
                             onToggle={id => setCollapsed(id, expanded.has(id))} onInspect={inspectElement}
                             model={model} diagramId={selectedDiagramId ?? undefined} readOnly={readOnly} childScope="flow"
                             onExpand={id => setCollapsed(id, false)} />

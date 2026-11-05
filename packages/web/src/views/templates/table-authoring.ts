@@ -9,7 +9,7 @@
 
 import {
     endAllowedByRules, findRelationshipDefinition, isAuthorableRelationship, legalRelationshipsForElement,
-    type KindDefinitionDTO, type MemoElement, type MemoModelDTO, type OntologyRegistriesDTO,
+    type KindDefinitionDTO, type MemoElement, type MemoModelDTO, type MemoRelationship, type OntologyRegistriesDTO,
     type RelationshipDefinitionDTO, type RelationshipDirection, type RelationshipEndScopes,
 } from '@memoarchitect/tools/browser';
 import { buildOwnershipTest, type CompositionTree } from './composition-tree';
@@ -148,4 +148,51 @@ export function viewInsertionPoint(tree: CompositionTree, model: MemoModelDTO): 
     const ownerId = first.parentAction ?? first.owner;
     const owner = ownerId ? model.elements[ownerId] : undefined;
     return owner ? { parent: owner } : { packageName: first.package, file: first.file };
+}
+
+// ─── Where a step goes in its flow ───────────────────────────────────────────
+
+/** Where a step is put in the order of its siblings: nowhere, first, or after one of them. */
+export type StepPlacement = { kind: 'none' } | { kind: 'start' } | { kind: 'after'; afterId: string };
+
+/** The writes that put a step in place: at most one succession moved, and the ones created. */
+export interface PlacementWrites {
+    move?: { relationshipId: string; sourceId: string; targetId: string };
+    create: { sourceId: string; targetId: string }[];
+}
+
+/**
+ * The successions that put `stepId` where `placement` says, among `siblings` in the order they run. A step put
+ * after one that already leads to the next goes between them: that succession is moved to end at the new step,
+ * which then leads to the next one, so the flow stays one sequence rather than forking. A succession the compile
+ * gave no source range cannot be moved, and the step is then joined on as a branch.
+ */
+export function placementWrites(
+    stepId: string,
+    siblings: readonly string[],
+    /** The model's successions, from `relationshipsOfType`. */
+    allSuccessions: readonly MemoRelationship[],
+    placement: StepPlacement,
+): PlacementWrites {
+    const others = siblings.filter(id => id !== stepId);
+    const among = new Set(others);
+    const successions = allSuccessions.filter(rel => among.has(rel.sourceId) && among.has(rel.targetId));
+    if (placement.kind === 'none' || others.length === 0) return { create: [] };
+    if (placement.kind === 'start') {
+        const first = others.find(id => !successions.some(rel => rel.targetId === id)) ?? others[0];
+        return { create: [{ sourceId: stepId, targetId: first }] };
+    }
+    const next = successions.filter(rel => rel.sourceId === placement.afterId);
+    if (next.length === 1 && next[0].sourceRange) {
+        return {
+            move: { relationshipId: next[0].id, sourceId: placement.afterId, targetId: stepId },
+            create: [{ sourceId: stepId, targetId: next[0].targetId }],
+        };
+    }
+    return { create: [{ sourceId: placement.afterId, targetId: stepId }] };
+}
+
+/** Where a new step goes unless the user says otherwise: after the last step, so a flow grows at its end. */
+export function defaultPlacement(siblings: readonly string[]): StepPlacement {
+    return siblings.length > 0 ? { kind: 'after', afterId: siblings[siblings.length - 1] } : { kind: 'none' };
 }

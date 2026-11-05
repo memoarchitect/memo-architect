@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { MemoElement, MemoModelDTO, MemoRelationship, OntologyRegistriesDTO, RelationshipDefinitionDTO, RelationshipEndScopes } from '@memoarchitect/tools/browser';
 import { buildFlowTableTree } from '../bdd-table';
 import {
-    childKindOptions, declaredNameFor, linkCategory, linksByRow, rowLinkCategories, rowMayHold, targetMayHold, viewInsertionPoint,
+    childKindOptions, declaredNameFor, defaultPlacement, linkCategory, placementWrites, linksByRow, rowLinkCategories, rowMayHold, targetMayHold, viewInsertionPoint,
 } from '../table-authoring';
 
 const end = (name: string, type?: string) => ({ name, ...(type ? { type } : {}) });
@@ -194,5 +194,38 @@ describe('flow table', () => {
         expect(viewInsertionPoint(whole, model).parent?.id).toBe('scenario');
         const steps = buildFlowTableTree(model, element => element.id !== 'scenario');
         expect(viewInsertionPoint(steps, model).parent?.id).toBe('scenario');
+    });
+});
+
+describe('placing a step in its flow', () => {
+    const ranged = (source: string, target: string): MemoRelationship => ({
+        ...link('succession', source, target), sourceRange: { offset: 0, length: 1 },
+    });
+    // a -> b -> c, and d is new.
+    const order = [ranged('a', 'b'), ranged('b', 'c')];
+
+    it('puts a step between two by moving the succession that joined them', () => {
+        expect(placementWrites('d', ['a', 'b', 'c', 'd'], order, { kind: 'after', afterId: 'a' })).toEqual({
+            move: { relationshipId: order[0].id, sourceId: 'a', targetId: 'd' },
+            create: [{ sourceId: 'd', targetId: 'b' }],
+        });
+    });
+    it('appends after the last step', () => {
+        expect(placementWrites('d', ['a', 'b', 'c'], order, { kind: 'after', afterId: 'c' })).toEqual({ create: [{ sourceId: 'c', targetId: 'd' }] });
+    });
+    it('starts the flow with it', () => {
+        expect(placementWrites('d', ['b', 'c', 'a'], order, { kind: 'start' })).toEqual({ create: [{ sourceId: 'd', targetId: 'a' }] });
+    });
+    it('joins on as a branch where the succession cannot be moved', () => {
+        const unranged = [link('succession', 'a', 'b')];
+        expect(placementWrites('d', ['a', 'b'], unranged, { kind: 'after', afterId: 'a' })).toEqual({ create: [{ sourceId: 'a', targetId: 'd' }] });
+    });
+    it('writes nothing when the step is left out of the order, or has nothing to be ordered with', () => {
+        expect(placementWrites('d', ['a', 'b'], order, { kind: 'none' })).toEqual({ create: [] });
+        expect(placementWrites('d', ['d'], [], { kind: 'start' })).toEqual({ create: [] });
+    });
+    it('grows a flow at its end by default', () => {
+        expect(defaultPlacement(['a', 'b'])).toEqual({ kind: 'after', afterId: 'b' });
+        expect(defaultPlacement([])).toEqual({ kind: 'none' });
     });
 });
