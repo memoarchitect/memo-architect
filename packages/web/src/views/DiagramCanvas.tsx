@@ -272,11 +272,11 @@ function captureEdgeLayout(edge: FlowEdge, previous?: DiagramLayout['edges'][str
         targetSide: edge.data?.targetSide as DiagramEdgeSide | undefined,
         ...(edge.data?.sourceOffset ? { sourceOffset: {
             ...(oldSourceOffset && typeof oldSourceOffset === 'object' ? oldSourceOffset : {}),
-            ...(edge.data.sourceOffset as object),
+            ...(edge.data.sourceOffset as NonNullable<DiagramLayout['edges'][string]['sourceOffset']>),
         } } : {}),
         ...(edge.data?.targetOffset ? { targetOffset: {
             ...(oldTargetOffset && typeof oldTargetOffset === 'object' ? oldTargetOffset : {}),
-            ...(edge.data.targetOffset as object),
+            ...(edge.data.targetOffset as NonNullable<DiagramLayout['edges'][string]['targetOffset']>),
         } } : {}),
         sourcePortId: edge.data?.sourcePortId as string | undefined,
         targetPortId: edge.data?.targetPortId as string | undefined,
