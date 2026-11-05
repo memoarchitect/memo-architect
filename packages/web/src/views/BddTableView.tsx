@@ -77,6 +77,14 @@ export function BddTableView({
     const rows = useMemo(() => flattenBddRows(tree, expanded, definitions), [tree, expanded, definitions]);
     const links = useMemo(() => (model && registries ? linksByRow(model, registries) : new Map<string, Record<TableLinkCategory, RowLink[]>>()), [model, registries]);
 
+    // Legality is per kind, and a table has far fewer kinds than rows, redrawn on every keystroke in the add form.
+    const categoriesByKind = useMemo(() => new Map<string, Set<TableLinkCategory>>(), [registries, endScopes]);
+    const categoriesOf = (kind: string) => {
+        let categories = categoriesByKind.get(kind);
+        if (!categories) categoriesByKind.set(kind, categories = rowLinkCategories({ kind }, registries!, endScopes));
+        return categories;
+    };
+
     const childrenOf = useCallback((parent: MemoElement | undefined) =>
         (parent ? tree.childrenMap.get(parent.id) ?? [] : tree.roots)
             .map(id => tree.elements.get(id))
@@ -205,7 +213,7 @@ export function BddTableView({
                     {rows.flatMap(row => {
                         const branch = row.childCount > 0;
                         const typedBy = (row.element.attributes.usageType ?? '').split('::').pop() ?? '';
-                        const categories = authorable ? rowLinkCategories(row.element, registries!, endScopes) : new Set<TableLinkCategory>();
+                        const categories = authorable ? categoriesOf(row.element.kind) : new Set<TableLinkCategory>();
                         const writable = authorable && row.element.provenance?.declaration.writable !== false;
                         const rowLinks = links.get(row.id);
                         const line = (
