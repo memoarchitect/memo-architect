@@ -384,7 +384,7 @@ function handleMessage(msg: ExtendedServerMessage): void {
             break;
         case 'rules:update':
             if (restartPending) return;
-            store.setEffectiveRules(msg.payload.rules, msg.payload.diagnostics, msg.payload.clauses, msg.payload.projectFiles);
+            store.setEffectiveRules(msg.payload.rules, msg.payload.diagnostics, msg.payload.clauses, msg.payload.projectFiles, msg.payload.relationshipEndScopes);
             break;
         case 'rule:policy:write:result':
             settleRelationshipRequest(msg.payload, rulePolicyWriteRequests);

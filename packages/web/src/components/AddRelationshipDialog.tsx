@@ -42,6 +42,12 @@ export interface AddRelationshipDialogProps {
     }) => void;
     /** Full-screen legacy shell or an embedded relationship browser. */
     presentation?: 'modal' | 'inline';
+    /** Narrow what the dialog offers. Absent, it offers everything the ontology allows. */
+    offered?: (definition: RelationshipDefinitionDTO, direction: RelationshipDirection) => boolean;
+    /** Narrow the elements offered at the far end of a relation. */
+    targetAllowed?: (definition: RelationshipDefinitionDTO, direction: RelationshipDirection, target: MemoElement) => boolean;
+    /** What the header calls this dialog, for one that offers less than every relation. */
+    title?: string;
 }
 
 type Flow = 'relationship-first' | 'target-first';
@@ -51,7 +57,7 @@ const BORDER = '#E5E5E0';
 const ACCENT = '#2DD4A8';
 
 export function AddRelationshipDialog({
-    element, model, registries, onCancel, onConfirm, presentation = 'modal',
+    element, model, registries, onCancel, onConfirm, presentation = 'modal', offered, targetAllowed, title,
 }: AddRelationshipDialogProps) {
     const inline = presentation === 'inline';
     const [flow, setFlow] = useState<Flow>('relationship-first');
@@ -74,8 +80,21 @@ export function AddRelationshipDialog({
     // ─── Relationship-first: legal types for the selected element ───────────
 
     const legalForElement = useMemo(
-        () => legalRelationshipsForElement(element, registries),
-        [element, registries]);
+        () => legalRelationshipsForElement(element, registries)
+            .map(entry => ({
+                definition: entry.definition,
+                directions: offered ? entry.directions.filter(d => offered(entry.definition, d)) : entry.directions,
+            }))
+            .filter(entry => entry.directions.length > 0),
+        [element, registries, offered]);
+
+    // A dialog offering one relation in one direction has nothing to ask first.
+    useEffect(() => {
+        if (legalForElement.length === 1 && legalForElement[0].directions.length === 1) {
+            setDirection(legalForElement[0].directions[0]);
+            setSelectedType(legalForElement[0].definition.name);
+        }
+    }, [legalForElement]);
 
     /**
      * Types offered once a direction is chosen — the element must fit that end.
@@ -112,8 +131,8 @@ export function AddRelationshipDialog({
             kind: kindFilter || undefined,
             layer: layerFilter || undefined,
             package: packageFilter || undefined,
-        });
-    }, [definition, direction, element, model, registries, query, kindFilter, layerFilter, packageFilter]);
+        }).filter(candidate => !targetAllowed || targetAllowed(definition, direction, candidate.element));
+    }, [definition, direction, element, model, registries, query, kindFilter, layerFilter, packageFilter, targetAllowed]);
 
     const groupedCandidates = useMemo(() => groupTargetsByKindAndLayer(candidates), [candidates]);
 
@@ -137,8 +156,10 @@ export function AddRelationshipDialog({
     /** Every legal (type, direction) pair between the two chosen elements. */
     const optionsForTarget = useMemo(() => {
         if (!targetElement) return [];
-        return legalRelationshipTypes(element, targetElement, registries);
-    }, [element, targetElement, registries]);
+        return legalRelationshipTypes(element, targetElement, registries).filter(option =>
+            (!offered || offered(option.definition, option.direction))
+            && (!targetAllowed || targetAllowed(option.definition, option.direction, targetElement)));
+    }, [element, targetElement, registries, offered, targetAllowed]);
 
     // Exactly one legal choice is preselected — but never auto-confirmed.
     useEffect(() => {
@@ -216,7 +237,7 @@ export function AddRelationshipDialog({
                 {/* Header */}
                 <div className="px-4 py-3" style={{ borderBottom: `1px solid ${BORDER}` }}>
                     <div className="text-sm font-semibold" style={{ color: '#1a1a1a' }}>
-                        {inline ? 'Browse Allowed Relationships' : 'Add Relationship'}
+                        {title ?? (inline ? 'Browse Allowed Relationships' : 'Add Relationship')}
                     </div>
                     <div className="text-xs mt-0.5" style={{ color: '#6B7280' }}>
                         from <span style={{ fontWeight: 500, color: '#374151' }}>{element.name}</span>

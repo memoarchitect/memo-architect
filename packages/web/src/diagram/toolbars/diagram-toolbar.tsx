@@ -164,6 +164,10 @@ export interface DiagramToolbarContext {
     hiddenUseCaseActorIds: Set<string>;
     setHiddenUseCaseActorIds: Dispatch<SetStateAction<Set<string>>>;
 
+    // ── Action flow ──────────────────────────────────────────────────────────
+    actionFlowMode: 'flow' | 'table';
+    setActionFlowMode: (mode: 'flow' | 'table') => void;
+
     // ── General ──────────────────────────────────────────────────────────────
     allowedGeneralModes: readonly GeneralViewMode[];
     generalMode: GeneralViewMode;
@@ -413,8 +417,19 @@ export class ActionFlowToolbar extends BaseDiagramToolbar {
 
     override renderProfileControls(ctx: DiagramToolbarContext): ReactNode {
         if (!ctx.supportsToolbarOperation('flowSwimlanes')) return null;
+        const modes = (
+            <>
+                <IconToggle icon={<Icon.modeGraph />} label="Flow" active={ctx.actionFlowMode === 'flow'}
+                    onClick={() => ctx.setActionFlowMode('flow')} title="Flow: the steps drawn in the order they run" />
+                <IconToggle icon={<Icon.modeTable />} label="Table" active={ctx.actionFlowMode === 'table'}
+                    onClick={() => ctx.setActionFlowMode('table')} title="Table: one row per step, where steps and links can be added" />
+            </>
+        );
+        // The rest of the controls arrange the drawing, which the table replaces.
+        if (ctx.actionFlowMode === 'table') return modes;
         return (
             <>
+                {modes}
                 {/* Display toggles: grid (above) + swimlanes read as one group */}
                 <IconToggle
                     icon={ctx.swimlanesOn ? <Icon.lanes /> : <Icon.lanesOff />}

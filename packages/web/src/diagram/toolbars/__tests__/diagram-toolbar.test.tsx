@@ -67,6 +67,7 @@ function makeContext(overrides: Partial<DiagramToolbarContext> = {}): DiagramToo
         useCaseEdgeStyle: 'straight', setUseCaseEdgeStyle: noop, autoArrangeUseCase: noop,
         useCaseActors: [{ id: 'a1', name: 'Clinician' }], hiddenUseCaseActorIds: new Set(['a1']), setHiddenUseCaseActorIds: noop,
 
+        actionFlowMode: 'flow', setActionFlowMode: noop,
         allowedGeneralModes: ['graph', 'tree', 'containment'], generalMode: 'tree', setGeneralMode: noop,
         clearPositionCache: noop, expandAll: noop, collapseAll: noop, resetLayout: noop, outlineDepth: 3, outlineLevel: 0, allExpanded: false, setOutlineLevel: noop,
 

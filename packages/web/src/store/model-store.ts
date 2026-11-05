@@ -26,7 +26,7 @@ import type {
     RelationshipDirection,
 } from '@memoarchitect/tools/browser';
 import { setUserFeatures } from '../config/feature-flags';
-import { affectingFiles, changeAffects, findRelationshipDefinition } from '@memoarchitect/tools/browser';
+import { affectingFiles, changeAffects, findRelationshipDefinition, type RelationshipEndScopes } from '@memoarchitect/tools/browser';
 import {
     sendElementUpdate, sendElementCreate, sendDiagramCreate, sendDiagramUpdate, sendDiagramDelete,
     requestRelationshipCreate, requestRelationshipDelete, requestElementDelete, sendPackageMutation,
@@ -394,7 +394,9 @@ export interface ModelState {
     /** Record which source files the server just rebuilt from. */
     applySourceChange: (change: Omit<SourceChange, 'seq'>) => void;
     setMethodology: (m: import('@memoarchitect/tools/browser').MethodologyDescriptor | null) => void;
-    setEffectiveRules: (rules: any[], diagnostics: any[], clauses?: ClauseFact[], projectFiles?: string[]) => void;
+    /** The kinds the rules refuse at each end of a relation; an authoring surface leaves them out. */
+    relationshipEndScopes?: RelationshipEndScopes;
+    setEffectiveRules: (rules: any[], diagnostics: any[], clauses?: ClauseFact[], projectFiles?: string[], endScopes?: RelationshipEndScopes) => void;
     setActiveMode: (mode: AppMode) => void;
     setActiveView: (view: ActiveView) => void;
     setExplorerTab: (tab: ExplorerTab) => void;
@@ -959,10 +961,11 @@ export const useModelStore = create<ModelState>((set, get) => ({
         lastSourceChange: { ...change, seq: (s.lastSourceChange?.seq ?? 0) + 1 },
     })),
     setMethodology: (m) => set({ methodology: m }),
-    setEffectiveRules: (rules, diagnostics, clauses, projectFiles) =>
+    setEffectiveRules: (rules, diagnostics, clauses, projectFiles, endScopes) =>
         set({
             effectiveRules: rules ?? [], ruleDiagnostics: diagnostics ?? [],
             ruleClauses: clauses ?? [], ruleProjectFiles: projectFiles ?? [],
+            relationshipEndScopes: endScopes,
         }),
     setModel: (model) => set((s) => {
         retainRendererModel(s.model, model);

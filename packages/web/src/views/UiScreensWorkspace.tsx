@@ -1,3 +1,4 @@
+import { awaitSavedElement } from '../store/await-element';
 import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
 import { alertDialog, askConfirm, askText } from '../components/AppDialogs';
 import type { MemoElement } from '@memoarchitect/tools/browser';
@@ -162,30 +163,6 @@ export function screenForLayout(layout: { id: string; name: string }, screens: M
  * the value is chosen to be longer than any plausible recompile.
  */
 const MODEL_ARRIVAL_TIMEOUT_MS = 90_000;
-
-/**
- * Wait for a created element to come back in the rebuilt model, and return the id it has THERE.
- *
- * The id sent is the usage name; the rebuilt model keys the element by its qualified id
- * (`pkg::owner::name`). Waiting on the bare name never saw the saved element arrive, so a region was written
- * to source and then reported as never saved, and nothing was attached to its screen.
- */
-async function waitForElement(id: string, optimistic: MemoElement | undefined): Promise<string> {
-    const deadline = Date.now() + MODEL_ARRIVAL_TIMEOUT_MS;
-    while (Date.now() < deadline) {
-        const failure = useModelStore.getState().failedCreates[id];
-        if (failure) throw new Error(`The region was not saved: ${failure}`);
-        const elements = useModelStore.getState().model?.elements ?? {};
-        const qualified = Object.keys(elements).find(key => key.endsWith(`::${id}`));
-        if (qualified) return qualified;
-        // createModelElement inserts an optimistic copy immediately. Relationships
-        // must wait for the server rebuild, where legality sees the new endpoint.
-        const current = elements[id];
-        if (current && current !== optimistic) return id;
-        await new Promise(resolve => setTimeout(resolve, 100));
-    }
-    throw new Error('The new element was saved, but the rebuilt model did not arrive.');
-}
 
 /** Wait for a declared view to come back in the rebuilt model. */
 async function waitForDiagram(id: string): Promise<boolean> {
@@ -530,7 +507,7 @@ export function UiScreensWorkspace() {
                     'bounds.x': '0', 'bounds.y': '0', 'bounds.width': '1', 'bounds.height': '1',
                 },
             });
-            const elementId = await waitForElement(optimisticId, useModelStore.getState().model?.elements[optimisticId]);
+            const elementId = await awaitSavedElement(optimisticId, useModelStore.getState().model?.elements[optimisticId]);
             const viewpointId = model.viewpoints?.find(viewpoint =>
                 viewpoint.label.toLowerCase().includes('ui layout'))?.id ?? '__model';
             createDiagram({
@@ -626,7 +603,7 @@ export function UiScreensWorkspace() {
                     boundaryOpacity: '0.12',
                 },
             });
-            const savedId = await waitForElement(id, useModelStore.getState().model?.elements[id]);
+            const savedId = await awaitSavedElement(id, useModelStore.getState().model?.elements[id]);
             setDrawMode(false);
             setStatus('Region saved.');
             return savedId;
@@ -676,7 +653,7 @@ export function UiScreensWorkspace() {
                     captureContext: selected.name,
                 },
             });
-            const savedId = await waitForElement(id, useModelStore.getState().model?.elements[id]);
+            const savedId = await awaitSavedElement(id, useModelStore.getState().model?.elements[id]);
             await createLink('CapturesScreen', savedId, screen.id);
             // Normalized bounds migrate to a new capture. Automatically detected
             // regions must be reviewed again; manual regions keep their disposition.

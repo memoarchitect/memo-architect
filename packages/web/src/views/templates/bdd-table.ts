@@ -8,7 +8,7 @@
 // the tree is open in the table.
 // ─────────────────────────────────────────────────────────────────────────────
 
-import type { MemoElement } from '@memoarchitect/tools/browser';
+import { activityNodeType, isControlNode, relationshipsOfType, type MemoElement, type MemoModelDTO } from '@memoarchitect/tools/browser';
 import { displayNameOf, type CompositionTree } from './composition-tree';
 
 export interface BddTableRow {
@@ -46,6 +46,44 @@ export function flattenBddRows(
     };
     for (const root of tree.roots) visit(root, 0);
     return rows;
+}
+
+/**
+ * The table of a flow view: its actions, each under the action that owns it, in the order the flow runs. Control
+ * nodes route the flow and are not steps of it.
+ */
+export function buildFlowTableTree(model: MemoModelDTO, visible?: (element: MemoElement) => boolean): CompositionTree {
+    const actions = Object.values(model.elements).filter(element =>
+        (!visible || visible(element))
+        && activityNodeType(element, model.registries) !== undefined
+        && !isControlNode(element, model.registries));
+    const elements = new Map(actions.map(action => [action.id, action]));
+    const childrenMap = new Map<string, string[]>();
+    const roots: string[] = [];
+    for (const action of actions) {
+        if (action.parentAction && elements.has(action.parentAction)) {
+            childrenMap.set(action.parentAction, [...(childrenMap.get(action.parentAction) ?? []), action.id]);
+        } else roots.push(action.id);
+    }
+    const links = relationshipsOfType(model, 'succession', 'flow');
+    for (const [parent, children] of childrenMap) childrenMap.set(parent, inRunOrder(children, links));
+    return { roots: inRunOrder(roots, links), childrenMap, elements };
+}
+
+/** Each step after what leads to it; a loop, or a step nothing orders, keeps its place. */
+function inRunOrder(ids: string[], links: readonly { sourceId: string; targetId: string }[]): string[] {
+    const members = new Set(ids);
+    const before = new Map(ids.map(id => [id, new Set<string>()]));
+    for (const link of links) {
+        if (members.has(link.sourceId) && members.has(link.targetId) && link.sourceId !== link.targetId) before.get(link.targetId)!.add(link.sourceId);
+    }
+    const ordered: string[] = [];
+    const remaining = [...ids];
+    while (remaining.length > 0) {
+        const next = remaining.findIndex(id => [...before.get(id)!].every(prior => ordered.includes(prior)));
+        ordered.push(...remaining.splice(next === -1 ? 0 : next, 1));
+    }
+    return ordered;
 }
 
 /** Every element that has children, to expand the whole outline. */

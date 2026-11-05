@@ -109,7 +109,7 @@ import { NodeContextMenu, EdgeContextMenu, type EdgeLineStyle } from './DiagramC
 import { DecisionNode, ForkNode, StartEndNode } from './WorkflowNodes';
 import { Icon } from './DiagramToolbarControls';
 import { BddTableView } from './BddTableView';
-import { allBranchIds, branchIdsToLevel, treeDepth } from './templates/bdd-table';
+import { allBranchIds, branchIdsToLevel, buildFlowTableTree, treeDepth } from './templates/bdd-table';
 import { resolveLegend } from './templates/legend';
 import { landingsFromPoints, type Side as DiagramEdgeSide } from './templates/landing-rules';
 import { declaredSubject, definitionIndex, resolveDefinition } from './templates/composition-tree';
@@ -1638,6 +1638,9 @@ function DiagramCanvasInner() {
     const isGeneralTemplate = viewKind === 'general';
     const isUseCaseDiagram = selectedDiagram?.diagramType === 'ucd';
     const [generalMode, setGeneralMode] = useState<GeneralViewMode>('graph');
+    const [actionFlowMode, setActionFlowMode] = useState<'flow' | 'table'>('flow');
+    // A flow's table opens fully expanded, so what is held is what was closed, and a row just added shows.
+    const [collapsedFlowRows, setCollapsedFlowRows] = useState<ReadonlySet<string>>(new Set());
     // The toolbar dock (below) is selected by the same DiagramProfile the
     // template dispatch uses — one enum, two consumers, so they can never
     // disagree about which diagram this is. See diagram/toolbars/diagram-toolbar.tsx.
@@ -1646,9 +1649,9 @@ function DiagramCanvasInner() {
     });
     // A block diagram keeps its own toolbar even while it is the plain graph a view with no hierarchy opens as.
     const activeToolbar = resolveDiagramToolbar(diagramProfile === 'standard' && viewKind === 'general' ? 'general' : diagramProfile);
-    // The toolbar holds a block diagram's modes, so it opens with one rather than hiding them behind a button.
-    const isBlockDiagram = activeToolbar.profile === 'general';
-    useEffect(() => { if (isBlockDiagram) setToolbarCollapsed(false); }, [isBlockDiagram, selectedDiagramId]);
+    // The toolbar holds a block diagram's and a flow's modes, so it opens with one rather than hiding them behind a button.
+    const hasModes = activeToolbar.profile === 'general' || activeToolbar.profile === 'actionflow';
+    useEffect(() => { if (hasModes) setToolbarCollapsed(false); }, [hasModes, selectedDiagramId]);
     const [useCaseDisplayLevel, setUseCaseDisplayLevel] = useState<number | 'all'>('all');
     const [useCaseEdgeStyle, setUseCaseEdgeStyle] = useState<UseCaseEdgeStyle>('straight');
     const [hiddenUseCaseActorIds, setHiddenUseCaseActorIds] = useState<Set<string>>(new Set());
@@ -1793,6 +1796,8 @@ function DiagramCanvasInner() {
             : undefined;
         setGeneralMode(resolveGeneralMode(
             selectedDiagram?.properties, (generalTree?.childrenMap.size ?? 0) > 0));
+        setActionFlowMode(hint === 'table' ? 'table' : 'flow');
+        setCollapsedFlowRows(new Set());
         setUseCaseDisplayLevel(useCaseViewOptions(selectedDiagram?.properties).level ?? 'all');
         // The view's own hint sets how connectors start, and a choice made in the toolbar is written back to it.
         setUseCaseEdgeStyle(useCaseViewOptions(selectedDiagram?.properties).edgeStyle ?? 'straight');
@@ -4322,6 +4327,7 @@ function DiagramCanvasInner() {
         useCaseEdgeStyle, setUseCaseEdgeStyle, autoArrangeUseCase,
         viewStyleHint: selectedDiagram?.properties?.styleHint, viewLayoutHint: selectedDiagram?.properties?.layoutHint,
         useCaseActors, hiddenUseCaseActorIds, setHiddenUseCaseActorIds,
+        actionFlowMode, setActionFlowMode,
         allowedGeneralModes, generalMode, setGeneralMode,
         clearPositionCache: () => positionCacheRef.current.clear(),
         expandAll, collapseAll, resetLayout, outlineDepth, outlineLevel, allExpanded, setOutlineLevel,
@@ -4534,7 +4540,7 @@ function DiagramCanvasInner() {
 
                 {/* Drill-in breadcrumb: always visible when focused on
                     a nested action, independent of toolbar collapsed state. */}
-                {actionPath.length > 0 && !parentViewId && (
+                {actionPath.length > 0 && !parentViewId && actionFlowMode === 'flow' && (
                     <div
                         className="absolute top-3 left-3 z-10 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs"
                         style={{
@@ -4615,7 +4621,7 @@ function DiagramCanvasInner() {
                     </div>
                 )}
 
-                {floatingActions.length > 0 && !isLayouting && (
+                {floatingActions.length > 0 && !isLayouting && actionFlowMode === 'flow' && (
                     <div
                         role="alert"
                         className="absolute top-16 left-1/2 -translate-x-1/2 z-20 px-3 py-2"
@@ -4707,7 +4713,7 @@ function DiagramCanvasInner() {
                     </div>
                 )}
 
-                {viewKind === 'actionflow' && actionFlowLegendOpen && (
+                {viewKind === 'actionflow' && actionFlowMode === 'flow' && actionFlowLegendOpen && (
                     <div
                         aria-label="Action flow legend"
                         className="absolute z-10 flex flex-col gap-2 px-3 py-2.5"
@@ -4842,7 +4848,27 @@ function DiagramCanvasInner() {
                     return tableTree && (
                         <BddTableView tree={tableTree} expanded={expandedNodes}
                             definitions={definitionIndex(model!.elements)}
-                            onToggle={toggleExpand} onInspect={inspectElement} />
+                            onToggle={toggleExpand} onInspect={inspectElement}
+                            model={model!} diagramId={selectedDiagramId ?? undefined} readOnly={readOnly} childScope="hierarchy"
+                            onExpand={id => setExpandedNodes(current => (current.has(id) ? current : new Set(current).add(id)))} />
+                    );
+                })()}
+                {viewKind === 'actionflow' && actionFlowMode === 'table' && model && (() => {
+                    const tableTree = buildFlowTableTree(model, viewpointFilter);
+                    const expanded = new Set([...allBranchIds(tableTree)].filter(id => !collapsedFlowRows.has(id)));
+                    const setCollapsed = (id: string, collapsed: boolean) => setCollapsedFlowRows(current => {
+                        const next = new Set(current);
+                        if (collapsed) next.add(id); else next.delete(id);
+                        return next;
+                    });
+                    return (
+                        <BddTableView tree={tableTree} expanded={expanded} ariaLabel="Flow steps table"
+                            notice={floatingActions.length > 0
+                                ? `Not ordered in this flow yet, so the flow view reports ${floatingActions.length === 1 ? 'it' : 'them'} as floating: ${floatingActions.map(action => action.name).join(', ')}. Connect ${floatingActions.length === 1 ? 'it' : 'them'} in the flow view or in the source.`
+                                : undefined}
+                            onToggle={id => setCollapsed(id, expanded.has(id))} onInspect={inspectElement}
+                            model={model} diagramId={selectedDiagramId ?? undefined} readOnly={readOnly} childScope="flow"
+                            onExpand={id => setCollapsed(id, false)} />
                     );
                 })()}
                 <ActionFlowVariantContext.Provider value={variantState}>
