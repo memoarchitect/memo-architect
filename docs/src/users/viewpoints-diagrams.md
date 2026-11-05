@@ -1,4 +1,4 @@
-# Viewpoints and views
+# Viewpoints and Diagrams
 
 MEMO follows ISO/IEC/IEEE 42010: a **viewpoint** defines the concerns, audience,
 allowed model content, and presentation choices for a review; a **view** is an
@@ -7,11 +7,13 @@ relationship is many-to-many: a view can be reused across viewpoints, and a
 viewpoint can govern many views.
 
 Both are modeled in SysML v2 and supplied by the selected ontology and
-methodology packages. A device project's YAML does not redefine them.
+methodology packages; a project can add its own. For what each kind of diagram
+shows and how to read it, see [Views and diagrams](../modeling/views/index.md).
+This page is about working with views in Architect.
 
 ## What appears in Architect
 
-Open **Viewpoints** in the top navigation. The left explorer shows one
+Open **☰ › Views › Viewpoints**. The left explorer shows one
 authoritative hierarchy:
 
 ```text
@@ -35,8 +37,8 @@ Architect does not infer a “Document Views” viewpoint from presentation kind
 ## Showing the viewpoints for your role
 
 The **Role** control in the top bar lists the stakeholders the model's
-viewpoints are written for — each viewpoint's `stakeholders`, for example
-`ref :>> stakeholders = (safetyEngineer);`. Choosing one lists only the
+viewpoints are written for — each viewpoint's `memoStakeholders`, for example
+`ref :>> memoStakeholders = (safetyEngineer);`. Choosing one lists only the
 viewpoints that name that role, plus any viewpoint that names no stakeholder
 and the viewpoint a kept one is nested in. **All roles** lists everything.
 
@@ -46,23 +48,23 @@ Delete the file to go back to all roles.
 
 ## Ontology source
 
-A viewpoint usage defines its ID, title, purpose, audience, concerns, layers,
-and allowed kinds:
+A viewpoint usage defines its id, label, purpose, stakeholders, framed concerns
+and presentation:
 
 ```sysml
-part logicalArchitectureViewpoint : Viewpoint {
-    attribute :>> id = "VP-LOG";
-    attribute :>> title = "Logical Viewpoint";
+viewpoint logicalViewpoint : MemoViewpoint {
+    @MemoIdentity { :>> providedId = "VP-LOG"; :>> label = "LogicalViewpoint"; }
     attribute :>> purpose = "Describe the system's logical decomposition.";
-    attribute :>> group = "Architect & Realize";
+    ref :>> memoStakeholders = (systemArchitect);
+    attribute :>> presentationKind = (PresentationKind::blockDiagram);
 }
 ```
 
 To reuse the same view, bind the inherited feature more than once:
 
 ```sysml
-part :>> viewpointDefinition = logicalArchitectureViewpoint;
-part :>> viewpointDefinition = softwareViewpoint;
+ref :>> viewpointDefinition = logicalViewpoint;
+ref :>> viewpointDefinition = softwareViewpoint;
 ```
 
 Architect lists the same stable view under both viewpoints; it does not clone
@@ -74,34 +76,35 @@ A view binds to that viewpoint and owns a separate stable ID:
 
 ```sysml
 view gpcaActionFlowView : MemoDiagramView {
-    attribute :>> id = "VIEW-BHV-003";
-    @MemoIdentity { :>> label = "GPCA_InfusionDeliveryActionFlowView"; }
-    attribute :>> title = "GPCA Infusion Delivery Action Flow";
+    @MemoIdentity { :>> providedId = "VIEW-BHV-003"; :>> label = "GPCA_InfusionDeliveryActionFlowView"; }
     attribute :>> diagramType = "afd";
-    part :>> viewpointDefinition = logicalArchitectureViewpoint;
+    ref :>> viewpointDefinition = logicalViewpoint;
+    expose memo_examples_gpca_pump_gpca_behavior_actions::infusionDeliveryFlow::**;
 }
 ```
 
-`name` is a model attribute; it is not used as the URL identity.
+The id, not the SysML name, is the URL identity. `expose` and an optional
+`selectionQuery` decide what the view shows.
 
 ## Presentation types
 
-All authored views resolve to one of the eight SysML v2 presentation kinds
-used by Architect:
+All authored views resolve to one of the eight SysML v2 view kinds. Each has
+its own page in [Views and diagrams](../modeling/views/index.md):
 
 | View kind | Typical presentation |
 |---|---|
-| General | structure, decomposition, packages |
-| Interconnection | parts, ports, interfaces, exchanges |
-| Action flow | activity, operative flow, function flow |
-| State transition | state machines and transitions |
-| Sequence | ordered interactions and messages |
-| Grid | matrices and tabular analysis |
-| Browser | document-backed or hierarchical model browsing |
+| [General](../modeling/views/general.md) | structure, decomposition, packages, requirement and risk graphs |
+| [Interconnection](../modeling/views/interconnection.md) | parts, ports, connectors and flows |
+| [Action flow](../modeling/views/action-flow.md) | activity, operative flow, function flow |
+| [State transition](../modeling/views/state-transition.md) | state machines and transitions |
+| [Sequence](../modeling/views/sequence.md) | ordered interactions and messages |
+| [Grid](../modeling/views/grid.md) | matrices and tabular analysis |
+| [Browser](../modeling/views/browser.md) | document-backed or hierarchical model browsing |
 | Geometry | reserved by the model; renderer support is deferred |
 
-Legacy diagram codes such as `bdd`, `ibd`, `afd`, `ofd`, `ffd`, `stm`, and
-`seq` select a concrete presentation template within those kinds.
+Diagram codes such as `bdd`, `ibd`, `ucd`, `context`, `afd`, `ofd`, `ffd`,
+`stm` and `seq` select a familiar diagram within those kinds. To read an IBD,
+see [Interconnection views](../modeling/views/interconnection.md).
 
 ## Editing an internal block diagram
 
@@ -164,8 +167,8 @@ memo-architect export dot --output model.dot --viewpoint VP-LOG
 
 ## Add a view
 
-Create or specialize a `MemoView`/`MemoDiagramView` in a SysML source file,
-give it an `id`, `name`, and `title`, and bind `viewpointDefinition` to at least
-one ontology-defined viewpoint. Restarting Architect is not required for
-project source changes; the project watcher rebuilds the model and refreshes
-the view.
+Create a `MemoDiagramView` (or a `MemoView`) in a SysML source file, give it a
+`providedId` and `label` with `@MemoIdentity`, set its `diagramType`, bind
+`viewpointDefinition` to at least one viewpoint, and `expose` what it shows.
+Restarting Architect is not required for project source changes; the project
+watcher rebuilds the model and refreshes the view.

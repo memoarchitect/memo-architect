@@ -8,12 +8,7 @@ truth.
 
 ## Where Architect sits
 
-```mermaid
-flowchart LR
-    O["memo<br/><code>@memoarchitect/ontology</code><br/>SysML content"] --> T
-    T["memo-tools<br/><code>@memoarchitect/tools</code><br/>engine · CLI · project server"] --> A
-    A["memo-architect (this repository)<br/><code>@memoarchitect/architect</code><br/>React workbench + <code>memo-architect</code> bin"]
-```
+![Where Architect sits](../images/modeling/dev-stack.svg)
 
 Dependency direction is strict — `memo ← memo-tools ← memo-architect` — and
 lower layers never import from higher ones. `@memoarchitect/tools` and
@@ -39,12 +34,7 @@ Architect pins Tools exactly.
 `startProjectServer` from `@memoarchitect/tools` (the same operations the
 `memo` CLI uses) and points it at the web client:
 
-```mermaid
-flowchart LR
-    PRJ["Project directory<br/>.sysml source + memo.package.yaml"] --> SRV
-    SRV["Project server<br/>from @memoarchitect/tools<br/>parse · validate · operations"] -- "WebSocket protocol<br/>(@memoarchitect/tools/types)" --> WEB
-    WEB["React workbench<br/>Zustand store<br/>imports @memoarchitect/tools/browser"]
-```
+![How the runtime fits together](../images/modeling/dev-runtime.svg)
 
 - The server parses and validates the project and pushes model state over a
   WebSocket protocol whose event schemas live in `@memoarchitect/tools/types`.

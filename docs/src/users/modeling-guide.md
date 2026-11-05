@@ -1,64 +1,62 @@
 # Model Your Device
 
-Model one engineering argument at a time:
+Model one engineering argument at a time. This guide builds a single slice—from
+a stakeholder need to verification evidence—for an infusion pump, in SysML v2
+with MEMO kinds.
 
-```mermaid
-flowchart LR
-    Need[Need] --> Req[Requirement]
-    Req --> Function[LogicalFunction]
-    Function --> Component[LogicalComponent]
-    Cause[HazardCause] --> Hazard[Hazard]
-    Hazard --> Events[SequenceOfEvents]
-    Events --> Situation[HazardousSituation]
-    Situation --> Harm[Harm]
-    Harm --> Risk[Risk]
-    Control[RiskControlMeasure] --> Hazard
-    Control --> Residual[ResidualRisk]
-    Req --> Test[VerificationCase]
-    Control --> Test
-    Test --> Evidence[Evidence]
-```
+![The core traceability argument](../images/modeling/relationships-map.svg)
+
+The [Modeling](../modeling/index.md) section describes every kind used here,
+layer by layer.
 
 ## Define the elements
 
 ```sysml
 package infusion_pump {
-    private import memo_medical_device_library::*;
+    private import memo::*;
 
-    requirement safeDelivery : Need {
-        attribute :>> id = "NEED-001";
-        attribute :>> needKind = NeedKind::stakeholder;
+    // Requirements layer
+    requirement needSafeDelivery : Need {
+        attribute :>> needKind = NeedKind::'stakeholder';
+        @MemoIdentity { :>> providedId = "NEED-001"; :>> label = "SafeDelivery"; }
         attribute :>> statement =
             "The patient needs medication delivered without unintended over-infusion.";
     }
-
-    requirement detectOverDelivery : Requirement {
-        attribute :>> id = "REQ-001";
-        attribute :>> requirementKind = RequirementKind::system;
+    requirement reqDetectOverDelivery : Requirement {
+        attribute :>> requirementType = RequirementTypeKind::system;
+        @MemoIdentity { :>> providedId = "REQ-001"; :>> label = "DetectOverDelivery"; }
         attribute :>> statement =
-            "The pump shall detect flow above the configured limit.";
+            "The pump shall detect flow above the configured limit within 2 s.";
     }
 
-    part monitorFlow : LogicalFunction {
-        attribute :>> id = "LF-001";
+    // Functional and logical layers
+    action fnMonitorFlow : SystemFunction {
+        @MemoIdentity { :>> providedId = "FUNC-001"; :>> label = "MonitorFlow"; }
     }
-
     part safetyMonitor : LogicalComponent {
-        attribute :>> id = "LC-001";
+        @MemoIdentity { :>> providedId = "LC-001"; :>> label = "SafetyMonitor"; }
+        attribute :>> responsibility = "Independently detects over-delivery and stops the pump.";
     }
 
-    item overInfusion : Hazard {
-        attribute :>> id = "HAZ-001";
+    // Risk layer
+    item hzOverInfusion : Hazard {
+        @MemoIdentity { :>> providedId = "HZ-001"; :>> label = "OverInfusion"; }
+        attribute :>> severity = SeverityKind::catastrophic;
+    }
+    part rcIndependentMonitor : RiskControlMeasure {
+        @MemoIdentity { :>> providedId = "RC-001"; :>> label = "IndependentFlowMonitor"; }
     }
 
-    item independentMonitor : RiskControlMeasure {
-        attribute :>> id = "RC-001";
-        @MemoIdentity { :>> label = "IndependentFlowMonitor"; }
+    // Verification layer
+    verification vcShutoff : VerificationCase {
+        @MemoIdentity { :>> providedId = "VER-001"; :>> label = "OverDeliveryShutoffTest"; }
+        attribute :>> methodKind = MemoVerificationMethodKind::test;
+        attribute :>> acceptanceCriteria = "Pump stops within 2 s of flow exceeding the limit.";
+        objective { verify reqDetectOverDelivery; }
+        subject verified : Base::Anything[*] = (rcIndependentMonitor, safetyMonitor, fnMonitorFlow);
     }
-
-    part shutoffTest : VerificationCase {
-        attribute :>> id = "VER-001";
-        @MemoIdentity { :>> label = "OverDeliveryShutoffTest"; }
+    part evShutoffReport : MemoEvidence {
+        @MemoIdentity { :>> providedId = "EV-001"; :>> label = "ShutoffTestReport"; }
     }
 }
 ```
@@ -66,37 +64,44 @@ package infusion_pump {
 ## Connect the argument
 
 ```sysml
+// The requirement exists because of the need, and because of the control.
 connection : DerivesFrom
-    connect sourceDriver ::> safeDelivery
-    to targetRequirement ::> detectOverDelivery;
+    connect sourceDriver ::> needSafeDelivery
+    to targetRequirement ::> reqDetectOverDelivery;
+connection : DerivesFrom
+    connect sourceDriver ::> rcIndependentMonitor
+    to targetRequirement ::> reqDetectOverDelivery;
 
-connection : AllocatedTo
-    connect function ::> monitorFlow
-    to allocatedElement ::> safetyMonitor;
+// The function satisfies the requirement; the component owns the function.
+satisfy reqDetectOverDelivery by fnMonitorFlow;
+allocate fnMonitorFlow to safetyMonitor;
 
-connection : MitigatesHazard
-    connect riskControl ::> independentMonitor
-    to mitigatedHazard ::> overInfusion;
+// The control mitigates the hazard.
+connection : Mitigates
+    connect control ::> rcIndependentMonitor
+    to mitigatedElement ::> hzOverInfusion {
+    attribute :>> mitigationKind = MitigationKind::hazard;
+}
 
-connection : VerifiedBy
-    connect verificationTarget ::> detectOverDelivery
-    to verificationCase ::> shutoffTest;
-
-connection : VerifiedBy
-    connect verificationTarget ::> independentMonitor
-    to verificationCase ::> shutoffTest;
+// The test produced the evidence. (What it verifies is in its objective.)
+connection : ProducesEvidence
+    connect producer ::> vcShutoff
+    to producedEvidence ::> evShutoffReport;
 ```
 
 ## Review the slice
 
-Ask:
+Save the file and open it in Architect: the model reloads, and the Problems bar
+shows what the closure rules still expect. Then ask:
 
 - Is the need written in stakeholder language?
 - Is the requirement measurable?
 - Is the function independent of implementation?
 - Is component responsibility explicit?
-- Does the control genuinely reduce the hazard?
-- Does the verification case test both the requirement and the control?
+- Does the control genuinely reduce the hazard, and is the hazard's chain to
+  harm modeled?
+- Does the verification case check the requirement, with the control among the
+  subjects it exercises?
 
 Use [Choosing Elements](elements.md) and
 [Connecting Elements](relationships.md) when extending the slice.

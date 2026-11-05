@@ -22,7 +22,7 @@ variation part outputStage : LogicalComponent {
 
 ## The Variability page
 
-**Model › Variability** lists the releases, the variation points with their variants, and the
+**☰ › Advanced › Variability** lists the releases, the variation points with their variants, and the
 features with what they require, exclude, are realized by and are selected by.
 
 Tick a feature on a release to select it. That writes the `#SelectsFeature` statement into the

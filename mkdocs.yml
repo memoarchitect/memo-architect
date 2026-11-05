@@ -117,6 +117,41 @@ nav:
           - Import Existing Data: users/importing-data.md
           - End-to-End Tutorial: users/medical-device-tutorial.md
           - Command Line Usage: users/cli-usage.md
+  - Modeling:
+      - modeling/index.md
+      - Layers:
+          - modeling/layers/index.md
+          - Context: modeling/layers/context.md
+          - Operational: modeling/layers/operational.md
+          - Requirements: modeling/layers/requirements.md
+          - Functional: modeling/layers/functional.md
+          - Logical: modeling/layers/logical.md
+          - Software: modeling/layers/software.md
+          - Hardware and Physical: modeling/layers/hardware-physical.md
+          - Deployment and Realization: modeling/layers/deployment.md
+          - Risk: modeling/layers/risk.md
+          - Cybersecurity: modeling/layers/cybersecurity.md
+          - Human Factors: modeling/layers/human-factors.md
+          - Verification and Validation: modeling/layers/verification.md
+          - Variability: modeling/layers/variability.md
+      - Extensions:
+          - modeling/extensions/index.md
+          - ROS 2: modeling/extensions/ros.md
+          - Messaging: modeling/extensions/messaging.md
+          - Container and Cloud: modeling/extensions/cloud-container.md
+          - AADL: modeling/extensions/aadl.md
+          - Clinical and Anatomy: modeling/extensions/clinical-anatomy.md
+          - Write Your Own: modeling/extensions/authoring.md
+      - Views and Diagrams:
+          - modeling/views/index.md
+          - General: modeling/views/general.md
+          - Use Case and Context: modeling/views/use-case-and-context.md
+          - Interconnection (IBD): modeling/views/interconnection.md
+          - Action Flow: modeling/views/action-flow.md
+          - State Transition: modeling/views/state-transition.md
+          - Sequence: modeling/views/sequence.md
+          - Grid: modeling/views/grid.md
+          - Browser: modeling/views/browser.md
   - Concepts and Design:
       - How Architect Works: concepts/architect.md
       - Codebase Overview: developers/codebase-overview.md

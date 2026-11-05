@@ -1,173 +1,190 @@
 # Feature Tour
 
-MEMO Architect is a collection of views over one SysML v2 source model. This
-tour explains what each major feature is for, where to find it, and what to do
-next. Diagram layouts, tables, documents, and notebooks do not create separate
-copies of the engineering model.
+MEMO Architect is a set of views over one SysML v2 source model. This tour
+explains what each feature is for, where to find it, and where to read more.
+Diagrams, tables, documents and notebooks never create a separate copy of the
+engineering model.
+
+## Finding your way
+
+Open the navigation with **☰** in the top-left corner. It has five sections:
+
+| Section | Pages |
+|---|---|
+| **Home** | Dashboard; Guide and Custom Dashboards when switched on |
+| **Views** | Viewpoints, Use Cases, UI Screens, Interfaces |
+| **Model** | Architecture and Assurance explorers, Traceability Matrix, Documents; Model Diff and AI Tools when switched on |
+| **Advanced** | Variability, Projects and Impact, Release Records, Suspect Links, Design Structure Matrix, Analysis Notebooks; Design Review and Statistics when switched on |
+| **Settings** | Settings (including Rules and Methodology); Import Model and Ontology Explorer when switched on |
+
+Every page has its own URL, so you can bookmark or share any view, element or
+matrix.
 
 ## Feature availability
 
 | Availability | Meaning | How to enable |
 |---|---|---|
-| Standard | Available in the normal regulated workspace | Start Architect normally |
-| Experimental | Advanced or evolving behavior; hidden by default | Start with `memo-architect dev --experimental` |
+| Standard | Part of the normal regulated workspace | Start Architect normally |
+| Experimental | Advanced or evolving; hidden by default | Start with `memo-architect dev --experimental`, or switch individual features on in **Settings › Features** (saved per person) |
 
-The `--experimental` switch enables all experimental features together. It is
-intended for evaluation and development, not as evidence that a feature is
-release-ready.
+Experimental features are AI Tools, Ontology Explorer, Import Model, the Model
+Tools (Model Diff, Design Review, Statistics), the Guide and Custom Dashboards.
+Generated and transformed content from these features carries no
+design-control provenance; review it before committing it.
 
-## 1. Dashboard
+## Home
 
-**Purpose:** understand the model's current size, coverage, and most important
-next review action.
+### Dashboard
 
-Open **Dashboard** to see element and relationship totals, completeness,
-violations, layer coverage, and shortcuts into common review tasks. Start here
-after loading a project or after a large import.
+**Purpose:** see the model's size, coverage and the most important next review
+action.
 
-Use the Dashboard to answer:
+The Dashboard shows element and relationship totals, completeness, violations
+and layer coverage, with shortcuts into common review tasks. Start here after
+loading a project or after a large import.
 
-- Which engineering layers contain model content?
+- Which layers contain model content?
 - Where is coverage absent or unexpectedly low?
 - Are there validation issues that should block the next review?
 
-## 2. Model Explorer
+With the Guide switched on, the Dashboard also shows the next step of the
+project's method. See [Custom Dashboards](dashboards.md) for markdown
+dashboards with live embeds.
+
+## Views
+
+### Viewpoints and diagrams
+
+**Purpose:** review one concern without putting the whole model on one canvas.
+
+**☰ › Views › Viewpoints** lists the ontology's viewpoints and their views. The
+renderer follows the view's kind: general (BDD, requirements, risk chain),
+interconnection (IBD), action flow, state transition, sequence, grid and
+browser. The **Role** control narrows the list to the viewpoints written for
+your role.
+
+See [Views and diagrams](../modeling/views/index.md) for what each diagram
+shows, and [Viewpoints and Diagrams](viewpoints-diagrams.md) for how to add and
+edit views.
+
+### Use Cases
+
+**Purpose:** review operational intent from goals through scenarios.
+
+**☰ › Views › Use Cases** lists use cases grouped by declared level, each with
+the workflows that realize it and their scenarios. Select a scenario to review
+it as an operational flow; variants appear as rows you can switch between.
+
+- What goal is the actor trying to accomplish?
+- Which normal, alternate and failure scenarios are represented?
+- Which requirements and risks does each scenario exercise?
+
+See the [Operational layer](../modeling/layers/operational.md).
+
+### UI Screens
+
+**Purpose:** connect the user interface to the model.
+
+Load screen captures, detect regions, label each as a UI element and accept it
+into the model. Each region links to its traceability. See
+[Human factors](../modeling/layers/human-factors.md).
+
+### Interfaces
+
+**Purpose:** list every interface between two parts.
+
+Pick two parts—of any kind or layer—and Architect lists every interface between
+them: ports, connectors and what flows. Save the result as a markdown page. The
+same list is available from a terminal: `memo-architect interfaces <a> <b>`.
+
+## Model
+
+### Model Explorer
 
 **Purpose:** browse the model as typed engineering content instead of raw files.
 
-Open **Model Explorer**, search by name or identifier, then select an element to
-inspect its properties and relationships. The explorer groups elements by model
-family and keeps the underlying SysML source as the source of truth.
+**☰ › Model › Architecture** and **Assurance** open the explorer on one domain,
+with a system filter. The explorer groups elements by kind (requirements by
+requirement type, use cases by declared level) and, if you switch it on, by
+package. Search by name or id, select an element, and follow its relationships
+in the Properties panel.
 
-Typical workflow:
+See [Choosing Elements](elements.md), [Connecting Elements](relationships.md)
+and [Layers](../modeling/layers/index.md).
 
-1. Search for a requirement, function, component, hazard, or verification item.
-2. Open its details.
-3. Follow incoming and outgoing relationships.
-4. Use the breadcrumb to retain context while moving through the model.
+### Traceability Matrix
 
-See [Choosing Elements](elements.md) and [Connecting Elements](relationships.md).
+**Purpose:** show and close coverage gaps.
 
-## 3. Viewpoints and diagrams
+Choose rows and columns (or a quick trace such as *Requirement → Test case*),
+build the matrix, filter to missing links, and save it into the model as a view.
+With **Edit trace** on, clicking a cell writes or removes a typed relationship.
+See [Analysis Tools](analysis-tools.md#1b-traceability).
 
-**Purpose:** review a selected concern without placing the entire model on one
-canvas.
+### Documents and the DHF workbench
 
-Open **Viewpoints** and select a modeled view. Architect supports BDD, IBD,
-use-case, action-flow, sequence, state, tree, DSM, and tabular presentations.
-The appropriate renderer is selected from the view's modeled diagram type.
+**Purpose:** produce reviewable engineering documents from model content.
 
-Use focused views for context, requirements, behavior, logical decomposition,
-interfaces, physical architecture, risk, and verification. Auto-layout provides
-a starting arrangement; manual positions and sizes can be used when a review
-needs a carefully composed page.
+**☰ › Model › Documents** lists the DHF documents and their readiness.
+Documents pull requirements, risks, architecture and verification evidence
+into controlled review artifacts, with the document's diagrams drawn in.
+Download as HTML, PDF or Word.
 
-See [Viewpoints and Diagrams](viewpoints-diagrams.md).
+Generated documents are reviewed and approved through your organization's
+quality process. See [DHF Workbench](dhf-workbench.md).
 
-## 4. Documents and the DHF workbench
+## Advanced
 
-**Purpose:** produce reviewable engineering documents from model-backed content.
+| Page | Purpose | Read more |
+|---|---|---|
+| Variability | Features, variation points, variants and release selections | [Features and Design Options](variability.md) |
+| Projects and Impact | Change projects and the elements they affect | — |
+| Release Records | What each release contains | [Features and Design Options](variability.md) |
+| Suspect Links | Links whose imported record changed revision | [Analysis Tools](analysis-tools.md#1c-suspect-links) |
+| Design Structure Matrix | Dependencies and coupled clusters | [Analysis Tools](analysis-tools.md#1-design-structure-matrix-dsm) |
+| Analysis Notebooks | Live JupyterLab on the project's `analysis` folder | [Analysis Tools](analysis-tools.md#jupyter-notebooks) |
 
-Open **Documents** to browse configured DHF documents and templates. Documents
-can pull requirements, risks, architecture, verification evidence, and other
-model content into a controlled review artifact.
+### Analysis notebooks
 
-Use this feature when preparing design reviews, risk-management records,
-software lifecycle documents, verification summaries, or a DHF index. Generated
-documents should be reviewed and approved through the organization's quality
-process.
-
-See [DHF Workbench](dhf-workbench.md).
-
-## 5. Use Cases
-
-**Purpose:** review operational intent from use-case hierarchy through executable
-scenarios.
-
-Open **Use Cases** to navigate modeled operational behavior. A use case may lead
-to workflows and scenarios; scenario content can then be reviewed as an
-operational flow. This keeps the user's goal, participating actors, and expected
-system behavior connected to requirements and design.
-
-Use this area to answer:
-
-- What goal is the actor trying to accomplish?
-- Which leaf use cases require detailed workflows?
-- Which normal, alternate, and failure scenarios must be represented?
-- Which requirements and risks are exercised by each scenario?
-
-## 6. Analysis and Jupyter notebooks
-
-**Purpose:** perform reproducible Python analysis directly against textual SysML
-v2 models.
-
-Choose **Analysis → Jupyter Notebooks** to open the live local JupyterLab server;
-Architect starts it for you and stops it when it exits.
-Every project created by `memo-architect init` includes `analysis/Samples/README.md` and
-seven model-independent notebooks:
+Architect starts JupyterLab for you when you open **Analysis Notebooks**, and
+stops it when Architect exits. Every project created by `memo-architect init`
+includes `analysis/Samples/README.md` and seven model-independent notebooks:
 
 | Notebook | Analysis |
 |---|---|
 | Model overview | Semantic composition and diagnostic summary |
 | Architecture hotspots | Busy containers and deep ownership paths |
-| Model quality | Diagnostics, unnamed elements, repeated names, and empty definitions |
+| Model quality | Diagnostics, unnamed elements, repeated names and empty definitions |
 | Change-impact explorer | Structural neighborhood of a selected element |
 | Model charts | Semantic bar chart and diagnostic donut chart |
 | Ownership graph | SVG graph of model ownership relationships |
 | Model inventory table | HTML inventory with filters and CSV export |
 
 The samples read the model through `analysis/memo_model.py`, compiled by the
-compiler (`toolchain.compiler`: the project's, or your own default, set with the **Compiler** control in the toolbar or `memo-architect config set compiler`, where the project names none). See [Analysis Tools](analysis-tools.md#jupyter-starts-for-you)
-for how Jupyter is started and what to do when it is not installed.
+project's compiler (or your own default where the project names none; set it
+with the **Compiler** control or `memo-architect config set compiler`).
 
-See [Analysis Tools](analysis-tools.md).
+## Validation and the Problems bar
 
-## 7. Validation and the Problems bar
+**Purpose:** keep completeness and consistency gaps visible during review.
 
-**Purpose:** keep completeness and consistency gaps visible throughout review.
+The Problems bar at the bottom combines validation violations, completeness and
+analysis findings. Expand it and select a finding to go to the affected
+element.
 
-The bottom Problems bar combines validation violations, completeness, and
-analysis findings. Expand it to inspect individual issues and navigate back to
-the affected model content.
-
-Treat a clean display as evidence that configured rules passed—not as proof that
-the design is safe or complete. Rule coverage and human review remain necessary.
-
-See [Validation and Closure](validation.md).
-
-## 8. Experimental tools
-
-Start Architect with `--experimental` to evaluate the following hidden-by-default
-surfaces:
-
-| Feature | Purpose |
-|---|---|
-| Ontology Explorer | Inspect available element kinds, layers, and relationship definitions |
-| Import Model | Bring supported external data into the project workflow |
-| Design Structure Matrix | Review dependencies and connected clusters |
-| Traceability Matrix | Compare coverage across source and target model families |
-| Statistics Dashboard | Inspect model-wide counts and distributions |
-| Model Diff | Compare model states and changed engineering content |
-| Review Dashboard | Collect review-oriented status in one workspace |
-| Guide | Where the model stands against its method: each step done, open or blocked for a workspace, and the next step |
-| AI Tools | Ask model-aware questions and generate supported SysML drafts |
-
-Ontology and Import appear under **Tools** rather than as permanent top-level
-navigation items. AI Tools remains separate because it is an interactive
-workspace. Review generated or transformed content before committing it.
-
-See [Intelligence and AI](ai-features.md) for AI configuration and limitations.
+A clean display means the configured rules passed—not that the design is safe
+or complete. Rule coverage and human review remain necessary. See
+[Validation and Closure](validation.md).
 
 ## Suggested first session
 
-1. Use **Dashboard** to identify a coverage gap.
-2. Find the relevant element in **Model Explorer**.
-3. Review it within a focused **Viewpoint**.
-4. Follow related operational behavior in **Use Cases**.
-5. inspect validation findings in the **Problems** bar.
-6. Open **Analysis → Jupyter Notebooks** and run Model Overview or Model Quality.
-7. Generate or review the relevant artifact under **Documents**.
+1. Use the **Dashboard** to find a coverage gap.
+2. Find the relevant element in the **Model Explorer**.
+3. Review it in a focused **Viewpoint**.
+4. Follow related behavior in **Use Cases**.
+5. Inspect findings in the **Problems** bar.
+6. Build a **Traceability Matrix** for the gap you found.
+7. Generate or review the relevant artifact in **Documents**.
 
 For a guided example, continue with [First Workbench Session](first-session.md)
 or the [Worked GPCA Example](gpca-example.md).
-

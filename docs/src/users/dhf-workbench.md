@@ -42,7 +42,7 @@ save a reusable Markdown template there and create the first document from it.
 Templates remain reusable and can create more than one document.
 
 ### Reviewing Status
-Open the **DHF Dashboard** from the top toolbar to see the status of your entire file.
+Open **☰ › Model › Documents** to see the status of your entire file.
 - **Complete:** All required sections have been populated with model data.
 - **Partial:** Some required sections are empty or have validation errors.
 - **Empty:** No model data has been allocated to this document type yet.

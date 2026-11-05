@@ -1,10 +1,10 @@
 # Analysis Tools
 
-MEMO includes a suite of advanced analysis tools for design verification, dependency management, and risk analysis. These tools are accessible from the top toolbar in the Workbench.
+Architect includes analysis tools for coverage, dependency management and risk analysis. Open the navigation (☰): the Traceability Matrix is under **Model**, and the Design Structure Matrix, Analysis Notebooks and Suspect Links are under **Advanced**. For what each grid shows, see [Grid views](../modeling/views/grid.md).
 
 ## Jupyter notebooks
 
-**Analysis → Jupyter Notebooks** opens the project's live JupyterLab workspace. Architect
+**☰ › Advanced › Analysis Notebooks** opens the project's live JupyterLab workspace. Architect
 starts JupyterLab itself the first time you open the view (see
 [Jupyter starts for you](#jupyter-starts-for-you)). New projects created with `memo-architect init` contain an
 `analysis/Samples` folder with seven sample notebooks:
@@ -97,13 +97,9 @@ one logical architecture, and they belong on an axis together. Picking the
 `Logical` layer gives you that whole tree; picking `LogicalComponent` inside it
 narrows to the leaves.
 
-Both matrices **open on a pair derived from the model**, not from a fixed list:
-
-- The DSM opens on the layer whose elements depend on each other the most,
-  against itself — the reading a structure matrix exists for.
-- Traceability opens on the two layers the model links across the most —
-  requirements against verification in one project, functions against
-  components in another.
+Both matrices **open empty**: nothing is computed until you choose the axes.
+The left panel lists the matrices already saved in the model, by package, so a
+review can reopen the same matrix every time.
 
 ### What you choose
 
@@ -153,19 +149,26 @@ for *reading* the dependency structure, traceability is for *establishing* it.
 
 ### Usage
 
-1. Open **Tools → Traceability Matrix**.
-2. Pick a **preset** (`Requirement → Function`, `IEC 62304: Requirement →
-   Test`, …) as a starting point, then adjust **Rows**, **Columns**, the
-   per-axis element filter and **Trace via** freely — presets fill the pickers,
-   they are not modes, and applying one clears any hand-picked elements from
-   the previous configuration. A preset names several candidate types per axis
-   and the axis takes the first one this model actually has, so it can never
-   assemble the mixed axis the pickers refuse to.
-3. Coverage is reported in the header: how many rows carry at least one trace.
+1. Open **☰ › Model › Traceability Matrix**. The panel on the left lists the
+   saved matrices by package; select one to open it, or choose **New**.
+2. In the builder, choose the **Rows** and **Columns**: an element type the
+   model holds (requirement types are offered separately), or a saved query.
+   Optionally tie the matrix to one system or system of systems, and choose the
+   **Relations** counted as a trace.
+3. Or pick a **quick trace** instead of the pickers: *User need → System
+   requirement*, *Risk → Software requirement*, *Requirement → Test case* and
+   others. A quick trace fills the rows, columns and relations for you.
+4. **Build**. The result shows as a **Table** (rows against columns) or a
+   **List** (each row with the items it links to). Filter to rows **With links**
+   or **Missing** links, and order by most or fewest links.
+5. **Save matrix** writes the definition into its package, so the matrix is
+   part of the model, reviewed and versioned like any view. **Edit view** changes
+   a saved matrix; **Duplicate**, **Rename**, **Move** and **Delete** are on each
+   entry in the panel.
 
 ### Adding and removing links
 
-Turn on **Edit links**:
+Turn on **Edit trace**:
 
 - Clicking an **empty** cell offers the relationship types the ontology says
   are legal between those two elements, with the types you are currently
@@ -177,8 +180,8 @@ Turn on **Edit links**:
   first.
 
 Editing needs a running dev server, since every change is written to source.
-An anonymous connection (one with no declared name in the SysML) can be read
-but not removed by id; name it in the source first.
+An anonymous connection (one with no declared name in the SysML) can be removed
+when Architect recorded where it is declared; otherwise name it in the source first.
 
 ---
 
@@ -187,7 +190,7 @@ but not removed by id; name it in the source first.
 When a requirements tool, PLM or quality system stays the owner of some records,
 import them as a *source* (Import Model › Sources; in the command line,
 `memo-architect import source`). A link you author to an imported record can note
-the revision it was made against. After a re-import, **Assurance › Suspect Links**
+the revision it was made against. After a re-import, **☰ › Advanced › Suspect Links**
 lists the links whose record has moved to another revision or left its source.
 
 - **Mark reviewed** rewrites the revision the link was made against to the record's
@@ -198,7 +201,7 @@ lists the links whose record has moved to another revision or left its source.
 
 The Sources panel previews a re-import before it writes anything: what is new,
 what changed, what left the export, and how many links each change makes suspect.
-Import Model is an experimental feature (`--experimental`).
+Import Model is an experimental feature: start Architect with `--experimental`, or switch it on in **Settings › Features**.
 
 ## 2. Consistency Analysis
 
@@ -208,9 +211,9 @@ The Consistency Panel provides real-time feedback on logical gaps in your model 
 *Consistency Panel showing unallocated functions and missing interface definitions.*
 
 ### Key Checks
-- **Functional Allocation:** Identification of `Function` elements that are not yet allocated to a `Component`.
-- **Interface Needs:** Detection of `DataFlow` relationships that cross `Component` boundaries without a defined `Interface`.
-- **Requirement Orphans:** Identification of requirements that do not have a parent (Need) or a child (Design Output).
+- **Functional allocation:** functions (`SystemFunction`, `ComponentFunction`) not yet allocated to a responsible element.
+- **Interface needs:** exchanges that cross a component boundary without a defined interface.
+- **Requirement orphans:** requirements with no driver (`DerivesFrom`) or nothing that satisfies them.
 
 ### Usage
 - The **Problems** panel at the bottom lists consistency violations.
@@ -221,7 +224,7 @@ The Consistency Panel provides real-time feedback on logical gaps in your model 
 
 ## 3. Risk Analysis Views
 
-MEMO provides specialized views for Failure Modes and Effects Analysis (FEMA) and Fault Tree Analysis (FTA).
+MEMO provides specialized views for Failure Modes and Effects Analysis (FMEA) and Fault Tree Analysis (FTA). The kinds behind them are described in the [Risk layer](../modeling/layers/risk.md).
 
 ### FMEA Mode
 The FMEA view presents a tabular interface for failure analysis:
@@ -231,6 +234,6 @@ The FMEA view presents a tabular interface for failure analysis:
 
 ### Fault Tree (FTA) View
 The FTA view uses a specialized layout for logic gates:
-- **Top Events:** Usually linked to a `HazardousSituation`.
-- **Intermediate & Basic Events:** Linked via `FaultTreeGate` (AND/OR) relationships.
-- **Auto-Layout:** ELK.js provides a hierarchical tree layout optimized for temporal and logical flow.
+- **Top events:** usually linked to a `HazardousSituation`.
+- **Intermediate and basic events:** `FaultTreeNode`s joined by `InputToGate` (AND/OR) relationships; `MinimalCutSet` records the result.
+- **Layout:** a hierarchical tree layout, top event first.

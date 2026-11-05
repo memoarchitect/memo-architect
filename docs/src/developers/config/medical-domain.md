@@ -60,21 +60,10 @@ criteria, risk acceptability, approvals, and regulatory interpretation.
 A safety-risk argument connects causes, hazards, event sequences, hazardous
 situations, harms, controls, residual-risk records, verification, and evidence.
 
-```mermaid
-flowchart LR
-    Cause[HazardCause] --> Hazard[Hazard]
-    Cause[HazardCause] --> Hazard
-    Hazard --> Sequence[SequenceOfEvents]
-    Sequence --> Situation[HazardousSituation]
-    Situation --> Harm[Harm]
-    Harm --> Risk[Risk]
-    Control[RiskControlMeasure] -->|MitigatesHazard| Hazard
-    Risk --> Control
-    Control --> Residual[ResidualRisk]
-    Benefit[Benefit] --> Residual
-    Control -->|VerifiedBy| Test[VerificationCase]
-    Test -->|ProducesEvidence| Evidence[Evidence]
-```
+![Risk layer — the ISO 14971 chain](../../images/modeling/layer-risk.svg)
+
+The [Risk layer](../../modeling/layers/risk.md) page explains each kind and
+relationship in the chain.
 
 ### IEC 62304 software argument
 

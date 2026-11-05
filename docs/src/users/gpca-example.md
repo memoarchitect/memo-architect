@@ -1,82 +1,86 @@
-# Worked GPCA example
+# Worked GPCA Example
 
 The bundled Generic Patient-Controlled Analgesia (GPCA) pump is the complete
 MEMO reference model. It is a research example, not a reusable device design:
-use its organization, traceability patterns, and review views, but never copy
-its requirements, risk estimates, acceptance criteria, or evidence as a claim
+use its organization, traceability patterns and review views, but never copy
+its requirements, risk estimates, acceptance criteria or evidence as a claim
 about another product.
 
-## What the example proves
+Open it with:
 
-GPCA is deliberately broader than a diagram demo. Its catalog contains the
-clinical context, operational scenarios, requirements, functional behavior,
-logical/physical/software architecture, safety risk, cybersecurity, V&V, and
-document views. `gpca_trace.sysml` connects those records with typed
-relationships; a view selects a review-sized projection of that same source.
-
-Use one scenario to orient yourself. A patient requests a bolus during a
-lockout interval. The model should show that the request is recognized, the
-limit is enforced, no unsafe command is issued, the outcome is logged, and the
-relevant requirement and risk control have verification coverage.
-
-```mermaid
-flowchart LR
-    Patient[Patient] --> Request[Request bolus]
-    Request --> Limit[Enforce lockout and dose limits]
-    Limit --> Decision{Bolus permitted?}
-    Decision -->|yes| Deliver[Command pump]
-    Decision -->|no| Log[Record rejected request]
-    Deliver --> Log
-    Limit --> Requirement[Lockout requirement]
-    Requirement --> Test[Verification case]
-    Test --> Evidence[Evidence]
+```bash
+memo-architect --example gpca
 ```
 
-The arrows in this picture show the direction of the argument or outcome, not
-a mandatory project phase. In the model, follow the relationship label and its
-source/target roles for the authoritative meaning.
+## What the example shows
+
+GPCA is deliberately broader than a diagram demo. Its catalog covers the
+clinical context, operational scenarios, requirements, functional behavior,
+logical, physical and software architecture, safety risk, cybersecurity,
+verification and validation, and document views. `gpca_trace.sysml` connects
+those records with typed relationships; each view selects a review-sized
+projection of that same source.
+
+Use one scenario to orient yourself: **a patient requests a bolus during a
+lockout interval**. The model should show that
+
+1. the request is recognized (`oaRequestBolus`, an operative action);
+2. the dose and lockout limits are checked (`fnEnforceLimits`, a system
+   function in the `fcPatientBolus` flow);
+3. no unsafe command is issued, and the outcome is logged;
+4. the requirement that says so (`reqCs25`) derives from the request, the
+   over-infusion hazard and its risk estimate;
+5. the risk control (`lockoutControl`) mitigates the hazard; and
+6. a verification case (`vcLockout`) verifies the requirement, exercises the
+   control, and produces evidence.
+
+![Action flow view](../images/modeling/view-action-flow.svg)
+
+The figure is an illustration of this scenario as an action flow; the model's
+own *Infusion Delivery Action Flow* view (`VIEW-BHV-003`) shows the full
+version. In the model, follow each relationship's own ends for the
+authoritative direction.
 
 ## Read the model in a useful order
 
-| Read this | Then answer this question | Start with |
+| Read this | To answer | Files (under `model/catalog/`) |
 | --- | --- | --- |
-| Context and operational catalog | Who is using the pump, in which setting, and what can go wrong in use? | `model/catalog/gpca_context.sysml`, `gpca_operational.sysml` |
-| System and behavior catalog | What is supposed to happen for a bolus, alarm, or startup? | `gpca_system.sysml`, `gpca_behavior_actions.sysml`, `gpca_behavior_modes.sysml` |
-| Requirements catalog | What measured or observable claim constrains that behavior? | `gpca_requirements.sysml` |
-| Architecture and interfaces | Which hardware and software elements own the behavior and exchange information? | `gpca_architecture.sysml`, `gpca_interfaces.sysml`, `gpca_physical.sysml` |
-| Risk and cybersecurity catalog | What harm or compromise is being controlled, and by what control? | `gpca_risk.sysml`, `gpca_cybersecurity.sysml` |
-| Verification and trace catalog | What proves the claim, and what remains unconnected? | `gpca_verification.sysml`, `gpca_trace.sysml` |
+| Context and operational catalog | Who uses the pump, where, and what can go wrong in use? | `gpca_context.sysml`, `gpca_operational.sysml` |
+| System and behavior catalog | What should happen for a bolus, an alarm, or startup? | `gpca_system.sysml`, `gpca_behavior_actions.sysml`, `gpca_behavior_modes.sysml` |
+| Requirements catalog | Which measurable claims constrain that behavior? | `gpca_requirements.sysml` |
+| Architecture and interfaces | Which hardware and software own the behavior and exchange information? | `gpca_architecture.sysml`, `gpca_interfaces.sysml`, `gpca_physical.sysml` |
+| Risk and cybersecurity catalog | What harm or compromise is controlled, and by what? | `gpca_risk.sysml`, `gpca_cybersecurity.sysml` |
+| Verification and trace catalog | What proves each claim, and what is still unconnected? | `gpca_verification.sysml`, `gpca_trace.sysml` |
 
-Do not start by reading every folder. Choose one question, find the named
-element, and follow its typed relationships in both directions. Repeat with
-the alarm-response and startup scenarios to see which parts are reused and
+Do not start by reading every file. Choose one question, find the named element
+in the explorer, and follow its typed relationships in both directions. Repeat
+with the alarm-response and startup scenarios to see which parts are reused and
 which are scenario-specific.
 
 ## Use the views as review tools
 
-| Review question | GPCA view | What a good review checks |
-| --- | --- | --- |
-| What is outside the pump boundary? | System context | Actors, external systems, and exchanges are explicit. |
-| How is the device decomposed? | System decomposition (BDD) | Containment is clear without claiming signal direction. |
-| What flows across components? | Device interconnect (IBD) | Ports and exchanges point from provider to consumer. |
-| Which component owns a function? | Function allocation | An allocated function has a responsible design element. |
-| What state or action happens next? | Mode state / action flow | The nominal and safety paths are distinguishable. |
-| How does a fault reach harm? | Risk chain or FMEA | A control appears in the chain and is not merely a label. |
-| What still lacks proof? | Verification coverage | Requirements and controls have meaningful cases and evidence. |
+| Review question | GPCA view | What a good review checks | How to read it |
+| --- | --- | --- | --- |
+| What is outside the pump boundary? | System context (`VIEW-CTX-101`) | Actors, external systems and exchanges are explicit. | [Context view](../modeling/views/use-case-and-context.md#context-view) |
+| What do users want to do? | Use cases (`VIEW-OPS-101`) | Every goal has a realizing workflow. | [Use case view](../modeling/views/use-case-and-context.md#use-case-view) |
+| How is the device decomposed? | System decomposition (`VIEW-LOG-002`) | Containment is clear without claiming signal direction. | [General view](../modeling/views/general.md) |
+| What flows between parts? | Device interconnect (`VIEW-LOG-003`) | Ports and flows point from provider to consumer. | [Interconnection view](../modeling/views/interconnection.md) |
+| Which part owns each function? | Function allocation (`VIEW-FUN-102`) | Every function has a responsible element. | [Grid view](../modeling/views/grid.md) |
+| What happens next? | Mode states (`VIEW-BHV-001`), action flow (`VIEW-BHV-003`), scenario sequence (`VIEW-BHV-002`) | Nominal and safety paths are distinguishable. | [State](../modeling/views/state-transition.md), [action flow](../modeling/views/action-flow.md), [sequence](../modeling/views/sequence.md) |
+| How does a fault reach harm? | Risk chain (`VIEW-RISK-101`), FMEA (`VIEW-RISK-102`) | Each control appears in the chain, not only as a label. | [Risk layer](../modeling/layers/risk.md) |
+| What still lacks proof? | Verification coverage (`VIEW-VER-101`) | Requirements and controls have meaningful cases and evidence. | [Verification layer](../modeling/layers/verification.md) |
 
-BDD and IBD are structural views: a BDD explains definitions and containment;
-an IBD explains internal parts, ports, and directed exchanges. Treat an action
-or state diagram as behavior, not as a substitute for either structural view.
+## Source and scope
 
-## Source trail and scope
+Architect runs the example from its installed `@memoarchitect/ontology`
+dependency, in `node_modules/@memoarchitect/ontology/examples/gpca-pump`
+(opened as a disposable copy, so edits last only for the session). The
+`catalog` directory owns the
+elements, `gpca_trace.sysml` owns cross-layer connections, and
+`catalog/viewpoints` holds the purpose-built views, including document views so
+review artifacts come from the same source rather than a second record system.
 
-The source is in `memo/examples/gpca-pump/model` in the `memo-meta` workspace.
-The `catalog` directory owns canonical elements, `gpca_trace.sysml` owns
-cross-layer connections, and `views` contains purpose-built review selections.
-The model also includes document views so that review artifacts can be derived
-from the same source rather than becoming a second record system.
-
-For neutral renderer fixtures that use no MEMO types, see the separate
-`memo/examples/sysml-diagram-samples` project. It contains standard SysML v2
-BDD, IBD, requirements, and action-flow inputs; it is intentionally not part
-of GPCA.
+For neutral renderer fixtures that use no MEMO types, see the
+`standard-sysml-diagrams` example (`memo-architect --example
+standard-sysml-diagrams`). It contains standard SysML v2 BDD, IBD, requirements
+and action-flow inputs, and is intentionally not part of GPCA.

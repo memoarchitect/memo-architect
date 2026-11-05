@@ -8,7 +8,9 @@ through **Open diagram**. Viewing is not restricted — drag to pan, pinch or
 ⌘/Ctrl-scroll to zoom, and the corner controls zoom in, zoom out, fit the whole
 diagram, and go full screen.
 
-Open **Tools → Custom Dashboards**, or go to `/dashboards`.
+Custom Dashboards is an experimental feature: start Architect with
+`--experimental`, or switch it on in **☰ › Settings › Features**. Then open
+**☰ › Home › Custom Dashboards**, or go to `/dashboards`.
 
 ## Shared or only me
 

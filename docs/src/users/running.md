@@ -18,6 +18,13 @@ opening a browser:
 memo-architect dev --port 4173 --no-open
 ```
 
+To look at an earlier state of the model without checking it out, open it
+read-only at a commit, tag or branch:
+
+```bash
+memo-architect dev --at v1.2.0
+```
+
 The server watches project SysML files. After saving a change, confirm that the
 model reloads and review any new validation findings.
 
@@ -56,5 +63,5 @@ memo-architect --example standard-sysml-diagrams
 memo-architect --example gpca --read-only
 ```
 
-The examples are the quickest way to learn the workbench before opening your
-own project.
+`memo-architect --list` prints every bundled example. The examples are the
+quickest way to learn the workbench before opening your own project.

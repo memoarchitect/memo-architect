@@ -16,34 +16,33 @@ You will:
 ## 1. Launch the example
 
 ```bash
-git clone https://github.com/memoarchitect/memo-architect.git
-cd memo-architect
-corepack enable
-pnpm install
-pnpm run build
-pnpm run example:dev
+memo-architect --example gpca
 ```
+
+The example opens in a disposable copy: you can edit it freely, and the edits
+are discarded when Architect exits. The copy's folder is printed on startup;
+you will need it in steps 3 and 4.
 
 ## 2. Follow the patient-bolus scenario
 
 In the workbench, locate:
 
-1. patient actor;
-2. request-bolus operational activity;
-3. titrated-analgesia capability;
-4. patient-bolus functional chain;
-5. enforce-limits and command-pump functions;
-6. associated requirements;
-7. overdose hazard and controls;
-8. verification cases.
+1. the patient (`actorPatient`, a `User`);
+2. the request-bolus operative action (`oaRequestBolus`);
+3. the *Deliver PCA therapy* use case and its workflows;
+4. the patient-bolus functional flow (`fcPatientBolus`);
+5. the enforce-limits and command-pump functions (`fnEnforceLimits`, `fnCommandPump`);
+6. the requirements derived from the request (`reqCs25` and others);
+7. the over-infusion hazard (`overdoseHazard`) and its controls;
+8. the verification cases that verify those requirements (`vcLockout`).
 
-Use incoming and outgoing relationships to move between them.
+Use incoming and outgoing relationships in the Properties panel to move between
+them. The [Layers](../modeling/layers/index.md) pages explain each kind you
+meet.
 
 ## 3. Read the source
 
-In a `memo-meta` development checkout, the editable source is under
-`memo/examples/gpca-pump/model`. Standalone Architect runs the same example
-from its installed `@memoarchitect/ontology` dependency.
+Open the `model/catalog` folder of the copy in your editor:
 
 - `catalog/gpca_context.sysml`
 - `catalog/gpca_operational.sysml`
@@ -59,10 +58,10 @@ connection around it.
 
 ## 4. Validate
 
-From the repository root:
+In a second terminal, from the copy's folder:
 
 ```bash
-pnpm --dir ../memo-tools run example:validate
+memo validate .
 ```
 
 Choose one finding or one trace you want to understand. State the engineering
@@ -80,6 +79,6 @@ workbench update. Rerun validation. Confirm that:
 
 ## 6. Apply the pattern to your project
 
-Create a new project with `memo-architect init`, then build one vertical scenario slice.
+Create a new project with `memo-architect init my-device`, then build one vertical scenario slice.
 Use [Start a New Project](new-project.md) and
 [Model Your Device](modeling-guide.md) as the checklist.

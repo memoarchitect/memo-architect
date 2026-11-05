@@ -46,5 +46,6 @@ risk acceptability, or design approval. Those remain accountable engineering
 and quality-system decisions.
 
 Next, open [First Workbench Session](../users/first-session.md) to explore the
-included GPCA model, or [Viewpoints and Diagrams](../users/viewpoints-diagrams.md)
+included GPCA model, read [Modeling](../modeling/index.md) to see what each layer
+and view kind expresses, or [Viewpoints and Diagrams](../users/viewpoints-diagrams.md)
 to choose a review lens for your own project.

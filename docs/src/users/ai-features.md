@@ -17,8 +17,8 @@ Ollama or vLLM).
 
 ### From the workbench
 
-1. Click **DHF** in the top navigation, then **Model Assistant** under **AI Tools** in
-   the sidebar. (Both AI tools currently live under the DHF tab; `/ask` and
+1. Switch on AI Tools (start with `--experimental`, or **☰ › Settings › Features**),
+   then open **☰ › Model › AI Tools** and choose **Model Assistant**. (`/ask` and
    `/generate` also work as direct URLs.)
 2. Click **⚙ Settings**.
 3. Pick a provider, optionally override the model, paste your key, and press **Save**.
@@ -80,7 +80,7 @@ effect, because the higher-precedence source would still win.
 
 ## 2. Model Assistant
 
-**DHF → AI Tools → Model Assistant** (or go straight to `/ask`)
+**☰ › Model › AI Tools › Model Assistant** (or go straight to `/ask`)
 
 A multi-turn conversation about your model. Unlike a plain chat window, the assistant has
 tools: it can search elements, read one in full, follow traceability chains, and read
@@ -126,7 +126,7 @@ is held to exactly the same standard.
 
 ## 3. SysML Generator
 
-**DHF → AI Tools → SysML Generator** (or go straight to `/generate`)
+**☰ › Model › AI Tools › SysML Generator** (or go straight to `/generate`)
 
 Where the assistant edits an existing model, the generator writes new SysML from a
 description. MEMO supplies your ontology — the kinds and relationships your project

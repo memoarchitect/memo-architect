@@ -1,22 +1,38 @@
-# Architect command line
+# Command Line Usage
 
-`memo-architect` opens a MEMO project as an interactive workbench or builds a
-static viewer. Run it from the project root — the directory containing
-`model/methodology/project.sysml`, the project's native entrypoint. A project stays a
-project when every YAML file beside it is deleted.
+Two commands are installed with Architect:
+
+- **`memo-architect`** opens a project in the workbench, builds static viewers,
+  and owns the project commands: `init`, `import`, `export`, `install`, `dhf`,
+  `rules`, `new` and more.
+- **`memo`** (from MEMO Tools) compiles, validates, evaluates and packages a
+  model. It is what CI runs.
+
+Run both from the project root—the directory containing
+`model/methodology/project.sysml`, the project's native entrypoint.
 
 ## Discover what is available
 
 ```bash
 memo-architect --help
-memo-architect examples
+memo-architect --list
+memo --help
 ```
 
-`examples` lists the example IDs bundled by the installed ontology package.
-The choices come from the installed content manifest, so the CLI does not rely
-on a hard-coded list that can drift from the package. A new project starts from
-one empty skeleton (`memo-architect init`) or from a copy of an example
-(`memo-architect init --example <id>`).
+`--list` (or `memo-architect examples`) prints the examples bundled with the
+installed ontology package and how to run each.
+
+## Create a project
+
+```bash
+memo-architect init my-device
+```
+
+`init` always creates a new, empty project; to look at a worked model, open an
+example with `--example` instead. `init` creates `package.json`, `memo.package.yaml`, `memo.lock.yaml`,
+`syside.toml`, the `model/` skeleton and `analysis/Samples`, then installs the
+ontology. `--no-install` skips the install; `--toolchain.compiler syside` or
+`opensysml` chooses the compiler. See [Start a New Project](new-project.md).
 
 ## Open a project
 
@@ -29,28 +45,79 @@ memo-architect dev
 |---|---:|---|
 | `-p, --port <port>` | `3000` | HTTP port for the workbench. |
 | `--no-open` | off | Start the server without opening a browser. |
+| `--keep-alive` | off | Keep running after the last browser tab closes. |
+| `--experimental` | off | Enable every experimental surface (AI Tools, Ontology, Import, Model Tools, Guide, Custom Dashboards). |
+| `--at <ref>` | — | Open the model as it was at a commit, tag or branch, read-only. |
+| `--release <record>` | — | Open the version a release record names, read-only. |
 
-Architect requires a project. Running the command without `dev`, `build`, or
-`--example` prints help instead of starting an empty workbench.
+Architect requires a project. Running it with no command, `--example` or
+`--list` prints help instead of starting an empty workbench.
 
-## Open a worked example
+## Open a bundled example
 
 ```bash
-memo-architect examples
 memo-architect --example gpca
+memo-architect --example ros-mobile-robot
 memo-architect --example standard-sysml-diagrams --read-only
 ```
 
-| Option | Default | Meaning |
-|---|---:|---|
-| `--example <id>` | — | Open an example listed by `memo-architect examples`. |
-| `--read-only` | off | Use a disposable copy; edits are discarded on exit. |
-| `-p, --port <port>` | `3000` | HTTP port for the workbench. |
-| `--no-open` | off | Do not open a browser. |
+An example from an installed package opens in a disposable copy, so the
+dependency is never modified. A writable local ontology checkout opens in
+place; `--read-only` forces the disposable copy.
 
-A writable local ontology checkout is opened in place. An example from an
-installed package is copied to a disposable directory automatically so a
-dependency is never modified.
+## Validate and compile
+
+```bash
+memo validate .
+memo validate . --format junit --output validation.xml
+memo compile .
+```
+
+`memo validate` runs the compiler (stage 1) and then MEMO's closure rules.
+See [Validation and Closure](validation.md).
+
+## Choose the compiler
+
+```bash
+memo-architect config set compiler opensysml            # just for you
+memo-architect config set compiler syside --project     # for everyone on the project
+memo-architect config get
+```
+
+The project's setting wins over yours; yours applies where the project names
+none. The **Compiler** control in the top bar does the same.
+
+## Import, export and documents
+
+```bash
+memo-architect import template elements --output element-template.csv
+memo-architect import csv requirements.csv --dry-run
+memo-architect export json --output model.json
+memo-architect export dot --output model.dot --viewpoint VP-LOG
+memo-architect export dhf --format docx
+memo-architect dhf review-packet
+```
+
+See [Import Existing Data](importing-data.md) and [DHF Workbench](dhf-workbench.md).
+
+## Other project commands
+
+| Command | Purpose |
+|---|---|
+| `memo-architect interfaces <a> <b>` | List every interface between two elements, of any kind or layer. |
+| `memo-architect anatomy generate` | Generate the anatomy package the project's selectors ask for (see [Clinical and anatomy](../modeling/extensions/clinical-anatomy.md)). |
+| `memo-architect install [source]` | Install locked MEMO content, or add a package from git, npm or a path. |
+| `memo-architect lock` / `upgrade [version]` | Re-lock the ontology, or move to one release of Architect, Tools and Ontology. |
+| `memo-architect ontology show` | Show the resolved kinds, relationships and rules. |
+| `memo-architect new requirement` | Write a requirement stub from an EARS pattern. |
+| `memo-architect new rule` / `new kind` / `new package` / `new plugin` | Scaffold a rule, kind, package or plugin. |
+| `memo-architect rules` | Manage consistency rules. |
+| `memo-architect ids rebase` | Renumber a branch's ids that clash with the target branch's. |
+| `memo-architect migrate-layout` | Move diagram layouts from `.viewlayout` companions into the views. |
+| `memo-architect mcp` | Serve the model to AI coding tools (see [AI Coding Tools](mcp-cursor.md)). |
+| `memo-architect ask` / `generate` | Ask about the model, or draft SysML, with an LLM (see [Intelligence and AI](ai-features.md)). |
+
+Every command has `--help`.
 
 ## Start only JupyterLab
 
@@ -58,17 +125,11 @@ dependency is never modified.
 memo-architect jupyter
 ```
 
-Starts JupyterLab for the project in the current directory (its `analysis` folder) without
-the workbench. It prints the URL, runs in the foreground, and stops JupyterLab on Ctrl-C or
-SIGTERM. `memo-architect dev` already starts Jupyter for you when you open the Analysis
-view; this command is for using JupyterLab alone.
-
-| Option | Default | Meaning |
-|---|---:|---|
-| `-p, --port <port>` | a free port | Port for JupyterLab. |
-
-Architect finds `jupyter` on `PATH`; set `MEMO_JUPYTER_BIN` to use another executable.
-See [Analysis Tools](analysis-tools.md#jupyter-starts-for-you).
+Starts JupyterLab for the project's `analysis` folder without the workbench,
+prints the URL, and stops JupyterLab on Ctrl-C. `memo-architect dev` already
+starts Jupyter when you open **Analysis Notebooks**. `-p, --port` fixes the
+port; set `MEMO_JUPYTER_BIN` to use a `jupyter` that is not on `PATH`. See
+[Analysis Tools](analysis-tools.md#jupyter-starts-for-you).
 
 ## Build a static viewer
 
@@ -81,14 +142,7 @@ memo-architect build --output review-viewer --standalone
 |---|---:|---|
 | `-o, --output <dir>` | `dist` | Output directory. |
 | `--standalone` | off | Inline JavaScript and CSS into `index.html`. |
+| `--experimental` | off | Include the experimental surfaces. |
 
-## Create a project first
-
-Project creation, validation, import, export, and package management belong to
-the [`memo` CLI](https://memoarchitect.github.io/memo-tools/reference/commands/):
-
-```bash
-memo-architect init my-device
-memo-architect init my-pump --example gpca
-memo validate my-device
-```
+Keep the source commit, the lock file and the build command with the review
+record.

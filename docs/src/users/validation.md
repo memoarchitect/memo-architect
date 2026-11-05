@@ -1,9 +1,13 @@
 # Validation and Closure
 
-Validation checks two different concerns:
+Validation runs in two stages:
 
-- whether the source can be parsed and resolved; and
-- whether the connected model meets semantic and closure expectations.
+1. **Compile (stage 1).** The project's compiler—OpenSysML or SysIDE—checks
+   that the source is valid SysML v2 and that every name resolves. If it reports
+   errors, stage 2 does not run.
+2. **Rules (stage 2).** MEMO's closure, coverage, cross-layer, lifecycle and
+   quantitative rules check that the connected model meets its methodology's
+   expectations: every hazard controlled, every requirement verified, and so on.
 
 ## Run validation
 
@@ -38,9 +42,15 @@ Examples of useful questions:
 
 ## Use the workbench
 
-The problems or consistency area links findings to model elements. Combine it
-with requirement, risk, and verification views to understand the gap in
-context.
+The **Problems** bar at the bottom lists findings; select one to go to the
+affected element. Combine it with requirement, risk and verification views, or
+a [traceability matrix](../modeling/views/grid.md) filtered to missing links,
+to understand the gap in context.
+
+**☰ › Settings › Model › Rules** lists the rules by layer, each with its
+obligation (required, recommended or best practice), and lets a methodology
+owner switch groups or individual rules on and off. `memo-architect new rule`
+writes a rule of the project's own, previewed against the model first.
 
 ## Do not game completeness
 
@@ -50,6 +60,7 @@ according to your project process rather than creating a false trace.
 
 ## External portability checks
 
-If the project selects SysIDE, `memo validate` can run strict external
-diagnostics before semantic checks. `memo pack` can delegate packaging to
-SysAnd. These checks complement MEMO closure validation; they do not replace it.
+The compiler's own diagnostics (stage 1) are the portability check: a model
+that compiles under OpenSysML or SysIDE is standard SysML v2. `memo pack` can
+delegate packaging to SysAnd and produce a KPAR archive. These checks complement
+MEMO's rules; they do not replace them.
