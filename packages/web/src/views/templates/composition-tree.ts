@@ -7,7 +7,7 @@
 // Interconnection view derives its hierarchy from its own selection.
 // ─────────────────────────────────────────────────────────────────────────────
 
-import type { MemoElement, MemoModelDTO, MemoRelationship } from '@memoarchitect/tools/browser';
+import type { KindDefinitionDTO, MemoElement, MemoModelDTO, MemoRelationship } from '@memoarchitect/tools/browser';
 
 /**
  * Relationship types that express whole→part composition.
@@ -404,16 +404,66 @@ export interface MixedKindsIssue {
     kinds: Array<{ kind: string; count: number }>;
 }
 
+/** What `mixedKindsIssue` reads from a kind registry entry. */
+type KindHierarchyEntry = Pick<KindDefinitionDTO, 'name' | 'superType' | 'additionalSuperTypes' | 'isAbstract' | 'origin'>;
+
 /**
- * A block definition diagram is of one kind of thing: every element in it has
- * the same kind. A diagram of parts that also holds a function, or of
- * system functions that also holds component functions, reads as one
- * hierarchy but is several. Null when the tree is uniform.
+ * A block definition diagram is of one kind of thing, and the ontology says
+ * what a kind is. A project's own definition is a block, not a kind:
+ * `part def Pump specializes System` is a System, so each element is judged by
+ * the ontology kind it derives from.
+ *
+ * The kinds agree when all of them are some kind an element can actually be.
+ * `System` and `SystemOfSystems` are both a `LogicalComponent`, so a tree of
+ * them is uniform. `SystemFunction` and `ComponentFunction` meet only at the
+ * abstract `MemoFunction`, and a part and a function only at nothing, so those
+ * are mixed. Null when the tree is uniform. Without a registry the kinds are
+ * compared as they are written.
  */
-export function mixedKindsIssue(tree: CompositionTree): MixedKindsIssue | null {
+export function mixedKindsIssue(
+    tree: CompositionTree,
+    registry?: readonly KindHierarchyEntry[],
+): MixedKindsIssue | null {
+    const byName = new Map(registry?.map(entry => [entry.name, entry]));
+    const parentsOf = (kind: string): string[] => {
+        const entry = byName.get(kind);
+        return [entry?.superType, ...(entry?.additionalSuperTypes ?? [])].filter((name): name is string => !!name);
+    };
+    const ontologyKindOf = (kind: string): string => {
+        const seen = new Set<string>();
+        let current = kind;
+        while (byName.get(current)?.origin === 'project' && !seen.has(current)) {
+            seen.add(current);
+            const parent: string | undefined = parentsOf(current)[0];
+            if (!parent) break;
+            current = parent;
+        }
+        return current;
+    };
+    /** The kind and its ancestors that an element can be: concrete, below the roots. */
+    const concreteLineage = (kind: string): Set<string> => {
+        const lineage = new Set<string>();
+        const seen = new Set<string>();
+        const pending = [kind];
+        while (pending.length > 0) {
+            const current = pending.pop()!;
+            if (seen.has(current)) continue;
+            seen.add(current);
+            const parents = parentsOf(current);
+            if (parents.length > 0 && !byName.get(current)?.isAbstract) lineage.add(current);
+            pending.push(...parents);
+        }
+        return lineage;
+    };
+
     const counts = new Map<string, number>();
-    for (const el of tree.elements.values()) counts.set(el.kind, (counts.get(el.kind) ?? 0) + 1);
+    for (const el of tree.elements.values()) {
+        const kind = ontologyKindOf(el.kind);
+        counts.set(kind, (counts.get(kind) ?? 0) + 1);
+    }
     if (counts.size < 2) return null;
+    const [first, ...rest] = [...counts.keys()].map(concreteLineage);
+    if ([...first].some(kind => rest.every(lineage => lineage.has(kind)))) return null;
     return { kinds: [...counts].map(([kind, count]) => ({ kind, count })).sort((a, b) => b.count - a.count) };
 }
 

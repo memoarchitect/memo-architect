@@ -554,4 +554,36 @@ describe('mixedKindsIssue', () => {
         expect(mixedKindsIssue(tree(['ComponentFunction', 'SystemFunction', 'SystemFunction']))?.kinds)
             .toEqual([{ kind: 'SystemFunction', count: 2 }, { kind: 'ComponentFunction', count: 1 }]);
     });
+
+    describe('against the kind registry', () => {
+        const registry = [
+            { name: 'MemoPart', isAbstract: true, origin: 'ontology' },
+            { name: 'LogicalComponent', superType: 'MemoPart', origin: 'ontology' },
+            { name: 'System', superType: 'LogicalComponent', origin: 'ontology' },
+            { name: 'SystemOfSystems', superType: 'LogicalComponent', origin: 'ontology' },
+            { name: 'PhysicalElement', superType: 'MemoPart', origin: 'ontology' },
+            { name: 'MemoFunction', superType: 'MemoAction', isAbstract: true, origin: 'ontology' },
+            { name: 'MemoAction', isAbstract: true, origin: 'ontology' },
+            { name: 'SystemFunction', superType: 'MemoFunction', origin: 'ontology' },
+            { name: 'ComponentFunction', superType: 'MemoFunction', origin: 'ontology' },
+            { name: 'PumpSystem', superType: 'System', origin: 'project' },
+            { name: 'ValveComponent', superType: 'LogicalComponent', origin: 'project' },
+            { name: 'PumpBoard', superType: 'PhysicalElement', origin: 'project' },
+        ] as const;
+
+        it('treats project definitions as the ontology kind they derive from', () => {
+            expect(mixedKindsIssue(tree(['PumpSystem', 'System', 'SystemOfSystems', 'ValveComponent']), registry)).toBeNull();
+        });
+        it('does not treat an abstract meeting point as one kind', () => {
+            expect(mixedKindsIssue(tree(['SystemFunction', 'ComponentFunction']), registry)?.kinds).toHaveLength(2);
+        });
+        it('flags logical and physical parts, which meet only at the root', () => {
+            expect(mixedKindsIssue(tree(['ValveComponent', 'PumpBoard']), registry)?.kinds)
+                .toEqual([{ kind: 'LogicalComponent', count: 1 }, { kind: 'PhysicalElement', count: 1 }]);
+        });
+        it('flags a part beside a function', () => {
+            expect(mixedKindsIssue(tree(['PumpSystem', 'SystemFunction']), registry)?.kinds)
+                .toEqual([{ kind: 'System', count: 1 }, { kind: 'SystemFunction', count: 1 }]);
+        });
+    });
 });

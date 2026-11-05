@@ -2127,7 +2127,7 @@ function DiagramCanvasInner() {
         if (!model || !selectedDiagram || selectedDiagram.diagramType !== 'bdd') return null;
         const hint = selectedDiagram.properties?.layoutHint;
         return mixedKindsIssue(buildGeneralViewTree(model, viewpointFilter, selectedDiagram.relationshipTypes, viewElementOf(model, selectedDiagram),
-            hint === 'tree' || hint === 'containment' || hint === 'table'));
+            hint === 'tree' || hint === 'containment' || hint === 'table'), model.registries?.kinds);
     }, [model, selectedDiagram, viewpointFilter]);
 
     // ─── Decomp callbacks ──────────────────────────────────────────────────────
