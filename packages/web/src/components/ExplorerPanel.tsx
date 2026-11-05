@@ -946,7 +946,7 @@ function isExplorerHiddenElement(kind: string, sourceLayer: string, sourcePackag
     // `ItemDefinition` used to be hidden here, on the grounds that an untyped
     // item is not yet a MEMO element. Under the construct rule it has a home
     // the moment it is authored — Items, then its layer — and hiding it made
-    // the one thing worth seeing invisible: 394 of project's 440 were untyped
+    // the one thing worth seeing invisible: 394 of the 440 in a real model were untyped
     // usages in an ARCHITECTURE layer, which is exactly the gap the
     // "architecture defines, assurance states" guideline exists to surface.
     return isDiagramOnlyElement(kind, sourceLayer, sourcePackage);
@@ -1245,7 +1245,7 @@ export function computeExplorerGroupTree(
     // ─── Rule 4: a relationship is an edge, so it is never a row ────────────
     //
     // `connection` is a construct, but it is the construct of the EDGES, and
-    // this tree lists elements. project declares nineteen of them — `Composes`,
+    // this tree lists elements. A real model declares nineteen of them — `Composes`,
     // `DeploysOnto`, `RealizesInterface` — which arrived as a Connections
     // category listing the relationship vocabulary beside the model's parts.
     // Composition is read from the `composes` relationships, not from these,
@@ -1769,7 +1769,7 @@ export function computeExplorerGroupTree(
     //
     // Two different findings, and reading them as one hid the difference. An
     // element whose kind IS a SysML metaclass is valid SysML the ontology has
-    // not classified — `EnumerationDefinition` is project's case, and the
+    // not classified — `EnumerationDefinition` is a real model's case, and the
     // question it raises is whether the ontology should classify it. An
     // element SysML does not know either is neither modelled nor standard, and
     // the question is what it is at all.

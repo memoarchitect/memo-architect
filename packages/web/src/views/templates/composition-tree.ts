@@ -269,7 +269,7 @@ export function dominantRoot(tree: CompositionTree): string | undefined {
  * everything matching everything: `Risk` and `SoftwareSystem` both reach
  * `MemoPart`, and neither owns the other.
  *
- * Measured on project: of 2228 `composes` edges, 1266 are ownership and 959 are
+ * Measured on a real model: of 2228 `composes` edges, 1266 are ownership and 959 are
  * not.
  */
 export function buildOwnershipTest(

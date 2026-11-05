@@ -335,13 +335,13 @@ describe('computeExplorerGroupTree', () => {
 
     it('names the type the element declares, not an ancestor of it', () => {
         // Resolution used to climb to a concrete ontology kind, which filed
-        // RosPublisher ports under SoftwarePort and left the type the
+        // ProjectRosPublisher ports under SoftwarePort and left the type the
         // model declares out of the tree altogether.
         const groups = computeExplorerGroupTree(
-            [elc('pub1', 'RosPublisher', 'logical', 'port')],
+            [elc('pub1', 'ProjectRosPublisher', 'logical', 'port')],
             '', registryFromOntology(ONTOLOGY), [ONTOLOGY],
         );
-        expect(kindsIn(groups[0], 'logical')).toEqual(['RosPublisher']);
+        expect(kindsIn(groups[0], 'logical')).toEqual(['ProjectRosPublisher']);
     });
 
     it('keeps fork and join in their own folders with no rule naming them', () => {
@@ -450,7 +450,7 @@ describe('computeExplorerGroupTree', () => {
     // ─── Rule 4 ─────────────────────────────────────────────────────────────
 
     it('lists no connection: a relationship is an edge, not a row', () => {
-        // project declares nineteen MemoRelationship definitions — Composes,
+        // A real model declares nineteen MemoRelationship definitions — Composes,
         // DeploysOnto, RealizesInterface. They are the edge vocabulary, and
         // listing them put the relationship types beside the model's parts.
         const groups = computeExplorerGroupTree([

@@ -400,7 +400,7 @@ describe('resolveGeneralMode', () => {
     });
 
     it('falls back to graph when the selection composes nothing', () => {
-        // The project L1 function allocation: seven functions, no composition.
+        // An L1 function allocation: seven functions, no composition.
         expect(resolveGeneralMode({ layoutHint: 'tree' }, false)).toBe('graph');
         expect(resolveGeneralMode({ layoutHint: 'containment' }, false)).toBe('graph');
     });
@@ -415,12 +415,12 @@ describe('resolveDefinition across constructs', () => {
     const defs = (els: MemoElement[]) => definitionIndex(Object.fromEntries(els.map(e => [e.id, e])));
 
     it('reads the typing attribute each construct uses', () => {
-        const d = el('TreatArrhythmiaUsingproject', { isDefinition: true, construct: 'action' });
+        const d = el('TreatArrhythmia', { isDefinition: true, construct: 'action' });
         const u = el('sysTreat', {
             construct: 'action', kind: 'SystemFunction',
-            attributes: { actionType: 'TreatArrhythmiaUsingproject' },
+            attributes: { actionType: 'TreatArrhythmia' },
         });
-        expect(resolveDefinition(u, defs([d, u]))?.id).toBe('TreatArrhythmiaUsingproject');
+        expect(resolveDefinition(u, defs([d, u]))?.id).toBe('TreatArrhythmia');
     });
 
     it('resolves a part usage the same way', () => {

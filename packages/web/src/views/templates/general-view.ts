@@ -40,7 +40,7 @@ export const GENERAL_VIEW_MODES: readonly GeneralViewMode[] = ['graph', 'tree', 
  * hint ("tree" | "containment" | "graph"), defaults to graph.
  *
  * A hint asking for a tree is only honoured when there is a hierarchy to draw.
- * The project L1 function allocation declares `layoutHint: "tree"` and holds
+ * An L1 function allocation declares `layoutHint: "tree"` and holds
  * seven functions that compose nothing, so tree mode drew seven orphan boxes
  * with no line between them — a list pretending to be a decomposition. It opens
  * as a graph instead, and the mode toggle is still there for anyone who wants
@@ -152,7 +152,7 @@ export function buildGeneralViewTree(
     // selection query and is not on this diagram.
     // Nothing to root: the view's elements compose nothing. A function
     // allocation is a list of L1 functions, not a decomposition of one — the
-    // project L1 view holds seven actions and no composition at all — and
+    // L1 view holds seven actions and no composition at all — and
     // picking a "root" there would prune six of them away to leave an
     // arbitrary single box. `hasHierarchy` is the whole test: rooting is a
     // statement about a tree, and there is no tree here.

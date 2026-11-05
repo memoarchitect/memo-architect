@@ -163,7 +163,7 @@ describe('system context view template', () => {
 
     describe('the system of interest', () => {
         const hospital = element('hospitalEpRecordingSystem', 'OperationalEntity', 'Hospital EP Recording System');
-        const product = element('mainSystem', 'OperationalEntity', 'project Ablation and Mapping System');
+        const product = element('mainSystem', 'OperationalEntity', 'Main System');
         const doc = element('doc', 'User', 'Physician');
         const relationships = [
             { id: 'r1', type: 'flow', sourceId: 'hospitalEpRecordingSystem', targetId: 'mainSystem' },

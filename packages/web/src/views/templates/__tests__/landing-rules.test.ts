@@ -1,4 +1,4 @@
-// Ported from the project bundle patch's rule tests. A landing is a wall plus a
+// Ported from an earlier patch's rule tests. A landing is a wall plus a
 // fraction along it, so every case here is checkable without a canvas.
 import { describe, it, expect } from 'vitest';
 import {

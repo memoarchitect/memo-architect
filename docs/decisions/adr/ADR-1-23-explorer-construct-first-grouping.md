@@ -35,8 +35,8 @@ belong to.
 Resolution used to climb — through ontology superTypes and through project
 definitions to what they specialize — until it reached a concrete ontology
 kind, so a folder always named something the ontology knows. The cost was that
-it named something the author did not write: `RosPublisher` and
-`RosSubscriber` ports were filed under `SoftwarePort`, and the type the
+it named something the author did not write: `ProjectRosPublisher` and
+`ProjectRosSubscriber` ports were filed under `SoftwarePort`, and the type the
 model declares vanished from the tree. A project def two levels below the
 ontology is the model's own structure, which the reader is entitled to see.
 
@@ -98,10 +98,10 @@ outside both domains.
 
 ## Consequences
 
-Measured against the project model (6,058 elements):
+Measured against a large project model (6,058 elements):
 
 - **The top level reads Architecture 894, Assurance 988, Methodology 1, Core
-  41** on the project model, with no Undefined branch at all. Architecture
+  41** on that model, with no Undefined branch at all. Architecture
   divides into Operational Analysis 292, Functional Analysis 84, Behavior 193,
   Logical Architecture 108, Implementation 183, Realization 34.
 - **Risk analysis reads as Assurance ▸ Safety Risk ▸ Hazard**, and the 298
@@ -114,7 +114,7 @@ Measured against the project model (6,058 elements):
   excluded, they file under **Core**, where `core/enumerations` already keeps
   their kinds. A value type belongs to neither the architecture nor the claims
   made about it.
-- **A `connection` is never a row.** project declares nineteen
+- **A `connection` is never a row.** A real model declares nineteen
   `MemoRelationship` definitions — `Composes`, `DeploysOnto`,
   `RealizesInterface`. `connection` is a construct, but it is the construct of
   the *edges*, and this tree lists elements. Composition is read from the
@@ -124,7 +124,7 @@ Measured against the project model (6,058 elements):
   apart. `isNativeSysmlDiagramElement` and `buildLayerGroupsFromRegistry` were
   removed with it.
 - **`ItemDefinition` is no longer hidden.** It was suppressed on the grounds
-  that an untyped item is not yet a MEMO element. 394 of project's 440 are
+  that an untyped item is not yet a MEMO element. 394 of the 440 in a real model are
   untyped usages in an *architecture* layer — exactly the gap the modelling
   guideline below exists to surface, and hiding the kind hid the finding.
 

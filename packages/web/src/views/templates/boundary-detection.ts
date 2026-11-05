@@ -307,7 +307,7 @@ function straddles(candidate: Rect, panels: Rect[]): boolean {
  * cards' tops and returned no standalone card; with the flat-panel pass both
  * cards, the header bar, the drug selector and the Settings bar are each found.
  * The earlier figures for this detector (25 of 45 hand-authored regions on six
- * project captures) were taken before the panel pass and `MIN_CONFIDENCE`, and
+ * real-model captures) were taken before the panel pass and `MIN_CONFIDENCE`, and
  * those captures are not in this workspace, so they are NOT re-measured: see the
  * board row "Region detection is measured on two captures only".
  */

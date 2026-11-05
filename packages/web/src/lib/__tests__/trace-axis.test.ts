@@ -16,7 +16,7 @@ const model = {
         r2: element('r2', 'Requirement', 'Alert operator'),
         s1: element('s1', 'SecurityRequirement', 'Encrypt storage'),
         t1: element('t1', 'TestCase', 'Location test'),
-        a1: element('a1', 'InfusionPumpSystem', 'PumpProduct'),
+        a1: element('a1', 'InfusionPumpSystem', 'Infusion pump'),
     },
     relationships: [],
 } as unknown as MemoModelDTO;

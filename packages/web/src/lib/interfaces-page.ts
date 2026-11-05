@@ -13,7 +13,7 @@ import { portFamiliesByPart } from './interface-compat';
 /**
  * The parts an interface can be about: usages, not definitions, in a layer where the ontology defines ports or
  * interfaces, or that own a port themselves. Risks, actors, stakeholders and the like are parts to SysML and have
- * nothing to interface with, so listing them buried the components in project under a few hundred other rows.
+ * nothing to interface with, so listing them buried the components in a real model under a few hundred other rows.
  */
 export function selectableParts(model: MemoModelDTO | null): MemoElement[] {
     if (!model) return [];

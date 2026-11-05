@@ -1,4 +1,4 @@
-// Ported from the project bundle patch's rule tests. They are the reason the
+// Ported from an earlier patch's rule tests. They are the reason the
 // behaviour is portable at all: every rule here is pure geometry, so the whole
 // contract can be held down without a canvas.
 import { describe, it, expect } from 'vitest';
@@ -120,7 +120,7 @@ describe('context compass', () => {
   it('puts SoI center, humans left, devices right, stakeholders bottom', () => {
     const physician = { kind: 'PhysicianActor', name: 'EP Physician' };
     const stim = { kind: 'MemoPart', name: 'External Stimulator' };
-    const stk = { kind: 'Stakeholder', name: 'Manufacturer' };
+    const stk = { kind: 'ProjectStakeholder', name: 'Manufacturer' };
     const env = { kind: 'UseContext', name: 'EP Lab' };
     expectEqual(isHumanKind(physician.kind), true);
     expectEqual(isStakeholderKind(stk.kind), true);
