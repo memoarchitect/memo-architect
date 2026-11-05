@@ -30,10 +30,11 @@ const registries: OntologyRegistriesDTO = {
     ],
     relationships: [
         relation('AllocatedTo', undefined, undefined, { nativeKeyword: 'allocate' }),
-        relation('SatisfiedBy', 'MemoRequirementElement', undefined, { nativeKeyword: 'satisfy' }),
-        relation('Mitigates', undefined, 'RiskItem'),
-        relation('HasFailureMode', 'MemoPart', 'Hazard'),
-        relation('VerifiedBy', undefined, 'Requirement', { nativeKeyword: 'verify' }),
+        relation('SatisfiedBy', 'MemoRequirementElement', undefined, { nativeKeyword: 'satisfy', isTrace: true }),
+        relation('Mitigates', undefined, 'RiskItem', { isTrace: true }),
+        relation('HasFailureMode', 'MemoPart', 'Hazard', { isTrace: true }),
+        relation('VerifiedBy', undefined, 'Requirement', { nativeKeyword: 'verify', isTrace: true }),
+        relation('HostedBy', 'MemoPart', 'MemoPart'),
         relation('Composes', undefined, undefined, { nativeKeyword: 'nesting' }),
         relation('MemoLink'),
         relation('FunctionalTransfer', undefined, undefined, { sysmlConstruct: 'flow def' }),
@@ -54,13 +55,14 @@ const scopes: RelationshipEndScopes = {
 };
 
 describe('linkCategory', () => {
-    it('reads a category from how the ontology declares the relation', () => {
+    it('reads a category from what the ontology declares', () => {
         expect(linkCategory(definition('AllocatedTo'))).toBe('allocation');
         expect(linkCategory(definition('SatisfiedBy'))).toBe('trace');
         expect(linkCategory(definition('Mitigates'))).toBe('trace');
+        expect(linkCategory(definition('VerifiedBy'))).toBe('trace');
     });
-    it('offers no relation the writer cannot place, that says nothing, or that is wiring', () => {
-        expect(linkCategory(definition('VerifiedBy'))).toBeUndefined();
+    it('does not take typed ends for a trace', () => {
+        expect(linkCategory(definition('HostedBy'))).toBeUndefined();
         expect(linkCategory(definition('Composes'))).toBeUndefined();
         expect(linkCategory(definition('MemoLink'))).toBeUndefined();
         expect(linkCategory(definition('FunctionalTransfer'))).toBeUndefined();
@@ -77,6 +79,9 @@ describe('what a row can take', () => {
     it('offers a trace wherever a typed relation fits the row', () => {
         expect(rowLinkCategories({ kind: 'OperativeAction' }, registries, scopes).has('trace')).toBe(true);
         expect(rowLinkCategories({ kind: 'Requirement' }, registries, scopes).has('trace')).toBe(true);
+    });
+    it('does not offer a trace the writer cannot place, though it is one', () => {
+        expect(rowMayHold(definition('VerifiedBy'), 'outgoing', { kind: 'SoftwareModule' }, scopes)).toBe(false);
     });
     it('applies the rules to the end each side holds', () => {
         const allocation = definition('AllocatedTo');

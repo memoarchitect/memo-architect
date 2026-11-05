@@ -9,7 +9,6 @@
 
 import {
     endAllowedByRules, findRelationshipDefinition, isAuthorableRelationship, legalRelationshipsForElement,
-    relationshipSpecificity,
     type KindDefinitionDTO, type MemoElement, type MemoModelDTO, type OntologyRegistriesDTO,
     type RelationshipDefinitionDTO, type RelationshipDirection, type RelationshipEndScopes,
 } from '@memoarchitect/tools/browser';
@@ -17,29 +16,24 @@ import { buildOwnershipTest, type CompositionTree } from './composition-tree';
 
 export type TableLinkCategory = 'allocation' | 'trace';
 
-/**
- * Allocation is the relation written with the `allocate` keyword. A trace is any other relation the writer can state
- * that says what it links to by typing an end (`Mitigates` to a risk item, `SatisfiedBy` from a requirement). An
- * exchange (`flow def`, `interface def`) is wiring, and a relation typing neither end says nothing about what it links.
- */
+/** The ontology says which: `allocate` is how an allocation is written, and a trace relation declares `isTrace`. */
 export function linkCategory(definition: RelationshipDefinitionDTO): TableLinkCategory | undefined {
-    if (!isAuthorableRelationship(definition)) return undefined;
     if (definition.nativeKeyword === 'allocate') return 'allocation';
-    if (definition.sysmlConstruct) return undefined;
-    return relationshipSpecificity(definition) > 0 ? 'trace' : undefined;
+    return definition.isTrace ? 'trace' : undefined;
 }
 
 const ownEnd = (direction: RelationshipDirection) => (direction === 'outgoing' ? 'source' : 'target');
 const oppositeEnd = (direction: RelationshipDirection) => (direction === 'outgoing' ? 'target' : 'source');
 
 /**
- * Whether a row may take this relation in this direction, as far as the rules on its own end say. Allocating a row
- * is always of the row: what lands on it is allocated from the other element's row.
+ * Whether a row may take this relation in this direction: the writer can state it, and the rules on the row's own
+ * end allow it. Allocating a row is always of the row: what lands on it is allocated from the other element's row.
  */
 export function rowMayHold(
     definition: RelationshipDefinitionDTO, direction: RelationshipDirection, element: Pick<MemoElement, 'kind'>,
     scopes: RelationshipEndScopes | undefined,
 ): boolean {
+    if (!isAuthorableRelationship(definition)) return false;
     if (linkCategory(definition) === 'allocation' && direction === 'incoming') return false;
     return endAllowedByRules(scopes, definition.name, ownEnd(direction), element.kind);
 }
