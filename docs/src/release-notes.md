@@ -2,6 +2,25 @@
 
 Versioned under [semantic versioning](https://semver.org/). Before 1.0 a change that breaks a model, a command or a setting raises the minor number; a fix or addition that breaks nothing raises the patch. Every release is tagged in the repository. The notes for all three packages are also on [memoarchitect.com/releases.html](https://memoarchitect.com/releases.html).
 
+## 0.18.0
+
+### Added
+
+- **Author from table mode.** In the table mode of a block diagram, an operational
+  flow or a functional flow, a row can take a new element under it, and a trace or an
+  allocation where the ontology allows one. Each row lists its allocations and traces.
+- **Flow steps go in order.** Adding a step to a flow asks where it goes: after a
+  step, first, or not ordered. A step that the flow does not order yet has Place on
+  its row.
+- **A Modeling section** in the user guide, with a page per layer.
+
+### Changed
+
+- **A trace is what the ontology declares** with `isTrace`.
+- **The mixed-kinds warning compares ontology kinds**, so a diagram of parts with
+  their own definitions no longer warns. Only tree, containment and table layouts
+  are held to one tree of one kind.
+
 ## 0.17.x
 
 ### Changed
