@@ -20,18 +20,34 @@ export interface TraceAxisIds {
 
 const QUERY_DELAY_MS = 350;
 
+/** What the server answered, and for which query in which workspace. */
+export interface QueriedAxis extends TraceAxisIds {
+    query: string;
+    workspace: string | null;
+}
+
+/**
+ * The axis as the screen may use it. An answer to another query is not this axis yet: it is still counting. The
+ * query changes in the same render as the request to build on it, before the effect that runs the new query has
+ * marked it as counting, so an answer that is not checked against its query is the previous axis passed off as
+ * this one (choosing a second quick trace built it on the first one's columns).
+ */
+export function settledAxis(queried: QueriedAxis, query: string, workspace: string | null): TraceAxisIds {
+    if (!query) return { ids: [], counting: false };
+    if (queried.query !== query || queried.workspace !== workspace) return { ids: [], counting: true };
+    return { ids: queried.ids, counting: queried.counting, ...(queried.error ? { error: queried.error } : {}) };
+}
+
 export function useTraceAxis(
     model: MemoModelDTO | null, axis: AxisSelection, parents: KindParents, workspace: string | null,
 ): TraceAxisIds {
     const fromTypes = useMemo(() => selectAxis(model, axis, parents), [model, axis, parents]);
-    const [queried, setQueried] = useState<TraceAxisIds>({ ids: [], counting: false });
+    const [queried, setQueried] = useState<QueriedAxis>({ ids: [], counting: false, query: '', workspace: null });
     const query = axis.advanced ? axis.query.trim() : '';
 
     useEffect(() => {
-        if (!axis.advanced) return undefined;
-        if (!query) { setQueried({ ids: [], counting: false }); return undefined; }
+        if (!axis.advanced || !query) return undefined;
         let cancelled = false;
-        setQueried(current => ({ ...current, counting: true, error: undefined }));
         const timer = setTimeout(() => {
             void evaluateAxis({ query, elementIds: [] }, 0, workspace ?? undefined).then(result => {
                 if (cancelled) return;
@@ -39,7 +55,7 @@ export function useTraceAxis(
                 const ids = (result.ids ?? []).filter(id => elements[id])
                     .sort((a, b) => elements[a].kind.localeCompare(elements[b].kind) || elements[a].name.localeCompare(elements[b].name));
                 setQueried({
-                    ids, counting: false,
+                    ids, counting: false, query, workspace,
                     error: result.error ?? (result.ids ? undefined : `The query selects ${result.count.toLocaleString()} elements, too many to list. Narrow it.`),
                 });
             });
@@ -47,5 +63,5 @@ export function useTraceAxis(
         return () => { cancelled = true; clearTimeout(timer); };
     }, [axis.advanced, query, workspace, model]);
 
-    return axis.advanced ? queried : { ids: fromTypes, counting: false };
+    return axis.advanced ? settledAxis(queried, query, workspace) : { ids: fromTypes, counting: false };
 }

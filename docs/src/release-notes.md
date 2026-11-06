@@ -14,6 +14,10 @@ Versioned under [semantic versioning](https://semver.org/). Before 1.0 a change 
 
 ### Fixed
 
+- **Quick traces built on the previous trace's columns.** Choosing a second quick trace whose
+  rows or columns are a query (the requirement types) built it before the new query was
+  answered, with the first trace's columns: Risk → Software requirement listed the links to
+  hardware requirements. An axis is now counting until the answer is to its own query.
 - **A type folder's menu** in the Model Explorer is the type's menu. It opened the package
   menu, naming the folder's internal id as a package.
 
