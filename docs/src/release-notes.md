@@ -14,6 +14,9 @@ Versioned under [semantic versioning](https://semver.org/). Before 1.0 a change 
 
 ### Fixed
 
+- **A trace with nothing to match asked you to choose types.** When the chosen rows or columns
+  match no element (no system requirements in the model, say), the trace screen still said to
+  choose element types and Build. It now says which axis matched nothing, and in which system.
 - **Quick traces built on the previous trace's columns.** Choosing a second quick trace whose
   rows or columns are a query (the requirement types) built it before the new query was
   answered, with the first trace's columns: Risk → Software requirement listed the links to

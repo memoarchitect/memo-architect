@@ -39,7 +39,7 @@ import { useTraceDraft } from '../lib/use-trace-draft';
 import { useTraceMatrix } from '../lib/use-trace-matrix';
 import { useSavedTraceMatrix } from '../lib/use-saved-trace-matrix';
 import { useTraceLinkEditing } from '../lib/use-trace-link-editing';
-import { loadDisplay, saveDisplay, traceLimit, type LineFilter, type TraceView } from '../lib/trace-axis';
+import { loadDisplay, noMatchMessage, saveDisplay, traceLimit, type LineFilter, type TraceView } from '../lib/trace-axis';
 import { relationshipColor } from '../constants';
 import { COLOR, FONT } from '../styles/tokens';
 
@@ -178,12 +178,17 @@ export function TraceabilityMatrix() {
     }
 
     const building = matrix.progress !== null;
+    const noMatch = noMatchMessage(
+        { axis: draft.rowAxis, count: rowSelection.ids.length },
+        { axis: draft.columnAxis, count: columnSelection.ids.length },
+        workspace ? (wholeModel?.elements[workspace]?.name ?? workspace) : null,
+    );
     const message = matrix.refusal
         ?? limit
         ?? (counting
             ? 'Counting…'
             : rowSelection.ids.length === 0 || columnSelection.ids.length === 0
-                ? (builderOpen
+                ? noMatch ?? (builderOpen
                     ? 'Choose the element types for the rows and the columns, then Build matrix.'
                     : 'Select a traceability matrix on the left, or click + New to create one.')
                 : null);

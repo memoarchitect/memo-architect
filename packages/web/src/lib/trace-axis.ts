@@ -53,6 +53,23 @@ export function traceLimit(rows: number, columns: number): string | null {
         + `more than the ${TRACE_MAX_CELLS.toLocaleString()} this matrix builds. Narrow an axis.`;
 }
 
+/**
+ * Why there is nothing to build although the axes were chosen: a chosen axis matched no element. Null when every
+ * chosen axis selected something, or an axis is not chosen yet (that is the builder's prompt, not this).
+ */
+export function noMatchMessage(
+    rows: { axis: AxisSelection; count: number },
+    columns: { axis: AxisSelection; count: number },
+    scope: string | null,
+): string | null {
+    const chosen = (axis: AxisSelection) => axisToQuery(axis) !== '';
+    if (!chosen(rows.axis) || !chosen(columns.axis)) return null;
+    const empty = [rows.count === 0 && 'rows', columns.count === 0 && 'columns'].filter(Boolean) as string[];
+    if (empty.length === 0) return null;
+    const where = scope ? `in ${scope}` : 'in this model';
+    return `No element ${where} matches the ${empty.join(' or the ')}, so there is nothing to trace.`;
+}
+
 // ─── Saved as a view ──────────────────────────────────────────────────────────
 
 /** The memo-query an axis is saved as: the query as written, or the one the types stand for. */
