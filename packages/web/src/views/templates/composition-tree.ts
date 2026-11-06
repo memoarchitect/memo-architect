@@ -404,6 +404,22 @@ export interface MixedKindsIssue {
     kinds: Array<{ kind: string; count: number }>;
 }
 
+/** The layouts that draw a view as a decomposition. */
+export type DecompositionLayout = 'tree' | 'containment' | 'table';
+
+/**
+ * The decomposition a view's `layoutHint` draws, or undefined when it draws none.
+ *
+ * A general view may hold any definitions, linked however the model links them:
+ * an interface contract shows its interface, port and item side by side, joined
+ * by typing. Only a view drawn as a decomposition (a tree, nested containment,
+ * or its table) states a hierarchy, so only that one is held to a single tree
+ * of a single kind.
+ */
+export function decompositionLayout(layoutHint: string | undefined): DecompositionLayout | undefined {
+    return layoutHint === 'tree' || layoutHint === 'containment' || layoutHint === 'table' ? layoutHint : undefined;
+}
+
 /** What `mixedKindsIssue` reads from a kind registry entry. */
 type KindHierarchyEntry = Pick<KindDefinitionDTO, 'name' | 'superType' | 'additionalSuperTypes' | 'isAbstract' | 'origin'>;
 

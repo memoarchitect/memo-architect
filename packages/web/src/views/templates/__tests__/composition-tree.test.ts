@@ -7,7 +7,7 @@ import {
     COMPOSITION_REL_TYPES, validateSingleTree, isPortUsage, portCompartmentEntries,
     definitionIndex, definitionLevelElements, definitionLevelComposition, resolveDefinition,
     buildOwnershipTest, warnIfMixedKindFamilies,
-    declaredSubject, subtreeOf, dominantRoot, mixedKindsIssue,
+    declaredSubject, subtreeOf, dominantRoot, mixedKindsIssue, decompositionLayout,
 
 } from '../composition-tree';
 import { generalViewFilter, hierarchyTypesFor, resolveGeneralMode } from '../general-view';
@@ -585,5 +585,18 @@ describe('mixedKindsIssue', () => {
             expect(mixedKindsIssue(tree(['PumpSystem', 'SystemFunction']), registry)?.kinds)
                 .toEqual([{ kind: 'System', count: 1 }, { kind: 'SystemFunction', count: 1 }]);
         });
+    });
+});
+
+describe('decompositionLayout', () => {
+    it('holds tree, containment and table views to a decomposition', () => {
+        expect(decompositionLayout('tree')).toBe('tree');
+        expect(decompositionLayout('containment')).toBe('containment');
+        expect(decompositionLayout('table')).toBe('table');
+    });
+    it('leaves a general view of definitions free of the tree and kind checks', () => {
+        expect(decompositionLayout('force')).toBeUndefined();
+        expect(decompositionLayout('grid')).toBeUndefined();
+        expect(decompositionLayout(undefined)).toBeUndefined();
     });
 });

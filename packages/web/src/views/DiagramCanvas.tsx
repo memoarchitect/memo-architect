@@ -67,7 +67,7 @@ import {
     GENERAL_VIEW_MODES, type GeneralViewMode,
 } from './templates/general-view';
 import {
-    validateSingleTree, mixedKindsIssue, COMPOSITION_REL_TYPES,
+    validateSingleTree, mixedKindsIssue, decompositionLayout, COMPOSITION_REL_TYPES,
 } from './templates/composition-tree';
 
 import {
@@ -2113,14 +2113,7 @@ function DiagramCanvasInner() {
         () => (model ? resolveLegend(viewElementOf(model, selectedDiagram), model) : undefined),
         [model, selectedDiagram]);
 
-    // A general view may hold any definitions, linked however the model links
-    // them. Only one drawn as a decomposition (a tree, nested containment, or
-    // its table) states a hierarchy, so only that one is held to a single tree
-    // of a single kind.
-    const decompositionHint = (() => {
-        const hint = selectedDiagram?.properties?.layoutHint;
-        return hint === 'tree' || hint === 'containment' || hint === 'table' ? hint : undefined;
-    })();
+    const decompositionHint = decompositionLayout(selectedDiagram?.properties?.layoutHint);
 
     const bddTreeIssue = useMemo(() => {
         if (!model || !selectedDiagram || selectedDiagram.diagramType !== 'bdd' || !decompositionHint) return null;
