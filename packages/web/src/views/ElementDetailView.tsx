@@ -14,6 +14,7 @@
 //     name, the violations, and the source path all competed equally.
 // ─────────────────────────────────────────────────────────────────────────────
 
+import { FavoriteToggle } from '../components/FavoriteToggle';
 import { useMemo, useState } from 'react';
 import { escapeHtml, renderMarkdownBody } from '../dhf/document-renderer';
 import { useModelStore, getRelationshipsForElement } from '../store/model-store';
@@ -312,8 +313,9 @@ export function ElementDetailView({ elementId: requestedElementId }: { elementId
                         )}
                     </div>
 
-                    <h1 style={{ fontSize: '24px', fontWeight: 700, color: COLOR.primary, lineHeight: 1.2, margin: 0 }}>
+                    <h1 style={{ fontSize: '24px', fontWeight: 700, color: COLOR.primary, lineHeight: 1.2, margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
                         {element.name}
+                        <FavoriteToggle favorite={{ type: 'element', ref: element.id }} size={18} />
                     </h1>
 
                     <div style={{ marginTop: 9, paddingTop: 8, borderTop: `1px solid ${COLOR.borderLight}` }}>

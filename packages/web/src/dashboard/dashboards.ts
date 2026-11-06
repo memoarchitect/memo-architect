@@ -36,6 +36,20 @@ The model has **{{model.elements}}** elements and **{{model.relationships}}** re
 
 {{widget:stats}}
 
+## Favorites
+
+What you starred: views, viewpoints, elements, folders and packages. Only you see them.
+
+{{widget:favorites}}
+
+## Recent views
+
+{{widget:recent-views}}
+
+## Recent elements
+
+{{widget:recent-elements}}
+
 ## Layer coverage
 
 How much of each engineering layer has content. Select a layer to explore it.

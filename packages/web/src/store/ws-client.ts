@@ -18,7 +18,7 @@ import type {
     RelationshipUpdateRequest, RelationshipUpdateResultMessage,
     ElementDeleteResultMessage,
 } from '@memoarchitect/tools/browser';
-import type { ChatMessage, ProposedChange } from '@memoarchitect/tools/browser';
+import type { ChatMessage, ProposedChange, UserPreferencesDTO } from '@memoarchitect/tools/browser';
 
 type ExtendedServerMessage = ServerMessage | {
     type: 'dhf:template:save:result';
@@ -1234,7 +1234,7 @@ export function sendVersionOpen(selection: { release?: string; ref?: string }): 
 }
 
 /** Save this person's own choices for the model (memo.user.yaml, ignored by git). */
-export function sendUserPreferencesSave(preferences: { role?: string; workspace?: string; explorerSplit?: string; features?: string[]; packageFolders?: boolean }): void {
+export function sendUserPreferencesSave(preferences: UserPreferencesDTO): void {
     // A pinned view reads the choices from the working project and saves none: they last for the session.
     if (useModelStore.getState().pinned) return;
     if (ws && ws.readyState === WebSocket.OPEN) {

@@ -18,6 +18,7 @@
 // another editor, another client, or the relationship writer.
 // ─────────────────────────────────────────────────────────────────────────────
 
+import { FavoriteToggle } from '../components/FavoriteToggle';
 import { lazy, Suspense, useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import {
@@ -638,6 +639,7 @@ export function DiagramEditor({ diagramId }: DiagramEditorProps) {
                 <span className="truncate" style={{ color: COLOR.primary, fontSize: FONT.md, fontWeight: 700 }}>
                     {diagram.name}
                 </span>
+                <span style={{ marginLeft: 6, display: 'flex' }}><FavoriteToggle favorite={{ type: 'view', ref: diagram.id }} size={15} /></span>
                 {mode === 'visual' && <div className="absolute right-3 flex items-center gap-1">
                     <button
                         type="button"

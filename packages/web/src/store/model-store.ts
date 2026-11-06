@@ -17,7 +17,7 @@ import type {
     EditConflictMessage,
     PackageMutationResultMessage,
 } from '@memoarchitect/tools/browser';
-import type { ValidationResult, CompletenessReport, LlmSettingsStatus, UserToolchainStatus, DashboardDTO, DashboardScope, ClauseFact } from '@memoarchitect/tools/browser';
+import type { ValidationResult, CompletenessReport, LlmSettingsStatus, UserToolchainStatus, DashboardDTO, DashboardScope, ClauseFact, FavoriteDTO, UserPreferencesDTO } from '@memoarchitect/tools/browser';
 import type {
     OntologyRegistriesDTO,
     RelationshipCreateRequest,
@@ -308,7 +308,16 @@ export interface ModelState {
     selectedElementId: string | null;
     selectedRelationshipId: string | null;
     selectedElementIds: Set<string>;
+    /** The elements this person opened last, most recent first (memo.user.yaml). */
     recentlyVisited: string[];
+    /** The views this person opened last, most recent first (memo.user.yaml). */
+    recentViews: string[];
+    /** What this person marked as favorites (memo.user.yaml). */
+    favorites: FavoriteDTO[];
+    /** Add a favorite, or remove it when it is one already. */
+    toggleFavorite: (favorite: FavoriteDTO) => void;
+    /** The person's saved choices arrived; nothing is saved before, so an early save cannot wipe them. */
+    preferencesLoaded: boolean;
     selectedViewpointId: string | null;
     selectedDiagramId: string | null;
     searchTerm: string;
@@ -530,7 +539,7 @@ export interface ModelState {
      */
     workspace: string | null;
     /** The server's copy arrived (on connect, or after a save). */
-    applyUserPreferences: (preferences: { role?: string; workspace?: string; explorerSplit?: string; features?: string[]; packageFolders?: boolean }) => void;
+    applyUserPreferences: (preferences: UserPreferencesDTO) => void;
     /** The experimental features this person switched on in Settings. */
     /** Package folders in the Model Explorer: on by default; off lists elements by kind alone. */
     packageFolders: boolean;
@@ -600,15 +609,38 @@ export interface ModelState {
 
 const restoredActiveView = restoreActiveView();
 
+/** How many recently opened views, and elements, are kept: the number memo-tools keeps. */
+const RECENT_LIMIT = 10;
+
 /** The choices one person keeps for this model, as they are saved. */
-function preferencesOf(state: { role: string | null; workspace: string | null; explorerSplit: string; features: string[]; packageFolders: boolean }) {
+export function preferencesOf(state: {
+    role: string | null; workspace: string | null; explorerSplit: string; features: string[]; packageFolders: boolean;
+    favorites: FavoriteDTO[]; recentViews: string[]; recentlyVisited: string[];
+}): UserPreferencesDTO {
     return {
         ...(state.packageFolders ? {} : { packageFolders: false }),
         ...(state.features.length > 0 ? { features: state.features } : {}),
         ...(state.role ? { role: state.role } : {}),
         ...(state.workspace ? { workspace: state.workspace } : {}),
         ...(state.explorerSplit ? { explorerSplit: state.explorerSplit } : {}),
+        ...(state.favorites.length > 0 ? { favorites: state.favorites } : {}),
+        ...(state.recentViews.length > 0 ? { recentViews: state.recentViews.slice(0, RECENT_LIMIT) } : {}),
+        ...(state.recentlyVisited.length > 0 ? { recentElements: state.recentlyVisited.slice(0, RECENT_LIMIT) } : {}),
     };
+}
+
+/** Whether two favorites point at the same thing. */
+export function sameFavorite(a: FavoriteDTO, b: FavoriteDTO): boolean {
+    return a.type === b.type && a.ref === b.ref && (a.packageName ?? '') === (b.packageName ?? '');
+}
+
+/** `id` first, then the rest without it, at most RECENT_LIMIT. */
+const pushRecent = (list: readonly string[], id: string): string[] => [id, ...list.filter(x => x !== id)].slice(0, RECENT_LIMIT);
+
+/** Save the person's choices, all of them, once the saved ones have arrived. */
+function saveChoices(state: ModelState): void {
+    if (!state.preferencesLoaded) return;
+    sendUserPreferencesSave(preferencesOf(state));
 }
 
 export const useModelStore = create<ModelState>((set, get) => ({
@@ -718,35 +750,51 @@ export const useModelStore = create<ModelState>((set, get) => ({
     packageFolders: true,
     setPackageFolders: (packageFolders) => {
         set({ packageFolders });
-        sendUserPreferencesSave(preferencesOf(get()));
+        saveChoices(get());
     },
     features: [],
+    favorites: [],
+    recentViews: [],
+    preferencesLoaded: false,
+    toggleFavorite: (favorite) => {
+        const favorites = get().favorites;
+        set({
+            favorites: favorites.some(entry => sameFavorite(entry, favorite))
+                ? favorites.filter(entry => !sameFavorite(entry, favorite))
+                : [...favorites, favorite],
+        });
+        saveChoices(get());
+    },
     applyUserPreferences: (preferences) => {
         setUserFeatures(preferences.features ?? []);
         set({
             role: preferences.role ?? null, workspace: preferences.workspace ?? null, explorerSplit: preferences.explorerSplit ?? '',
             features: preferences.features ?? [],
             packageFolders: preferences.packageFolders !== false,
+            favorites: preferences.favorites ?? [],
+            recentViews: preferences.recentViews ?? [],
+            recentlyVisited: preferences.recentElements ?? [],
+            preferencesLoaded: true,
         });
     },
     setFeatureEnabled: (id, enabled) => {
         const features = enabled ? [...new Set([...get().features, id])] : get().features.filter(entry => entry !== id);
         setUserFeatures(features);
         set({ features });
-        sendUserPreferencesSave(preferencesOf(get()));
+        saveChoices(get());
     },
     // A save replaces the person's choices, so every one is sent with the others.
     setRole: (role) => {
         set({ role });
-        sendUserPreferencesSave(preferencesOf(get()));
+        saveChoices(get());
     },
     setWorkspace: (workspace) => {
         set({ workspace });
-        sendUserPreferencesSave(preferencesOf(get()));
+        saveChoices(get());
     },
     setExplorerSplit: (explorerSplit) => {
         set({ explorerSplit });
-        sendUserPreferencesSave(preferencesOf(get()));
+        saveChoices(get());
     },
 
     dashboards: [],
@@ -1007,19 +1055,21 @@ export const useModelStore = create<ModelState>((set, get) => ({
     setActiveView: (view) => {
         persistActiveView(view);
         set({ activeView: view });
+        if (view.type === 'diagram') {
+            set({ recentViews: pushRecent(get().recentViews, view.diagramId) });
+            saveChoices(get());
+        }
     },
     setExplorerTab: (tab) => set({ explorerTab: tab }),
     setExplorerMode: (mode) => set({ explorerMode: mode }),
     selectElement: (id) => {
         if (id) {
-            set((s) => {
-                const next = [id, ...s.recentlyVisited.filter(x => x !== id)].slice(0, 20);
-                return {
-                    selectedElementId: id,
-                    activeView: { type: 'element-detail', elementId: id },
-                    recentlyVisited: next,
-                };
-            });
+            set((s) => ({
+                selectedElementId: id,
+                activeView: { type: 'element-detail', elementId: id },
+                recentlyVisited: pushRecent(s.recentlyVisited, id),
+            }));
+            saveChoices(get());
         } else {
             set({ selectedElementId: id });
         }
@@ -1030,9 +1080,6 @@ export const useModelStore = create<ModelState>((set, get) => ({
         selectedElementId: id,
         selectedRelationshipId: null,
         propertiesPanelCollapsed: id ? false : s.propertiesPanelCollapsed,
-        recentlyVisited: id
-            ? [id, ...s.recentlyVisited.filter(x => x !== id)].slice(0, 20)
-            : s.recentlyVisited,
     })),
     inspectRelationship: (id) => set({
         selectedRelationshipId: id,

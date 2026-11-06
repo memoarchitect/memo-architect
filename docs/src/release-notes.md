@@ -2,6 +2,21 @@
 
 Versioned under [semantic versioning](https://semver.org/). Before 1.0 a change that breaks a model, a command or a setting raises the minor number; a fix or addition that breaks nothing raises the patch. Every release is tagged in the repository. The notes for all three packages are also on [memoarchitect.com/releases.html](https://memoarchitect.com/releases.html).
 
+## Unreleased
+
+### Added
+
+- **Favorites and recents on Home.** Star a view, a viewpoint or an element, or choose
+  **Add to favorites** on a folder or package in the Model Explorer. Home lists your
+  favorites, and the views and elements you opened last, each by its id and title. They are
+  kept in `memo.user.yaml`, which is not committed, and are available to any dashboard as
+  `{{widget:favorites}}`, `{{widget:recent-views}}` and `{{widget:recent-elements}}`.
+
+### Fixed
+
+- **A type folder's menu** in the Model Explorer is the type's menu. It opened the package
+  menu, naming the folder's internal id as a package.
+
 ## 0.18.0
 
 ### Added

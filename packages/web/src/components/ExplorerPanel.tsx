@@ -15,7 +15,9 @@ import {
     type ExplorerTab,
     type DhfDoc,
     type PackageMutationResult,
+    sameFavorite,
 } from '../store/model-store';
+import { FavoriteToggle, favoriteActionLabel, useIsFavorite } from './FavoriteToggle';
 import { LAYER_COLORS, LAYER_LABELS, LAYER_ORDER, normalizeLayerId, DIAGRAM_TYPE_META, VIEW_KIND_META, viewNaming, resolveActionFlowDiagramType } from '../constants';
 import { FONT, COLOR, ICON } from '../styles/tokens';
 import { WorkingSetsPanel as WorkingSetsContent } from './WorkingSetsPanel';
@@ -24,7 +26,7 @@ import { OntologyBrowserTab } from './OntologyBrowserTab';
 import { DashboardSidebar } from './DashboardSidebar';
 import { ExplorerElementIdentity } from './ExplorerElementIdentity';
 import { ExplorerCountBadge } from './ExplorerCountBadge';
-import { isSysmlMetaclass, type OperationalLevel, type MemoElement, type DiagramDTO, type KindDefinitionDTO, type MemoModelDTO, type ViewpointDTO, type ViewKind } from '@memoarchitect/tools/browser';
+import { isSysmlMetaclass, type FavoriteDTO, type OperationalLevel, type MemoElement, type DiagramDTO, type KindDefinitionDTO, type MemoModelDTO, type ViewpointDTO, type ViewKind } from '@memoarchitect/tools/browser';
 import type { OntologyPackageInfo } from '../types/ontology';
 import { getBuiltInTemplate } from '../dhf/built-in-templates';
 import { DHF_GROUPS, groupColorForLabel } from '../dhf/dhf-groups';
@@ -233,6 +235,8 @@ function ElementContextMenu({ menu, onClose }: { menu: CtxMenuState; onClose: ()
     const setActiveMode = useModelStore(s => s.setActiveMode);
     const setSelectedOntologyKind = useModelStore(s => s.setSelectedOntologyKind);
     const setActiveView = useModelStore(s => s.setActiveView);
+    const toggleFavorite = useModelStore(s => s.toggleFavorite);
+    const favorites = useModelStore(s => s.favorites);
     const [showChangeType, setShowChangeType] = useState<{ elementId: string; currentKind: string } | null>(null);
     const ref = useRef<HTMLDivElement>(null);
 
@@ -431,6 +435,17 @@ function ElementContextMenu({ menu, onClose }: { menu: CtxMenuState; onClose: ()
                 }
             }
         ];
+    }
+
+    // An element, a package, or a type folder (in its package, when the folder is in one) can be a favorite.
+    const favorite: FavoriteDTO | null =
+        menu.type === 'element' && menu.elementId ? { type: 'element', ref: menu.elementId }
+            : (menu.type === 'folder' || menu.type === 'view-package') && menu.packageName && !/^(?:sf|kt|kf|af|f):/.test(menu.packageName) ? { type: 'package', ref: menu.packageName }
+                : menu.type === 'kind' && menu.kind ? { type: 'folder', ref: menu.kind, ...(menu.packageName ? { packageName: menu.packageName } : {}) }
+                    : null;
+    if (favorite) {
+        const isFavorite = favorites.some(entry => sameFavorite(entry, favorite));
+        actions = [{ label: favoriteActionLabel(isFavorite), action: () => toggleFavorite(favorite) }, ...actions];
     }
 
     if (!actions.length) return null;
@@ -686,6 +701,18 @@ export function buildOwnershipTree(elements: MemoElement[]): TreeNode[] {
 function folderPackage(id: string): string {
     const inner = /^(?:kf|af):([^|]*)\|/.exec(id);
     return inner ? inner[1] : id.replace(/^f:/, '').split('|')[0];
+}
+
+/**
+ * The menu a folder row opens. A type folder (`kt:<type>`, or `kf:<package>|<type>` inside a package) is the
+ * folder for one element type, so it opens the type menu; a package folder (`f:<package>`) the package menu.
+ */
+export function folderMenuTarget(id: string): { type: 'kind'; kind: string; packageName?: string } | { type: 'folder'; packageName: string } {
+    const top = /^kt:(.+)$/.exec(id);
+    if (top) return { type: 'kind', kind: top[1] };
+    const inPackage = /^kf:([^|]*)\|(.+)$/.exec(id);
+    if (inPackage) return { type: 'kind', kind: inPackage[2], ...(inPackage[1] ? { packageName: inPackage[1] } : {}) };
+    return { type: 'folder', packageName: folderPackage(id) };
 }
 
 /** A folded usage is tinted so it reads as an instance, not a peer definition. */
@@ -985,7 +1012,7 @@ function subGroupLabel(id: string): string {
         .join(' ');
 }
 
-function kindFolderLabel(kind: string, count: number): string {
+export function kindFolderLabel(kind: string, count: number): string {
     const labels: Record<string, string> = {
         StateMachine: 'State Machine',
         ModeState: 'Mode State',
@@ -1865,12 +1892,15 @@ function ModelExplorerContent({ searchTerm }: { searchTerm: string }) {
 
     const onContextMenu = useCallback((e: React.MouseEvent, type: CtxMenuState['type'], id: string, kind?: string, extra?: Partial<CtxMenuState>) => {
         e.preventDefault();
+        if (type === 'folder') {
+            setCtxMenu({ x: e.clientX, y: e.clientY, ...folderMenuTarget(id), ...extra });
+            return;
+        }
         setCtxMenu({
             x: e.clientX,
             y: e.clientY,
             type,
             elementId: type === 'element' ? id : undefined,
-            packageName: type === 'folder' ? id.replace(/^f:/, '') : undefined,
             kind: kind || (type === 'kind' ? id.replace('k:', '').split(':').pop() : undefined),
             ...extra,
         });
@@ -3089,6 +3119,7 @@ function ViewExplorerContent({ searchTerm }: { searchTerm: string }) {
                             <ChevronIcon expanded={isExpanded} size={14} color={vpColor} />
                             <FolderIcon open={isExpanded} color={vpColor} />
                             <span className="font-semibold flex-1 truncate" style={{ color: COLOR.primary, fontSize: FONT.explorer.group }}>{viewpointLabels.get(vp.id) ?? vp.label}</span>
+                            <FavoriteToggle favorite={{ type: 'viewpoint', ref: vp.id }} size={12} />
                             <ExplorerCountBadge
                                 count={familyCount}
                                 color={vpColor}
@@ -3262,6 +3293,8 @@ function DiagramRow({ diag, isSelected, onSelect, onDelete, onMoveToPackage }: {
     const rowRef = useRef<HTMLDivElement>(null);
     const meta = DIAGRAM_TYPE_META[diag.diagramType];
     const elCount = diag.elementIds?.length ?? 0;
+    const favorite = useMemo<FavoriteDTO>(() => ({ type: 'view', ref: diag.id }), [diag.id]);
+    const isFavorite = useIsFavorite(favorite);
 
     useEffect(() => {
         if (isSelected && rowRef.current) {
@@ -3305,6 +3338,7 @@ function DiagramRow({ diag, isSelected, onSelect, onDelete, onMoveToPackage }: {
                     {elCount}
                 </span>
             )}
+            {(hovered || isFavorite) && <FavoriteToggle favorite={favorite} size={12} />}
             {onMoveToPackage && hovered && (
                 <button
                     onClick={e => { e.stopPropagation(); onMoveToPackage(); }}

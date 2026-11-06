@@ -11,6 +11,7 @@ import { DashboardPage } from './DashboardPage';
 import { HOME_DASHBOARD_ID, viewpointDashboardId } from '../dashboard/dashboards';
 import { computeExplorerGroupTree, explorerRowCounts } from '../components/ExplorerPanel';
 import { useOpenDomain } from '../lib/open-domain';
+import { FavoritesWidget, RecentElementsWidget, RecentViewsWidget } from '../components/FavoritesWidgets';
 
 // ─── Dashboard — Home View (#36 + #131) ────────────────────────────────────
 //
@@ -25,6 +26,8 @@ import { useOpenDomain } from '../lib/open-domain';
 //   {{widget:next-steps}}  NextActionPanel beside the quick-action buttons
 //   {{widget:viewpoint-dashboards}}  a link to every viewpoint's dashboard
 //   {{widget:diagrams}}    model view count
+//   {{widget:favorites}} {{widget:recent-views}} {{widget:recent-elements}}
+//                          this person's favorites and what they opened last (memo.user.yaml)
 //
 // Any dashboard or document can use them. See plans/memo-custom-dashboards.md.
 // ─────────────────────────────────────────────────────────────────────────────
@@ -517,15 +520,24 @@ export const DASHBOARD_WIDGETS: Record<string, () => ReactNode> = {
     diagrams: () => <DiagramsWidget />,
 };
 
+/** A person's own widgets: on a dashboard, never in a DHF document, which the team shares. */
+export const PERSONAL_WIDGETS: Record<string, () => ReactNode> = {
+    favorites: () => <FavoritesWidget />,
+    'recent-views': () => <RecentViewsWidget />,
+    'recent-elements': () => <RecentElementsWidget />,
+};
+
+const DASHBOARD_PAGE_WIDGETS = { ...DASHBOARD_WIDGETS, ...PERSONAL_WIDGETS };
+
 // ─── Home dashboard ──────────────────────────────────────────────────────────
 
 export function Dashboard() {
     // Re-render when a feature is switched on or off in Settings: isFeatureEnabled reads the saved list.
     useModelStore(state => state.features);
-    return <DashboardPage dashboardId={HOME_DASHBOARD_ID} widgets={DASHBOARD_WIDGETS} />;
+    return <DashboardPage dashboardId={HOME_DASHBOARD_ID} widgets={DASHBOARD_PAGE_WIDGETS} />;
 }
 
 /** Any custom dashboard, by id; `scope` pins a shadowed shared copy. */
 export function CustomDashboard({ dashboardId, scope }: { dashboardId: string; scope?: DashboardScope }) {
-    return <DashboardPage dashboardId={dashboardId} scope={scope} widgets={DASHBOARD_WIDGETS} />;
+    return <DashboardPage dashboardId={dashboardId} scope={scope} widgets={DASHBOARD_PAGE_WIDGETS} />;
 }

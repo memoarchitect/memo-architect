@@ -96,6 +96,16 @@ The home page's sections are widgets you can place anywhere:
 | `{{widget:next-steps}}` | suggested next step beside quick-action buttons |
 | `{{widget:viewpoint-dashboards}}` | a link to every viewpoint's dashboard |
 | `{{widget:diagrams}}` | number of model views |
+| `{{widget:favorites}}` | your favorites: views, viewpoints, elements, folders and packages |
+| `{{widget:recent-views}}` | the views you opened last |
+| `{{widget:recent-elements}}` | the elements you opened last |
+
+The last three are yours alone. Star a view, a viewpoint or an element where it is shown,
+or choose **Add to favorites** on a folder or package in the Model Explorer. Favorites and
+what you opened last are kept in `memo.user.yaml` at the model root, which the model's
+`.gitignore` lists, so they are never committed and differ for each person. Something you
+starred that the model no longer has is shown as gone, with **Remove**. These widgets work
+on dashboards only, not in DHF documents, which the team shares.
 
 An interfaces page is a dashboard whose body is one directive, `{{interfaces:A | B}}`,
 where A and B are the qualified ids of two parts. It draws a table of every interface
