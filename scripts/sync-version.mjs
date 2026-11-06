@@ -13,6 +13,9 @@ const replace = (path, pattern, replacement) => {
 replace('package.json', /^(  "version": ")[^"]+(",)$/m, `$1${version}$2`);
 replace('pyproject.toml', /^(version = ")[^"]+("$)/m, `$1${version}$2`);
 replace('README.md', /memo-architect \d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?/g, `memo-architect ${version}`);
+// The user guide names the release a user should pin.
+replace('docs/src/index.md', /\(currently \d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?\)/, `(currently ${version})`);
+replace('docs/src/users/installation.md', /\(\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)? at the time of writing\)/, `(${version} at the time of writing)`);
 if (checkOnly && changes.length) {
   console.error(`VERSION ${version} is not synchronized to: ${changes.map(({ path }) => path).join(', ')}`);
   process.exit(1);

@@ -20,7 +20,7 @@ The build compiles Architect against the exact `@memoarchitect/tools` and
 separate `memo-meta` sibling workspace when changing all three together.
 
 Architect, Tools and the Ontology are released together and share a version
-number (0.17.1 at the time of writing). Keep the three on the same release:
+number (0.18.0 at the time of writing). Keep the three on the same release:
 `memo-architect upgrade <version>` moves a project to one release of all three
 and re-locks it.
 
