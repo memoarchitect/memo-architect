@@ -14,7 +14,7 @@
 
 import { useMemo, useState } from 'react';
 import type { DiagramDTO, MatrixDefinitionDTO } from '@memoarchitect/tools/browser';
-import { MATRIX_VIEW_DEFINITIONS, type MatrixScreen } from '../lib/matrix-views';
+import { MATRIX_VIEW_DEFINITIONS, groupBySystem, type MatrixScreen } from '../lib/matrix-views';
 import { useModelStore } from '../store/model-store';
 import { useScopedModel } from '../store/scoped-model';
 import {
@@ -67,8 +67,12 @@ export function MatrixDefinitionTree({ screen, noun, plural, title, selectedId, 
         () => (model?.diagrams ?? []).filter(d => d.viewDefinition === viewDefinition && d.elementId),
         [model?.diagrams, viewDefinition],
     );
-    // The tree holds only the packages that declare one of these definitions.
-    const tree = useMemo(() => buildViewPackageTree(definitions), [definitions]);
+    // Grouped by the system each matrix traces, then by the packages that declare them: a matrix answers a
+    // question about one system, so that is where it is looked for.
+    const systems = useMemo(
+        () => groupBySystem(definitions, systemNameOf).map(group => ({ ...group, tree: buildViewPackageTree(group.definitions) })),
+        [definitions, systemOptions], // eslint-disable-line react-hooks/exhaustive-deps
+    );
     // The dialog offers the packages the project keeps views in, not the thousands that hold other things.
     const packageChoices = useMemo(
         () => [...new Set((model?.diagrams ?? []).map(d => d.package).filter((name): name is string => Boolean(name)))].sort(),
@@ -187,11 +191,6 @@ export function MatrixDefinitionTree({ screen, noun, plural, title, selectedId, 
                 }}
             >
                 <span className="flex-1 truncate">{definition.name}</span>
-                {definition.matrix?.system && (
-                    <span className="truncate" style={{ maxWidth: '90px', fontSize: '10px', color: COLOR.faint }} title={`System: ${systemNameOf(definition.matrix.system)}`}>
-                        {systemNameOf(definition.matrix.system)}
-                    </span>
-                )}
                 {showActions && (
                     <span style={{ display: 'flex' }} onClick={event => event.stopPropagation()}>
                         <button style={iconButton} disabled={busy} title="Rename" aria-label={`Rename ${definition.name}`} onClick={() => rename(definition)}>✎</button>
@@ -207,29 +206,32 @@ export function MatrixDefinitionTree({ screen, noun, plural, title, selectedId, 
     const countIn = (node: ViewPackageNode): number =>
         node.diagrams.length + node.children.reduce((total, child) => total + countIn(child), 0);
 
-    const renderPackage = (node: ViewPackageNode, depth = 0): React.ReactNode => {
-        const open = !collapsed.has(node.id);
+    const toggle = (key: string) => setCollapsed(current => {
+        const next = new Set(current);
+        if (next.has(key)) next.delete(key); else next.add(key);
+        return next;
+    });
+
+    const renderPackage = (node: ViewPackageNode, scope: string): React.ReactNode => {
+        const key = `${scope}|${node.id}`;
+        const open = !collapsed.has(key);
         const total = countIn(node);
         // A folder with nothing under it stays visible only when it is where
         // some view lives; the rest of the model's packages are not offered.
         return (
-            <div key={node.id} style={{ marginLeft: depth ? '12px' : 0 }}>
+            <div key={node.id} style={{ marginLeft: '12px' }}>
                 <div
-                    onMouseEnter={() => setHovered(`pkg:${node.id}`)}
+                    onMouseEnter={() => setHovered(`pkg:${key}`)}
                     onMouseLeave={() => setHovered(null)}
                     className="w-full flex items-center gap-1.5 px-2 py-1 font-semibold"
                     style={{ color: COLOR.muted, fontSize: FONT.explorer.group, cursor: 'pointer' }}
-                    onClick={() => setCollapsed(current => {
-                        const next = new Set(current);
-                        if (next.has(node.id)) next.delete(node.id); else next.add(node.id);
-                        return next;
-                    })}
+                    onClick={() => toggle(key)}
                     title={node.id}
                 >
                     <ChevronIcon expanded={open} size={12} color={COLOR.muted} />
                     <FolderIcon open={open} color={COLOR.muted} pkg={node.id !== '__unpackaged'} />
                     <span className="flex-1 truncate">{node.name}</span>
-                    {node.id !== '__unpackaged' && hovered === `pkg:${node.id}` && connected && (
+                    {node.id !== '__unpackaged' && hovered === `pkg:${key}` && connected && (
                         <button
                             style={{ ...iconButton, fontWeight: 700, color: COLOR.accentDark }}
                             disabled={busy}
@@ -242,7 +244,7 @@ export function MatrixDefinitionTree({ screen, noun, plural, title, selectedId, 
                 {open && (
                     <>
                         <div style={{ marginLeft: '8px' }}>{node.diagrams.map(renderDefinition)}</div>
-                        {node.children.map(child => renderPackage(child, depth + 1))}
+                        {node.children.map(child => renderPackage(child, scope))}
                     </>
                 )}
             </div>
@@ -279,7 +281,25 @@ export function MatrixDefinitionTree({ screen, noun, plural, title, selectedId, 
                         This model declares no {plural} yet. Use New to create one.
                     </div>
                 )}
-                {tree.map(node => renderPackage(node))}
+                {systems.map(group => {
+                    const key = `system:${group.system}`;
+                    const open = !collapsed.has(key);
+                    return (
+                        <div key={key} role="group" aria-label={group.name}>
+                            <div
+                                className="w-full flex items-center gap-1.5 px-2 py-1 font-semibold"
+                                style={{ color: COLOR.primary, fontSize: FONT.explorer.group, cursor: 'pointer' }}
+                                onClick={() => toggle(key)}
+                                title={group.system || 'Matrices over the whole model'}
+                            >
+                                <ChevronIcon expanded={open} size={12} color={COLOR.muted} />
+                                <span className="flex-1 truncate">{group.name}</span>
+                                <ExplorerCountBadge count={group.definitions.length} color={COLOR.muted} />
+                            </div>
+                            {open && group.tree.map(node => renderPackage(node, key))}
+                        </div>
+                    );
+                })}
             </div>
             {dialog && (
                 <MatrixDefinitionDialog

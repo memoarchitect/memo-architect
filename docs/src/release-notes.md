@@ -11,8 +11,17 @@ Versioned under [semantic versioning](https://semver.org/). Before 1.0 a change 
   favorites, and the views and elements you opened last, each by its id and title. They are
   kept in `memo.user.yaml`, which is not committed, and are available to any dashboard as
   `{{widget:favorites}}`, `{{widget:recent-views}}` and `{{widget:recent-elements}}`.
+- **Download a traceability table** as a spreadsheet or a Word document, with the rows,
+  filters and order the list shows.
+- **Traceability matrices are listed by system.** The panel groups them by the system each
+  traces, then by package; matrices tied to no system are under Whole model.
 
 ### Fixed
+
+- **Saving a traceability matrix held the screen.** A matrix saved to a new file was written
+  twice, a package first and the matrix after, which cost an extra compile and an extra model
+  rebuild, and the dialog stayed open until the model was rebuilt. It is written once, the
+  dialog closes at once, and the bar says it is saving until the matrix is listed.
 
 - **The Model Explorer lists by kind, always.** Assurance listed its elements under each system
   first and an Unassigned group last, and the system of systems' workspace pulled what no system

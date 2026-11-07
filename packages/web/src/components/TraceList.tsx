@@ -9,6 +9,8 @@ import { elementIdTitle } from '../lib/trace-labels';
 import type { TraceLinks } from '../lib/trace-axis';
 import { NO_TABLE_FILTER, filterTraceRows, linkedKinds, type TraceTableFilter } from '../lib/trace-table';
 import { TraceTableFilters } from './TraceTableFilters';
+import { ActionButton, ControlIcon } from './TraceControls';
+import { downloadTraceDocx, downloadTraceXlsx, traceExportLines } from '../lib/trace-export';
 import { COLOR, FONT } from '../styles/tokens';
 
 /**
@@ -26,8 +28,12 @@ function IdTitle({ element, fallback }: { element: Parameters<typeof elementIdTi
     );
 }
 
-export function TraceList({ model, rowIds, links, onSelect, selectedId }: {
+export function TraceList({ model, rowIds, links, onSelect, selectedId, title, subtitle }: {
     model: MemoModelDTO;
+    /** What the downloads are called: the matrix's name, or the trace it was built from. */
+    title: string;
+    /** What the matrix shows, written under the title in the Word download. */
+    subtitle: string;
     rowIds: readonly string[];
     links: TraceLinks;
     onSelect: (id: string) => void;
@@ -39,7 +45,17 @@ export function TraceList({ model, rowIds, links, onSelect, selectedId }: {
     const visible = useMemo(() => filterTraceRows(model, rowIds, links, filter), [model, rowIds, links, filter]);
     return (
         <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
-        <TraceTableFilters filter={filter} onChange={setFilter} kinds={kinds} shown={visible.length} total={rowIds.length} />
+        <TraceTableFilters
+            filter={filter} onChange={setFilter} kinds={kinds} shown={visible.length} total={rowIds.length}
+            trailing={(
+                <span style={{ display: 'inline-flex', gap: '6px' }}>
+                    <ActionButton icon={ControlIcon.download} title="Download these rows as an Excel workbook"
+                        onClick={() => { void downloadTraceXlsx(title, traceExportLines(model, visible, links)); }}>Spreadsheet</ActionButton>
+                    <ActionButton icon={ControlIcon.download} title="Download these rows as a Word document"
+                        onClick={() => { void downloadTraceDocx(title, subtitle, traceExportLines(model, visible, links)); }}>Word</ActionButton>
+                </span>
+            )}
+        />
         <div style={{ flex: 1, minWidth: 0, overflow: 'auto', padding: '14px' }}>
             <div style={{ minWidth: 640, border: `1px solid ${COLOR.border}`, borderRadius: '6px', background: COLOR.surface }}>
                 <div style={{ display: 'grid', gridTemplateColumns: 'minmax(260px, 2fr) 3fr', position: 'sticky', top: 0, zIndex: 5, background: COLOR.surfaceAlt, borderBottom: `1px solid ${COLOR.border}`, fontWeight: 600, color: COLOR.primary }}>

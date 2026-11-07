@@ -193,6 +193,8 @@ export function TraceabilityMatrix() {
                     : 'Select a traceability matrix on the left, or click + New to create one.')
                 : null);
     const status = saved.status ?? editor.status;
+    const exportTitle = saved.definition?.name ?? DEFAULT_TRACE_PRESETS.all().find(preset => preset.id === activePresetId)?.label ?? 'Traceability matrix';
+    const exportSubtitle = `${draft.system ? (wholeModel?.elements[draft.system]?.name ?? draft.system) : 'Whole model'}, from the model on ${new Date().toLocaleDateString()}.`;
     const { definition } = saved;
 
     // What can be done to the draft: keep it in the model. Offered wherever the matrix is, not only inside the options.
@@ -275,8 +277,8 @@ export function TraceabilityMatrix() {
                         {status && (
                             <div style={{
                                 padding: '5px 16px', fontSize: '11px',
-                                color: status.kind === 'ok' ? '#0F766E' : '#B91C1C',
-                                background: status.kind === 'ok' ? '#ECFDF5' : '#FEF2F2',
+                                color: status.kind === 'ok' ? '#0F766E' : status.kind === 'pending' ? COLOR.secondary : '#B91C1C',
+                                background: status.kind === 'ok' ? '#ECFDF5' : status.kind === 'pending' ? COLOR.surface : '#FEF2F2',
                                 borderTop: `1px solid ${COLOR.borderLight}`,
                             }}>
                                 {status.message}
@@ -289,7 +291,7 @@ export function TraceabilityMatrix() {
                 <div style={{ display: 'flex', flex: '1 0 65vh', minHeight: 0, minWidth: 0, opacity: view === 'matrix' && building && matrix.result ? 0.5 : 1 }}>
                     {view === 'list' ? (
                         matrix.shown && matrix.links ? (
-                            <TraceList model={model} rowIds={matrix.shown.rowIds} links={matrix.links} onSelect={selectElement} selectedId={selectedElementId} />
+                            <TraceList model={model} rowIds={matrix.shown.rowIds} links={matrix.links} onSelect={selectElement} selectedId={selectedElementId} title={exportTitle} subtitle={exportSubtitle} />
                         ) : (
                             <div className="flex-1 flex items-center justify-center px-8 text-center" role="status" style={{ color: COLOR.faint, fontSize: FONT.sm }}>{message}</div>
                         )
@@ -332,7 +334,7 @@ export function TraceabilityMatrix() {
                     <SaveMatrixDialog
                         packages={saved.packageChoices} busy={saved.saving} error={saved.saveError}
                         initialName={definition ? `${definition.name} copy` : ''} initialPackage={definition ? '' : saved.newPackage}
-                        onSubmit={value => { void saved.saveAs(value).then(done => { if (done) setSaveDialog(false); }); }}
+                        onSubmit={value => { setSaveDialog(false); void saved.saveAs(value); }}
                         onClose={() => setSaveDialog(false)}
                     />
                 )}

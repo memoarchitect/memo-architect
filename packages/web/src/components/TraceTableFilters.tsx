@@ -24,12 +24,14 @@ const field = {
     color: COLOR.primary, background: COLOR.surface,
 } as const;
 
-export function TraceTableFilters({ filter, onChange, kinds, shown, total }: {
+export function TraceTableFilters({ filter, onChange, kinds, shown, total, trailing }: {
     filter: TraceTableFilter;
     onChange: (next: TraceTableFilter) => void;
     kinds: readonly LinkedKind[];
     shown: number;
     total: number;
+    /** Placed after the row count: the downloads of what is shown. */
+    trailing?: React.ReactNode;
 }) {
     const covered = filter.coverage?.kind ?? '';
     return (
@@ -64,6 +66,7 @@ export function TraceTableFilters({ filter, onChange, kinds, shown, total }: {
                 {shown === total ? `${total.toLocaleString()} rows` : `${shown.toLocaleString()} of ${total.toLocaleString()} rows`}
                 {isFiltering(filter) && <> · <TextAction onClick={() => onChange(NO_TABLE_FILTER)}>Clear</TextAction></>}
             </span>
+            {trailing}
         </div>
     );
 }

@@ -24,7 +24,8 @@ export interface TraceBuilder {
     report(progress: ProgressState | null, refusal?: string | null): void;
 }
 
-export type SaveStatus = { kind: 'ok' | 'error'; message: string } | null;
+/** `pending` while a save is with the server: the model is checked and rebuilt before the matrix is listed. */
+export type SaveStatus = { kind: 'ok' | 'error' | 'pending'; message: string } | null;
 
 export function useSavedTraceMatrix(draft: TraceDraft, builder: TraceBuilder) {
     const wholeModel = useModelStore(s => s.model);
@@ -102,6 +103,7 @@ export function useSavedTraceMatrix(draft: TraceDraft, builder: TraceBuilder) {
     const save = useCallback(async () => {
         if (!definition?.elementId) return;
         setSaving(true);
+        setStatus({ kind: 'pending', message: `Saving “${definition.name}”…` });
         const outcome = await updateMatrixView(definition.elementId, { matrix: currentMatrix });
         setSaving(false);
         setStatus(outcome.success
@@ -113,6 +115,7 @@ export function useSavedTraceMatrix(draft: TraceDraft, builder: TraceBuilder) {
     const saveAs = useCallback(async (value: { name: string; package: string }): Promise<boolean> => {
         setSaving(true);
         setSaveError(null);
+        setStatus({ kind: 'pending', message: `Saving “${value.name}”. You can keep working: the model is checked and rebuilt first, and it is listed on the left when that is done.` });
         try {
             let packageName = value.package || undefined;
             if (packageName && !packageChoices.includes(packageName)) {
@@ -130,7 +133,9 @@ export function useSavedTraceMatrix(draft: TraceDraft, builder: TraceBuilder) {
             if (outcome.elementId) setActiveView({ type: 'traceability', definitionId: outcome.elementId });
             return true;
         } catch (error) {
-            setSaveError(error instanceof Error ? error.message : String(error));
+            const message = error instanceof Error ? error.message : String(error);
+            setSaveError(message);
+            setStatus({ kind: 'error', message: `“${value.name}” was not saved: ${message}` });
             return false;
         } finally {
             setSaving(false);

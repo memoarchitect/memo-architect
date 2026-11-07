@@ -150,7 +150,8 @@ for *reading* the dependency structure, traceability is for *establishing* it.
 ### Usage
 
 1. Open **☰ › Model › Traceability Matrix**. The panel on the left lists the
-   saved matrices by package; select one to open it, or choose **New**.
+   saved matrices by the system each one traces, then by package; those tied to
+   no system are under **Whole model**. Select one to open it, or choose **New**.
 2. In the builder, choose the **Rows** and **Columns**: an element type the
    model holds (requirement types are offered separately), or a saved query.
    Optionally tie the matrix to one system or system of systems, and choose the
@@ -162,9 +163,14 @@ for *reading* the dependency structure, traceability is for *establishing* it.
    **List** (each row with the items it links to). Filter to rows **With links**
    or **Missing** links, and order by most or fewest links.
 5. **Save matrix** writes the definition into its package, so the matrix is
-   part of the model, reviewed and versioned like any view. **Edit view** changes
-   a saved matrix; **Duplicate**, **Rename**, **Move** and **Delete** are on each
-   entry in the panel.
+   part of the model, reviewed and versioned like any view. The dialog closes at
+   once and you can keep working; the model is checked and rebuilt before the
+   matrix is listed on the left, which takes as long as a rebuild of the model.
+   **Edit view** changes a saved matrix; **Duplicate**, **Rename**, **Move** and
+   **Delete** are on each entry in the panel.
+6. **Spreadsheet** and **Word**, beside the row count of the list, download the
+   rows as they are shown (filters and order included): one line for each item
+   and each item it links to, and a line of its own for an item with no link.
 
 ### Adding and removing links
 

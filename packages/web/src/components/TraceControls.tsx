@@ -30,6 +30,7 @@ export const ControlIcon = {
     close: icon(<path d="M4 4l8 8M12 4l-8 8" />),
     grid: icon(<><rect x="2.5" y="2.5" width="11" height="11" rx="1" /><path d="M2.5 8h11M8 2.5v11" /></>),
     list: icon(<path d="M5.5 4h8M5.5 8h8M5.5 12h8M2.5 4h.1M2.5 8h.1M2.5 12h.1" />),
+    download: icon(<><path d="M8 2.5v7.5M4.8 7l3.2 3.2L11.2 7" /><path d="M3 13h10" /></>),
 };
 
 // ── states ───────────────────────────────────────────────────────────────────

@@ -175,3 +175,22 @@ export function filterFromQuery(query: string): { kinds: string[]; contains: str
     }
     return { kinds, contains };
 }
+
+/** The matrices of one system, or (system '') those over the whole model. */
+export interface SystemGroup<T> { system: string; name: string; definitions: T[] }
+
+/**
+ * Matrices grouped by the system they trace, named systems in name order and the whole-model ones last. A
+ * matrix answers a question about one system, so the list is read system by system.
+ */
+export function groupBySystem<T extends { matrix?: MatrixDefinitionDTO }>(
+    definitions: readonly T[], nameOf: (system: string) => string,
+): SystemGroup<T>[] {
+    const bySystem = new Map<string, T[]>();
+    for (const definition of definitions) {
+        const system = definition.matrix?.system ?? '';
+        bySystem.set(system, [...(bySystem.get(system) ?? []), definition]);
+    }
+    return [...bySystem].map(([system, members]) => ({ system, name: system ? nameOf(system) : 'Whole model', definitions: members }))
+        .sort((a, b) => (a.system === '') !== (b.system === '') ? (a.system === '' ? 1 : -1) : a.name.localeCompare(b.name));
+}
