@@ -40,7 +40,10 @@ export function MatrixSystemSelect({ value, onChange, disabled, noneLabel = 'Who
                 <option value="">{noneLabel}</option>
                 {groups.map(group => (
                     <optgroup key={group.label} label={group.label}>
-                        {group.options.map(option => <option key={option.root} value={option.root}>{option.name}</option>)}
+                        {group.options.map(option => {
+                            const id = elements?.[option.root]?.displayId;
+                            return <option key={option.root} value={option.root}>{id ? `${id} · ${option.name}` : option.name}</option>;
+                        })}
                     </optgroup>
                 ))}
             </select>

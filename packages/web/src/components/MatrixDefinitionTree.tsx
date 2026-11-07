@@ -56,6 +56,7 @@ export function MatrixDefinitionTree({ screen, noun, plural, title, selectedId, 
     const moveElementToPackage = useModelStore(s => s.moveElementToPackage);
     const createPackage = useModelStore(s => s.createPackage);
     const systemOptions = useSystemOptions();
+    const wholeElements = useModelStore(s => s.model?.elements);
     const systemNameOf = (root: string) => systemOptions.find(option => option.root === root)?.name ?? root.split('::').pop() ?? root;
     const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
     const [hovered, setHovered] = useState<string | null>(null);
@@ -254,6 +255,11 @@ export function MatrixDefinitionTree({ screen, noun, plural, title, selectedId, 
                                 title={group.system || 'Matrices over the whole model'}
                             >
                                 <ChevronIcon expanded={open} size={12} color={COLOR.muted} />
+                                {group.system && wholeElements?.[group.system]?.displayId && (
+                                    <span className="font-mono" style={{ flexShrink: 0, color: COLOR.muted, background: COLOR.surfaceAlt, padding: '0 5px', borderRadius: 5, fontSize: FONT.xs, fontWeight: 400 }}>
+                                        {wholeElements[group.system].displayId}
+                                    </span>
+                                )}
                                 <span className="flex-1 truncate">{group.name}</span>
                                 {hovered === key && connected && (
                                     <button
