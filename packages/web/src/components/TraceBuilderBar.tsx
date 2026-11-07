@@ -1,7 +1,7 @@
 // ─── Building a traceability matrix ───────────────────────────────────────────
 //
-// What is chosen to build a matrix: a quick trace, the system, the rows, the columns and the relations, then
-// Build. It holds no state of its own and decides nothing: it shows what it is given and says what was asked.
+// What is chosen to build a matrix: the system first, then a quick trace or the rows and columns, and the
+// relations, then Build. The quick traces the system holds nothing for are listed apart and cannot be chosen. It holds no state of its own and decides nothing: it shows what it is given and says what was asked.
 
 import type { ReactNode } from 'react';
 import { MatrixSystemSelect } from './MatrixSystemSelect';
@@ -9,12 +9,15 @@ import { TraceAxisField } from './TraceAxisField';
 import { TypeFilterSelect, type TypeFilterOption } from './TypeFilterSelect';
 import { ActionButton, ControlIcon, TextAction } from './TraceControls';
 import type { TracePreset } from '../lib/trace-presets';
+import type { PresetCounts } from '../lib/use-preset-counts';
 import type { AxisSelection } from '../lib/trace-axis';
 import type { TraceAxisIds } from '../lib/use-trace-axis';
 import { COLOR, FONT } from '../styles/tokens';
 
 export interface TraceBuilderBarProps {
     presets: readonly TracePreset[];
+    /** Each quick trace's rows and columns in the chosen system; a trace not in it is still being counted. */
+    presetCounts: PresetCounts;
     onPreset: (preset: TracePreset) => void;
     /** The quick trace in use. While there is one it stands for the rows and columns: they are not shown to pick. */
     activePresetId: string | null;
@@ -46,8 +49,13 @@ export interface TraceBuilderBarProps {
 export function TraceBuilderBar(props: TraceBuilderBarProps) {
     const { presets, onPreset, canBuild, stale, built, building, onBuild, activePresetId, onCustomize } = props;
     const active = presets.find(entry => entry.id === activePresetId);
+    const countOf = (preset: TracePreset) => props.presetCounts.get(preset.id);
+    const usable = presets.filter(preset => { const count = countOf(preset); return count && count.rows > 0 && count.columns > 0; });
+    const counting = presets.filter(preset => !countOf(preset));
+    const empty = presets.filter(preset => { const count = countOf(preset); return count && (count.rows === 0 || count.columns === 0); });
     return (
         <div className="flex items-start gap-4 px-4 py-3" style={{ flexWrap: 'wrap' }}>
+            <div style={{ width: '230px', maxWidth: '100%' }}><MatrixSystemSelect value={props.system} onChange={props.onSystem} /></div>
             <label style={{ display: 'grid', gap: '3px', fontSize: FONT.xs, fontWeight: 600, color: COLOR.muted }}>
                 Quick trace
                 <select
@@ -59,10 +67,19 @@ export function TraceBuilderBar(props: TraceBuilderBarProps) {
                     style={{ padding: '7px 8px', border: `1px solid ${COLOR.border}`, borderRadius: '6px', fontSize: FONT.xs, color: COLOR.primary, background: COLOR.surface, maxWidth: '230px' }}
                 >
                     <option value="">{active ? 'Custom: pick rows and columns' : 'Choose a trace, or pick below…'}</option>
-                    {presets.map(preset => <option key={preset.id} value={preset.id}>{preset.label}</option>)}
+                    {usable.map(preset => <option key={preset.id} value={preset.id}>{preset.label}</option>)}
+                    {counting.length > 0 && (
+                        <optgroup label="Counting…">
+                            {counting.map(preset => <option key={preset.id} value={preset.id} disabled>{preset.label}</option>)}
+                        </optgroup>
+                    )}
+                    {empty.length > 0 && (
+                        <optgroup label="Nothing to trace in this system">
+                            {empty.map(preset => <option key={preset.id} value={preset.id} disabled={preset.id !== activePresetId}>{preset.label}</option>)}
+                        </optgroup>
+                    )}
                 </select>
             </label>
-            <div style={{ width: '230px', maxWidth: '100%' }}><MatrixSystemSelect value={props.system} onChange={props.onSystem} /></div>
             {active ? (
                 <div style={{ display: 'grid', gap: '3px', alignSelf: 'end', paddingBottom: '2px' }}>
                     <span style={{ fontSize: FONT.sm, fontWeight: 600, color: COLOR.primary }}>{active.label}</span>

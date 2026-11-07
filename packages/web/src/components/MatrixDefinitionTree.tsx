@@ -1,10 +1,11 @@
 // ─── Matrix definition tree ───────────────────────────────────────────────────
 //
-// The list of traceability matrices (or DSMs) the model declares, organised by
-// the package that declares each one: a package is the folder, exactly as in
-// the Explorer's Views tree. The list is not kept here. It is `model.diagrams`
-// filtered to one `view def`, so the main Explorer's Views tree shows the same
-// definitions in the same packages, and a change made in either shows in both.
+// The list of traceability matrices (or DSMs) the model declares, under the
+// system each one traces: a matrix answers a question about one system, so that
+// is where it is looked for, and the package that happens to declare it is not
+// shown (the Explorer's Views tree shows packages). The list is not kept here. It
+// is `model.diagrams` filtered to one `view def`, so a change made in either
+// place shows in both.
 //
 // Every write goes the way the Views tree writes: a new or changed matrix is a
 // `diagram:create` / `diagram:update` that edits the view's declaration, a move
@@ -17,9 +18,7 @@ import type { DiagramDTO, MatrixDefinitionDTO } from '@memoarchitect/tools/brows
 import { MATRIX_VIEW_DEFINITIONS, groupBySystem, type MatrixScreen } from '../lib/matrix-views';
 import { useModelStore } from '../store/model-store';
 import { useScopedModel } from '../store/scoped-model';
-import {
-    buildViewPackageTree, ChevronIcon, FolderIcon, reportPackageResult, type ViewPackageNode,
-} from './ExplorerPanel';
+import { ChevronIcon } from './ExplorerPanel';
 import { ExplorerCountBadge } from './ExplorerCountBadge';
 import { confirmViewDelete } from './confirm-destructive';
 import { useSystemOptions } from './MatrixSystemSelect';
@@ -37,7 +36,7 @@ interface Props {
     /** `created` is true for a definition just made here, which opens in editing mode. */
     onSelect: (elementId: string | null, created?: boolean) => void;
     /** When given, New hands over to the screen (which builds the matrix there) instead of opening the create dialog. */
-    onNew?: (packageName?: string) => void;
+    onNew?: (system?: string) => void;
 }
 
 const lastSegment = (qualifiedName: string) => qualifiedName.split('::').pop() ?? qualifiedName;
@@ -67,10 +66,11 @@ export function MatrixDefinitionTree({ screen, noun, plural, title, selectedId, 
         () => (model?.diagrams ?? []).filter(d => d.viewDefinition === viewDefinition && d.elementId),
         [model?.diagrams, viewDefinition],
     );
-    // Grouped by the system each matrix traces, then by the packages that declare them: a matrix answers a
-    // question about one system, so that is where it is looked for.
+    // Under the system each matrix traces, by name.
     const systems = useMemo(
-        () => groupBySystem(definitions, systemNameOf).map(group => ({ ...group, tree: buildViewPackageTree(group.definitions) })),
+        () => groupBySystem(definitions, systemNameOf).map(group => ({
+            ...group, definitions: [...group.definitions].sort((a, b) => a.name.localeCompare(b.name)),
+        })),
         [definitions, systemOptions], // eslint-disable-line react-hooks/exhaustive-deps
     );
     // The dialog offers the packages the project keeps views in, not the thousands that hold other things.
@@ -98,7 +98,8 @@ export function MatrixDefinitionTree({ screen, noun, plural, title, selectedId, 
         setDialogError(null);
         setDialog({ mode, definition, packageName });
     };
-    const create = (packageName?: string) => (onNew ? onNew(packageName) : openDialog('create', undefined, packageName));
+    /** New, for a system when it is started from that system's heading. */
+    const create = (system?: string) => (onNew ? onNew(system) : openDialog('create'));
     const rename = (definition: DiagramDTO) => openDialog('rename', definition);
     const move = (definition: DiagramDTO) => openDialog('move', definition);
 
@@ -203,53 +204,11 @@ export function MatrixDefinitionTree({ screen, noun, plural, title, selectedId, 
         );
     };
 
-    const countIn = (node: ViewPackageNode): number =>
-        node.diagrams.length + node.children.reduce((total, child) => total + countIn(child), 0);
-
     const toggle = (key: string) => setCollapsed(current => {
         const next = new Set(current);
         if (next.has(key)) next.delete(key); else next.add(key);
         return next;
     });
-
-    const renderPackage = (node: ViewPackageNode, scope: string): React.ReactNode => {
-        const key = `${scope}|${node.id}`;
-        const open = !collapsed.has(key);
-        const total = countIn(node);
-        // A folder with nothing under it stays visible only when it is where
-        // some view lives; the rest of the model's packages are not offered.
-        return (
-            <div key={node.id} style={{ marginLeft: '12px' }}>
-                <div
-                    onMouseEnter={() => setHovered(`pkg:${key}`)}
-                    onMouseLeave={() => setHovered(null)}
-                    className="w-full flex items-center gap-1.5 px-2 py-1 font-semibold"
-                    style={{ color: COLOR.muted, fontSize: FONT.explorer.group, cursor: 'pointer' }}
-                    onClick={() => toggle(key)}
-                    title={node.id}
-                >
-                    <ChevronIcon expanded={open} size={12} color={COLOR.muted} />
-                    <FolderIcon open={open} color={COLOR.muted} pkg={node.id !== '__unpackaged'} />
-                    <span className="flex-1 truncate">{node.name}</span>
-                    {node.id !== '__unpackaged' && hovered === `pkg:${key}` && connected && (
-                        <button
-                            style={{ ...iconButton, fontWeight: 700, color: COLOR.accentDark }}
-                            disabled={busy}
-                            title={`New ${noun} in ${node.id}`} aria-label={`New ${noun} in ${node.id}`}
-                            onClick={event => { event.stopPropagation(); create(node.id); }}
-                        >+ New</button>
-                    )}
-                    <ExplorerCountBadge count={total} color={COLOR.muted} />
-                </div>
-                {open && (
-                    <>
-                        <div style={{ marginLeft: '8px' }}>{node.diagrams.map(renderDefinition)}</div>
-                        {node.children.map(child => renderPackage(child, scope))}
-                    </>
-                )}
-            </div>
-        );
-    };
 
     return (
         <aside
@@ -287,6 +246,8 @@ export function MatrixDefinitionTree({ screen, noun, plural, title, selectedId, 
                     return (
                         <div key={key} role="group" aria-label={group.name}>
                             <div
+                                onMouseEnter={() => setHovered(key)}
+                                onMouseLeave={() => setHovered(null)}
                                 className="w-full flex items-center gap-1.5 px-2 py-1 font-semibold"
                                 style={{ color: COLOR.primary, fontSize: FONT.explorer.group, cursor: 'pointer' }}
                                 onClick={() => toggle(key)}
@@ -294,9 +255,17 @@ export function MatrixDefinitionTree({ screen, noun, plural, title, selectedId, 
                             >
                                 <ChevronIcon expanded={open} size={12} color={COLOR.muted} />
                                 <span className="flex-1 truncate">{group.name}</span>
+                                {hovered === key && connected && (
+                                    <button
+                                        style={{ ...iconButton, fontWeight: 700, color: COLOR.accentDark }}
+                                        disabled={busy}
+                                        title={`New ${noun} for ${group.name}`} aria-label={`New ${noun} for ${group.name}`}
+                                        onClick={event => { event.stopPropagation(); create(group.system || undefined); }}
+                                    >+ New</button>
+                                )}
                                 <ExplorerCountBadge count={group.definitions.length} color={COLOR.muted} />
                             </div>
-                            {open && group.tree.map(node => renderPackage(node, key))}
+                            {open && <div style={{ marginLeft: '8px' }}>{group.definitions.map(renderDefinition)}</div>}
                         </div>
                     );
                 })}

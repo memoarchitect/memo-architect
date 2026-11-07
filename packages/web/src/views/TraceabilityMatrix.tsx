@@ -3,7 +3,7 @@
 // Pick the rows, pick the columns, get the matrix. The screen only composes: each concern lives in a part of
 // its own that can be used, tested and changed alone.
 //
-//   the panel on the left     MatrixDefinitionTree      the saved matrices, by package; New starts one here
+//   the panel on the left     MatrixDefinitionTree      the saved matrices, by system; New starts one here
 //   what is being chosen      useTraceDraft             system, rows, columns, relations
 //   how an axis is counted    useTraceAxis              types read from the model, queries run by the server
 //   which types are offered   OntologyKindCatalog       the ontology's element types the model holds
@@ -38,6 +38,7 @@ import { useTraceAxis } from '../lib/use-trace-axis';
 import { useTraceDraft } from '../lib/use-trace-draft';
 import { useTraceMatrix } from '../lib/use-trace-matrix';
 import { useSavedTraceMatrix } from '../lib/use-saved-trace-matrix';
+import { usePresetCounts } from '../lib/use-preset-counts';
 import { useTraceLinkEditing } from '../lib/use-trace-link-editing';
 import { loadDisplay, noMatchMessage, saveDisplay, traceLimit, type LineFilter, type TraceView } from '../lib/trace-axis';
 import { relationshipColor } from '../constants';
@@ -84,6 +85,7 @@ export function TraceabilityMatrix() {
     // How the rows and columns are counted.
     const rowSelection = useTraceAxis(model, draft.rowAxis, catalog.parents, workspace);
     const columnSelection = useTraceAxis(model, draft.columnAxis, catalog.parents, workspace);
+    const presetCounts = usePresetCounts(DEFAULT_TRACE_PRESETS.all(), model, catalog.parents, workspace);
     const counting = rowSelection.counting || columnSelection.counting;
     const limit = traceLimit(rowSelection.ids.length, columnSelection.ids.length);
     const canBuild = rowSelection.ids.length > 0 && columnSelection.ids.length > 0 && !limit && !counting;
@@ -122,9 +124,11 @@ export function TraceabilityMatrix() {
         || [...matrix.committed.linkTypes].sort().join(',') !== [...draft.linkTypes].sort().join(',');
 
     /** New: an empty draft with the builder open to fill it in. */
-    const startNew = useCallback((packageName?: string) => {
-        saved.startNew(packageName);
+    /** New, for the system it was started from when it was started from one. */
+    const startNew = useCallback((system?: string) => {
+        saved.startNew();
         draft.clear();
+        draft.setSystem(system);
         matrix.clear();
         editor.inspect(null);
         setActivePresetId(null);
@@ -234,7 +238,7 @@ export function TraceabilityMatrix() {
                     <div style={{ borderBottom: `1px solid ${COLOR.border}`, background: COLOR.surface, flexShrink: 0 }}>
                         {builderOpen && (
                             <TraceBuilderBar
-                                presets={DEFAULT_TRACE_PRESETS.all()} onPreset={applyPreset}
+                                presets={DEFAULT_TRACE_PRESETS.all()} presetCounts={presetCounts} onPreset={applyPreset}
                                 activePresetId={activePresetId} onCustomize={() => setActivePresetId(null)}
                                 system={draft.system} onSystem={draft.setSystem}
                                 rowAxis={draft.rowAxis} columnAxis={draft.columnAxis}

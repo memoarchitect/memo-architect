@@ -13,8 +13,11 @@ Versioned under [semantic versioning](https://semver.org/). Before 1.0 a change 
   `{{widget:favorites}}`, `{{widget:recent-views}}` and `{{widget:recent-elements}}`.
 - **Download a traceability table** as a spreadsheet or a Word document, with the rows,
   filters and order the list shows.
-- **Traceability matrices are listed by system.** The panel groups them by the system each
-  traces, then by package; matrices tied to no system are under Whole model.
+- **Traceability matrices are listed by system.** The panel lists them under the system each
+  traces, with no package level; matrices tied to no system are under Whole model. New on a
+  system's heading starts a matrix for that system.
+- **A new traceability matrix starts from the system.** System comes first in the builder, and
+  the quick traces the chosen system holds nothing for are listed apart and cannot be chosen.
 
 ### Fixed
 

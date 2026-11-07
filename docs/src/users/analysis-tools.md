@@ -150,25 +150,29 @@ for *reading* the dependency structure, traceability is for *establishing* it.
 ### Usage
 
 1. Open **☰ › Model › Traceability Matrix**. The panel on the left lists the
-   saved matrices by the system each one traces, then by package; those tied to
-   no system are under **Whole model**. Select one to open it, or choose **New**.
-2. In the builder, choose the **Rows** and **Columns**: an element type the
-   model holds (requirement types are offered separately), or a saved query.
-   Optionally tie the matrix to one system or system of systems, and choose the
-   **Relations** counted as a trace.
-3. Or pick a **quick trace** instead of the pickers: *User need → System
-   requirement*, *Risk → Software requirement*, *Requirement → Test case* and
-   others. A quick trace fills the rows, columns and relations for you.
-4. **Build**. The result shows as a **Table** (rows against columns) or a
+   saved matrices under the system each one traces; those tied to no system are
+   under **Whole model**. Select one to open it, or choose **New**; **New** on a
+   system's heading starts a matrix for that system.
+2. In the builder, choose the **System** first: a system or the system of
+   systems, or the whole model. The element types offered are the ones that
+   system holds.
+3. Pick a **quick trace**: *User need → System requirement*, *Risk → Software
+   requirement*, *Requirement → Test case* and others. A quick trace fills the
+   rows, columns and relations for you. The ones the chosen system holds
+   nothing for are listed apart and cannot be chosen.
+4. Or choose the **Rows** and **Columns** yourself: an element type (requirement
+   types are offered separately), or a saved query, and the **Relations**
+   counted as a trace.
+5. **Build**. The result shows as a **Table** (rows against columns) or a
    **List** (each row with the items it links to). Filter to rows **With links**
    or **Missing** links, and order by most or fewest links.
-5. **Save matrix** writes the definition into its package, so the matrix is
+6. **Save matrix** writes the definition into its package, so the matrix is
    part of the model, reviewed and versioned like any view. The dialog closes at
    once and you can keep working; the model is checked and rebuilt before the
    matrix is listed on the left, which takes as long as a rebuild of the model.
    **Edit view** changes a saved matrix; **Duplicate**, **Rename**, **Move** and
    **Delete** are on each entry in the panel.
-6. **Spreadsheet** and **Word**, beside the row count of the list, download the
+7. **Spreadsheet** and **Word**, beside the row count of the list, download the
    rows as they are shown (filters and order included): one line for each item
    and each item it links to, and a line of its own for an item with no link.
 
