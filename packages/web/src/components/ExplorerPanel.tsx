@@ -3,7 +3,7 @@ import { Fragment, createContext, lazy, Suspense, useContext, useState, useMemo,
 import { alertDialog, askConfirm, askText } from './AppDialogs';
 import { groupParentPath, siblingGroups, waitForPackage } from '../lib/element-package';
 import { kindParents } from '../analysis/kind-hierarchy';
-import { isFlatMode, partitionsOf, sharedIds, type ExplorerPartition } from '../lib/explorer-modes';
+import { ALLOCATION_LABELS, allocationFilter, isFlatMode, nextAllocationFilter, partitionsOf, sharedIds, type AllocationFilter, type ExplorerPartition } from '../lib/explorer-modes';
 import { SystemNavigator } from './SystemNavigator';
 import { GLOBAL_SYSTEM, groupBySystem } from '../lib/system-grouping';
 import { useNavigate } from 'react-router-dom';
@@ -1244,8 +1244,6 @@ export function computeExplorerGroupTree(
         groupBy?: string;
         /** False lists elements by kind with no package folders in between. */
         packageFolders?: boolean;
-        /** The systems that hold an element (and Unassigned for none); the domains listed in SYSTEM_FIRST_DOMAINS group by it. */
-        systemsOf?: (el: MemoElement) => ExplorerPartition[];
         /** The operational level an element is at, from the model (see memo-tools `operationalLevels`); an element at none is listed as before. */
         levelOf?: (el: MemoElement) => OperationalLevel | undefined;
     },
@@ -1711,35 +1709,6 @@ export function computeExplorerGroupTree(
             }));
     };
 
-    /**
-     * A domain listed system first: one group per system that holds any of it (an element two systems share
-     * is under each), then the categories that system's items fall into, then what the categories hold.
-     */
-    const bySystem = (domainRoots: TreeNode[], systemsOf: (el: MemoElement) => ExplorerPartition[]): ExplorerSubGroup[] => {
-        const held = new Map<string, { system: ExplorerPartition; roots: TreeNode[] }>();
-        for (const root of domainRoots) {
-            const owners = systemsOf(root.element!);
-            for (const system of owners.length > 0 ? owners : [{ id: 'unassigned', label: 'Unassigned', color: '#F59E0B', rank: 1000 }]) {
-                const entry = held.get(system.id) ?? { system, roots: [] };
-                entry.roots.push(root);
-                held.set(system.id, entry);
-            }
-        }
-        return [...held.values()]
-            .sort((a, b) => a.system.rank - b.system.rank || a.system.label.localeCompare(b.system.label))
-            .map(({ system, roots: ofSystem }) => {
-                const categories = toSubGroups(ofSystem, system.color);
-                const kinds = new Map<string, TreeNode[]>();
-                for (const category of categories) for (const [kind, nodes] of category.kinds) kinds.set(kind, [...(kinds.get(kind) ?? []), ...nodes]);
-                return {
-                    id: `sys:${system.id}`, label: system.label, color: system.color, kinds,
-                    tree: categories.map(category => ({
-                        id: `cat:${system.id}|${category.id}`, name: category.label, type: 'folder' as const, children: category.tree,
-                    })),
-                };
-            });
-    };
-
     const groups: { group: LayerGroup; subGroups: ExplorerSubGroup[] }[] = [];
 
     // A mode may list a root under groups of its own before the ontology's domains see it.
@@ -1786,9 +1755,7 @@ export function computeExplorerGroupTree(
                 color,
                 kinds: [...new Set(domainRoots.map(root => root.element!.kind))],
             },
-            subGroups: SYSTEM_FIRST_DOMAINS.has(domain) && modes?.systemsOf
-                ? bySystem(domainRoots, modes.systemsOf)
-                : toSubGroups(domainRoots, color),
+            subGroups: toSubGroups(domainRoots, color),
         });
     }
 
@@ -1933,14 +1900,17 @@ function ModelExplorerContent({ searchTerm }: { searchTerm: string }) {
     // Build the tree from the ontology registry and its source namespaces.
     const explorerSystems = useModelStore(s => s.explorerSystems);
     const systemFiltered = Boolean(explorerDomain && SYSTEM_FILTER_DOMAINS.has(explorerDomain) && explorerSystems.length > 0);
+    const allocation = useModelStore(s => s.explorerAllocation);
+    const allocationFiltered = explorerDomain === ALLOCATION_DOMAIN && allocation !== 'all';
     const shownElements = useMemo(() => {
-        const all = Object.values(model?.elements ?? {});
+        let all = Object.values(model?.elements ?? {});
+        if (allocationFiltered) all = all.filter(el => allocationFilter(el.id, membership, allocation));
         if (!systemFiltered) return all;
         const chosen = new Set(explorerSystems);
         const unassigned = new Set(membership?.unassigned ?? []);
         return all.filter(el => (membership?.membership[el.id] ?? []).some(root => chosen.has(root))
             || (chosen.has(UNASSIGNED_SYSTEM) && unassigned.has(el.id)));
-    }, [model?.elements, membership, explorerSystems, systemFiltered]);
+    }, [model?.elements, membership, explorerSystems, systemFiltered, allocationFiltered, allocation]);
     const groupTree = useMemo(
         () => model ? computeExplorerGroupTree(
             shownElements,
@@ -1956,7 +1926,6 @@ function ModelExplorerContent({ searchTerm }: { searchTerm: string }) {
                 flat: isFlatMode(explorerMode),
                 groupBy: groupBy || undefined,
                 packageFolders,
-                systemsOf: el => partitionsOf(el, { mode: 'system', membership, workspace }) ?? [],
                 levelOf: el => model.operationalLevels?.[el.id],
             },
         ) : [],
@@ -2680,12 +2649,8 @@ export interface ViewPackageNode {
 type PackagedDiagram = DiagramDTO & { package?: string };
 
 /** Build Viewpoints navigation from SysML package ownership, never file paths. */
-/**
- * Domains whose items are the evidence a system is built and checked to, so they are listed under the
- * system they belong to first and by category second. Everything the Assurance domain holds
- * (requirements, risk, verification, evidence) answers to a system; architecture does not.
- */
-const SYSTEM_FIRST_DOMAINS: ReadonlySet<string> = new Set(['assurance']);
+/** The domain whose explorer offers the allocated / not allocated / all toggle. */
+const ALLOCATION_DOMAIN = 'architecture';
 
 /** Domains opened from the navigation that offer a filter by system: what is built, and what it is checked against. */
 const SYSTEM_FILTER_DOMAINS: ReadonlySet<string> = new Set(['architecture', 'assurance']);
@@ -3686,6 +3651,40 @@ function savedExplorerWidth(): number {
     }
 }
 
+/** A system boundary with its parts inside (allocated), outside (not allocated), or both (all). */
+function AllocationIcon({ state }: { state: AllocationFilter }) {
+    return (
+        <svg width={16} height={16} viewBox="0 0 16 16" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth={1.3}>
+            <rect x={1.5} y={1.5} width={9} height={9} rx={1.5} strokeDasharray={state === 'unallocated' ? '2 1.5' : undefined} />
+            {state !== 'unallocated' && <rect x={4} y={4} width={4} height={4} fill="currentColor" stroke="none" />}
+            {state !== 'allocated' && <rect x={11} y={11} width={4} height={4} fill="currentColor" stroke="none" />}
+        </svg>
+    );
+}
+
+/** In Architecture: list every element, only those allocated to a system, or only those allocated to none. */
+function AllocationToggle() {
+    const explorerDomain = useModelStore(state => state.explorerDomain);
+    const state = useModelStore(state => state.explorerAllocation);
+    const setState = useModelStore(state => state.setExplorerAllocation);
+    const hasSystems = useModelStore(state => Boolean(state.model?.workspaceMembership && !state.model.workspaceMembership.missingSystem));
+    if (explorerDomain !== ALLOCATION_DOMAIN || !hasSystems) return null;
+    const next = nextAllocationFilter(state);
+    const on = state !== 'all';
+    return (
+        <button
+            onClick={() => setState(next)} aria-label="Filter by allocation to a system" data-state={state}
+            title={`${ALLOCATION_LABELS[state]}. Click for: ${ALLOCATION_LABELS[next].replace(/^Showing /, '')}.`}
+            className="rounded-lg flex items-center justify-center flex-shrink-0"
+            style={{
+                width: 28, cursor: 'pointer', color: on ? COLOR.accent : COLOR.secondary,
+                background: on ? `${COLOR.accent}22` : COLOR.surfaceAlt,
+                border: `1px solid ${on ? COLOR.accent : COLOR.border}`,
+            }}
+        ><AllocationIcon state={state} /></button>
+    );
+}
+
 /** The Explorer's switch between package folders and a list by type; the same one as in Settings. */
 function PackageFoldersToggle() {
     const on = useModelStore(state => state.packageFolders);
@@ -3852,6 +3851,7 @@ export function ExplorerPanel() {
                                 className="flex-1 min-w-0 px-3 py-2 rounded-lg focus:outline-none"
                                 style={{ background: COLOR.surfaceAlt, border: `1px solid ${COLOR.border}`, color: COLOR.primary, fontSize: FONT.explorer.search }} />
                             <button onClick={() => window.dispatchEvent(new Event('memo:collapse-explorer-tree'))} title="Collapse all Explorer groups" aria-label="Collapse all Explorer groups" className="rounded-lg flex items-center justify-center flex-shrink-0" style={{ width: 28, background: COLOR.surfaceAlt, border: `1px solid ${COLOR.border}`, color: COLOR.secondary, cursor: 'pointer' }}><CollapseAllIcon /></button>
+                        <AllocationToggle />
                         <PackageFoldersToggle />
                         </div>
                     </div>
@@ -3891,6 +3891,7 @@ export function ExplorerPanel() {
                             className="flex-1 min-w-0 px-3 py-2 rounded-lg focus:outline-none"
                             style={{ background: COLOR.surfaceAlt, border: `1px solid ${COLOR.border}`, color: COLOR.primary, fontSize: FONT.explorer.search }} />
                         <button onClick={() => window.dispatchEvent(new Event('memo:collapse-explorer-tree'))} title="Collapse all Explorer groups" aria-label="Collapse all Explorer groups" className="rounded-lg flex items-center justify-center flex-shrink-0" style={{ width: 28, background: COLOR.surfaceAlt, border: `1px solid ${COLOR.border}`, color: COLOR.secondary, cursor: 'pointer' }}><CollapseAllIcon /></button>
+                        <AllocationToggle />
                         <PackageFoldersToggle />
                         </div>
                     </div>

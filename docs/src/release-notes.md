@@ -14,6 +14,10 @@ Versioned under [semantic versioning](https://semver.org/). Before 1.0 a change 
 
 ### Fixed
 
+- **The Model Explorer lists by kind, always.** Assurance listed its elements under each system
+  first and an Unassigned group last, and the system of systems' workspace pulled what no system
+  holds into Unassigned. Both are gone. In Architecture, a switch beside the collapse button
+  shows all elements, only those allocated to a system, or only those allocated to none.
 - **A trace with nothing to match asked you to choose types.** When the chosen rows or columns
   match no element (no system requirements in the model, say), the trace screen still said to
   choose element types and Build. It now says which axis matched nothing, and in which system.

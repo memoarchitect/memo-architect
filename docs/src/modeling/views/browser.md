@@ -26,6 +26,10 @@ The **Model Explorer** is the browser view you use most:
   declared level.
 - **Filter element types** and **Filter systems** narrow the tree; both are
   searchable lists with counts.
+- In **Architecture**, the allocation switch beside the collapse button steps
+  through three states: all elements, only those allocated to a system, and
+  only those allocated to no system. Systems never become folders: the tree is
+  by kind in every state.
 - Folder counts show how many elements each folder holds.
 
 Document views—the DHF documents in **☰ › Model › Documents**—are also browser

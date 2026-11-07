@@ -236,7 +236,7 @@ export interface DhfSettings {
 }
 
 /** Which explorer tab is active in the left panel */
-import type { ExplorerMode } from '../lib/explorer-modes';
+import type { AllocationFilter, ExplorerMode } from '../lib/explorer-modes';
 export type ExplorerTab = 'model' | 'views' | 'worksets' | 'ontologies';
 
 /** Generic analysis issue surfaced by tools (DSM, traceability, etc.) */
@@ -550,6 +550,9 @@ export interface ModelState {
     /** The systems the Model Explorer is filtered to (workspace roots, or 'unassigned'); none means no filter. */
     explorerSystems: string[];
     setExplorerSystems: (systems: string[]) => void;
+    /** Architecture explorer: every element, only those allocated to a system, or only those allocated to none. */
+    explorerAllocation: AllocationFilter;
+    setExplorerAllocation: (filter: AllocationFilter) => void;
     features: string[];
     setFeatureEnabled: (id: string, enabled: boolean) => void;
     /** The attribute the Model Explorer splits its folders by ('' for none); saved with the person's choices. */
@@ -747,6 +750,8 @@ export const useModelStore = create<ModelState>((set, get) => ({
     setExplorerDomain: (explorerDomain) => set({ explorerDomain }),
     explorerSystems: [],
     setExplorerSystems: (explorerSystems) => set({ explorerSystems }),
+    explorerAllocation: 'all',
+    setExplorerAllocation: (explorerAllocation) => set({ explorerAllocation }),
     packageFolders: true,
     setPackageFolders: (packageFolders) => {
         set({ packageFolders });

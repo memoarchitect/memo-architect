@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { MemoElement, MemoModelDTO, WorkspaceMembershipDTO } from '@memoarchitect/tools/browser';
-import { partitionsOf, sharedIds } from '../lib/explorer-modes';
+import { allocationFilter, nextAllocationFilter, partitionsOf, sharedIds } from '../lib/explorer-modes';
 import { childrenOf, definitionSubtree, drillTarget, navigatorRoots } from '../lib/system-navigator';
 import { groupUseCases } from '../lib/use-case-groups';
 
@@ -64,9 +64,9 @@ describe('explorer modes', () => {
         expect(at('Isolation', 'system', 'Recording')).toEqual(['ws:Recording']);
     });
 
-    it('puts Unassigned in the system of systems workspace in layer mode, and only there', () => {
-        expect(at('stray', 'layer', 'Lab')).toEqual(['unassigned']);
-        expect(at('stray', 'layer', 'Mapping')).toBeUndefined();
+    it('lists by type in layer mode: an element no system holds gets no group of its own', () => {
+        expect(at('stray', 'layer', 'Lab')).toBeUndefined();
+        expect(at('stray', 'layer', null)).toBeUndefined();
         expect(at('Mapping', 'layer', 'Lab')).toBeUndefined();
     });
 
@@ -82,6 +82,24 @@ describe('explorer modes', () => {
 
     it('leaves a model with no System to the layers', () => {
         expect(partitionsOf(byId('Lab'), { mode: 'system', membership: { ...membership, missingSystem: true }, workspace: null })).toBeUndefined();
+    });
+});
+
+describe('allocation filter', () => {
+    it('lists everything, only what a system holds, or only what none holds', () => {
+        expect(['Isolation', 'stray', 'Lab'].filter(id => allocationFilter(id, membership, 'all'))).toEqual(['Isolation', 'stray', 'Lab']);
+        expect(['Isolation', 'stray', 'Lab'].filter(id => allocationFilter(id, membership, 'allocated'))).toEqual(['Isolation', 'Lab']);
+        expect(['Isolation', 'stray', 'Lab'].filter(id => allocationFilter(id, membership, 'unallocated'))).toEqual(['stray']);
+    });
+
+    it('lists everything when the model has no membership', () => {
+        expect(allocationFilter('stray', undefined, 'allocated')).toBe(true);
+    });
+
+    it('steps all, allocated, not allocated, and back', () => {
+        expect(nextAllocationFilter('all')).toBe('allocated');
+        expect(nextAllocationFilter('allocated')).toBe('unallocated');
+        expect(nextAllocationFilter('unallocated')).toBe('all');
     });
 });
 

@@ -46,6 +46,10 @@ copy of the model.
   Settings) adds the package level under each kind.
 - **Filter element types** and **Filter systems** narrow the tree. Both are
   searchable lists with counts.
+- In **Architecture**, the allocation switch beside the collapse button steps
+  through three states: all elements, only those allocated to a system, and
+  only those allocated to no system. Systems never become folders: the tree is
+  by kind in every state.
 - Explorer rows show display names; the id appears beside them.
 
 How the explorer's kind folders relate to modeling layers is explained in

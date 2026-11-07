@@ -3,9 +3,8 @@
 // Five readings of one model (plan A6). The tree below a group is the explorer's own (kind, then
 // package, then composition); a mode only decides the groups at the top.
 //
-//   layer             today's: the ontology's domains. In the system of systems' workspace the
-//                     elements no workspace holds are pulled into an Unassigned group, because
-//                     an element nothing links is a finding and belongs where the whole picture is.
+//   layer             the ontology's domains, then element types. Whether a system holds an
+//                     element is a filter the person turns on (`allocationFilter`), never a group.
 //   system            one group per workspace that holds the element: the system of systems, then
 //                     each system by name, then Unassigned. A shared element is listed under every
 //                     system that holds it, which is also what the workspace selector shows.
@@ -57,12 +56,7 @@ export function sharedIds(membership: WorkspaceMembershipDTO | undefined): Reado
  */
 export function partitionsOf(el: MemoElement, options: ExplorerModeOptions): ExplorerPartition[] | undefined {
     const { mode, membership, workspace } = options;
-    const unassigned = new Set(membership?.unassigned ?? []);
     switch (mode) {
-        case 'layer': {
-            const chosen = membership?.workspaces.find(candidate => candidate.root === workspace);
-            return chosen?.scope === 'sos' && unassigned.has(el.id) ? [UNASSIGNED] : undefined;
-        }
         case 'system': {
             if (!membership || membership.missingSystem) return undefined;
             const roots = membership.membership[el.id] ?? [];
@@ -107,3 +101,39 @@ export function groupableAttributes(elements: readonly MemoElement[]): string[] 
     // A few values make a split a reader can use; dozens make a list.
     return [...names].filter(([, values]) => values.size > 1 && values.size <= 8).map(([name]) => name).sort();
 }
+
+// ─── Allocated to a system, or not ──────────────────────────────────────────
+
+/** Which elements the Architecture explorer lists: all of them, those a system holds, or those none does. */
+export type AllocationFilter = 'all' | 'allocated' | 'unallocated';
+
+/** The order a click steps through, starting from showing everything. */
+export const ALLOCATION_FILTERS: readonly AllocationFilter[] = ['all', 'allocated', 'unallocated'];
+
+export const ALLOCATION_LABELS: Record<AllocationFilter, string> = {
+    all: 'Showing all elements',
+    allocated: 'Showing only elements allocated to a system',
+    unallocated: 'Showing only elements allocated to no system',
+};
+
+/** The next state of the toggle. */
+export const nextAllocationFilter = (current: AllocationFilter): AllocationFilter =>
+    ALLOCATION_FILTERS[(ALLOCATION_FILTERS.indexOf(current) + 1) % ALLOCATION_FILTERS.length];
+
+/**
+ * Whether an element is listed under this filter. "Allocated" is held by a system's or the system of systems'
+ * workspace (memo-tools `workspaceMembership`); "not allocated" is what memo-tools reports as held by none.
+ * A model with no membership has nothing to filter by, so everything is listed.
+ */
+export function allocationFilter(id: string, membership: WorkspaceMembershipDTO | undefined, filter: AllocationFilter): boolean {
+    if (filter === 'all' || !membership) return true;
+    if (filter === 'allocated') return (membership.membership[id] ?? []).length > 0;
+    return unassignedOf(membership).has(id);
+}
+
+const unassignedSets = new WeakMap<WorkspaceMembershipDTO, ReadonlySet<string>>();
+const unassignedOf = (membership: WorkspaceMembershipDTO): ReadonlySet<string> => {
+    let set = unassignedSets.get(membership);
+    if (!set) unassignedSets.set(membership, set = new Set(membership.unassigned));
+    return set;
+};
