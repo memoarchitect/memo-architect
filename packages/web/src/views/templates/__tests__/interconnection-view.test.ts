@@ -498,9 +498,13 @@ describe('back-facing ports', () => {
     // Two subsystems linked from an out-port on the right wall to an in-port on the left wall. Stacked, the
     // connector has to leave the wrong way and go round its own box, which the balanced-footprint preference
     // used to accept because a side-by-side pair is wide.
-    it('puts linked boxes where their ports face each other, even when that is wide', async () => {
+    it.each([
+        ['about square', 302, 162],
+        // Wider and flatter: the side-by-side pair is far from the target aspect, which a weight lost to.
+        ['wide and flat', 386, 122],
+    ])('puts linked boxes where their ports face each other (%s)', async (_, width, height) => {
         const nodes = [
-            { id: 'a', width: 302, height: 162, ports: [{ id: 'a.out', side: 'right' as const }] },
+            { id: 'a', width, height, ports: [{ id: 'a.out', side: 'right' as const }] },
             { id: 'b', width: 302, height: 122, ports: [{ id: 'b.in', side: 'left' as const }] },
         ];
         const edges = [{ id: 'e', source: 'a', target: 'b', sourcePort: 'a.out', targetPort: 'b.in' }];

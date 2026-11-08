@@ -116,6 +116,11 @@ export function ibdEdgeLabel(flowItem?: string, relType = '', connectorType?: st
         || undefined;
 }
 
+/** What a connector is labelled: its authored name, else what {@link ibdEdgeLabel} gives. */
+function connectorLabelText(rel: MemoRelationship): string | undefined {
+    return (rel.attributes?.name as string | undefined) || ibdEdgeLabel(rel.flowItem, rel.type, rel.kind);
+}
+
 export function classifyIbdFlow(flowItem?: string, relType?: string): IbdFlowKind {
     const item = flowItem ?? '';
     if (/energy|power|voltage|current|thermal|heat/i.test(item)) return 'energy';
@@ -330,6 +335,10 @@ const LEAF_MIN_H = 72;
 const IBD_CARD_MAX_W = 248;
 /** A container's header carries up to three 18px controls (drill, go to view, collapse) and their gaps. */
 export const IBD_HEADER_CONTROLS_W = 72;
+/** The frame bar's IBD badge and the gap after it. */
+const FRAME_BADGE_W = 42;
+/** The widest the frame's title may make the diagram; longer text ellipsizes. */
+const FRAME_HEADER_MAX_W = 640;
 
 /** Rough text width for sizing (kept in step with the node's font sizes). */
 const textWidth = (s: string, px = 7.2) => s.length * px + 20;
@@ -1032,9 +1041,15 @@ export async function computeInterconnectionLayout(
             sourcePort?: string; targetPort?: string;
         }[] = [];
         const connectedKids = new Set<string>();
+        /** The widest label on a connector between two of this part's children. */
+        let widestLabel = 0;
         connectors.forEach((rel, i) => {
             const s = liftHere(rel.sourceId);
             const t = liftHere(rel.targetId);
+            if (s && t && s !== t && kidSet.has(s) && kidSet.has(t)) {
+                const text = connectorLabelText(rel);
+                if (text) widestLabel = Math.max(widestLabel, connectorLabelWidth(text));
+            }
             if (s && t && s !== t) {
                 elkEdges.push({
                     id: `ic-${i}`, source: s, target: t,
@@ -1086,7 +1101,9 @@ export async function computeInterconnectionLayout(
                 // pass, so a pass-through connector is ordered against the
                 // internal wiring instead of being placed blind.
                 graphPorts: ownPorts.map(portId => ({ id: portId, side: portSideOf(portId) })),
-                gapX: 54,
+                // Wide enough for the label of a link between neighbours to sit in the gap, clear of the port
+                // squares and captions on either side.
+                gapX: Math.max(54, widestLabel + PORT_SIZE + 16),
                 gapY: 58,
                 // IBDs are boards, not process lanes. Compare horizontal,
                 // vertical and compact candidates, favouring a square-ish
@@ -1205,7 +1222,10 @@ export async function computeInterconnectionLayout(
             contentBottom = Math.max(contentBottom, rowStart);
         }
 
-        const headerW = Math.min(labelWidth(el) + 32, IBD_CARD_MAX_W) + IBD_HEADER_CONTROLS_W;
+        // The frame bar sets name and type on one row after the IBD badge, so it needs both widths side by side.
+        const headerW = parentOf.has(partId)
+            ? Math.min(labelWidth(el) + 32, IBD_CARD_MAX_W) + IBD_HEADER_CONTROLS_W
+            : Math.min(FRAME_BADGE_W + textWidth(el.name, 8) + textWidth(`: ${el.kind}`, 6.6) + 24, FRAME_HEADER_MAX_W);
         // A horizontal wall's ports have to fit ACROSS the frame between the
         // vertical caption gutters, and a bottom wall's captions need room
         // inside above the edge, so both walls can widen or deepen the frame.
@@ -1558,9 +1578,7 @@ export async function computeInterconnectionLayout(
         // itself (`/command/channels`), and a declaration can never carry it
         // because it cannot contain "/". Prefer the authored name; every flow
         // without one keeps the previous label.
-        const label = bundleCount > 1
-            ? `${bundleCount} connections`
-            : (rel.attributes?.name as string | undefined) || ibdEdgeLabel(rel.flowItem, rel.type, rel.kind);
+        const label = bundleCount > 1 ? `${bundleCount} connections` : connectorLabelText(rel);
         // Port endpoints anchor to the port's inner/outer face; a part endpoint
         // anchors to its right (source) / left (target) side so the connector
         // stays a clean horizontal run instead of looping over the box.

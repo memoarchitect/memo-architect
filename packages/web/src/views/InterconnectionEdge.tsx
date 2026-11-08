@@ -302,6 +302,9 @@ function InterconnectionEdgeInner(props: EdgeProps) {
                         border: `1px solid ${highlighted ? stroke : '#E2E8F0'}`,
                         opacity: labelDimmed ? 0.25 : 1,
                         padding: '1px 4px', borderRadius: 4, pointerEvents: 'all',
+                        // Above the parts, as the connector itself is: a link between two nested parts is labelled
+                        // over its container, and without this the container's fill hid the label.
+                        zIndex: 20,
                     }}>
                         {props.label}
                     </div>

@@ -451,7 +451,10 @@ function TypedLabel({ name, kind, nameColor, typeColor, frame = false, singleLin
     return (
         <span title={`${name} : ${kind}`} style={{ display: 'flex', flexDirection: frame ? 'row' : 'column', alignItems: textAlign === 'right' ? 'flex-end' : textAlign === 'center' ? 'center' : frame ? 'baseline' : 'flex-start', gap: frame ? 6 : 1, minWidth: 0, overflow: 'hidden', flex: 1, textAlign }}>
             <span style={{
-                display: frame || singleLine ? 'block' : '-webkit-box', width: '100%', minWidth: 0,
+                // In the frame bar the name and type share one row: the name takes only its own width, and when the
+                // row is short the type gives way first, so neither is squeezed to an ellipsis while there is room.
+                display: frame || singleLine ? 'block' : '-webkit-box', width: frame ? 'auto' : '100%', minWidth: 0,
+                flex: frame ? '0 1 auto' : undefined,
                 fontSize: style?.fontSize ?? (frame ? FONT.md : FONT.sm), lineHeight: 1.2, fontWeight: style?.fontWeight ?? 700,
                 color: style?.textColor ?? nameColor, whiteSpace: frame || singleLine ? 'nowrap' : 'normal', overflow: 'hidden',
                 textOverflow: 'ellipsis', WebkitBoxOrient: 'vertical', WebkitLineClamp: frame || singleLine ? undefined : 2,
@@ -459,7 +462,7 @@ function TypedLabel({ name, kind, nameColor, typeColor, frame = false, singleLin
             }}>
                 {name}
             </span>
-            <span style={{ display: 'block', maxWidth: '100%', fontSize: '9px', lineHeight: 1.15, fontWeight: 650, letterSpacing: '0.055em', textTransform: 'uppercase', color: style?.textColor ?? typeColor, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            <span style={{ display: 'block', maxWidth: '100%', minWidth: frame ? 0 : undefined, flex: frame ? '0 100 auto' : undefined, fontSize: '9px', lineHeight: 1.15, fontWeight: 650, letterSpacing: '0.055em', textTransform: 'uppercase', color: style?.textColor ?? typeColor, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                 {frame ? `: ${kind}` : `«${kind}»`}
             </span>
         </span>

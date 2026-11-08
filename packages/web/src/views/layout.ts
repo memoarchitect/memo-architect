@@ -502,9 +502,7 @@ export function resolvedLayoutScore(layout: ResolvedGraphLayout, edges: Resolver
         + routedLength * 6
         + routedBends * 4_000
         + routedCrossings * Math.max(layout.width * layout.height * 0.45, 70_000)
-        // Weighted above the balanced-footprint penalty a caller may add (2.8 × area × aspect error): a board that is
-        // too wide is still read correctly, a connector sent round its own box is not.
-        + portBlocked * Math.max(layout.width * layout.height * 1.5, 120_000);
+        + portBlocked * Math.max(layout.width * layout.height * 0.45, 70_000);
 }
 
 /** Connector ends whose port sits on a wall that does not face the box at the other end. */
@@ -773,8 +771,15 @@ export async function resolveGraphLayout(options: {
         ));
         return baseScore + candidate.width * candidate.height * aspectPenalty * 2.8;
     };
-    return candidates.reduce((best, candidate) =>
-        candidateScore(candidate) < candidateScore(best) ? candidate : best);
+    // A port facing away from its partner is decided first, before any footprint or length: a board that is too
+    // wide is still read correctly, a connector sent round its own box is not. No weight expresses that for every
+    // box size, so it is not a weight.
+    const ranked = candidates.map(candidate => ({
+        candidate, blocked: backFacingPorts(candidate, edges), score: candidateScore(candidate),
+    }));
+    return ranked.reduce((best, next) =>
+        next.blocked < best.blocked || (next.blocked === best.blocked && next.score < best.score) ? next : best,
+    ).candidate;
 }
 
 export async function computeLayout(

@@ -32,6 +32,9 @@ Versioned under [semantic versioning](https://semver.org/). Before 1.0 a change 
     of a `bind` no longer flips it.
   - Interfaces, connections and bindings are drawn without an arrowhead; only a flow has a
     direction. A typed interface is labelled by its definition, not by the word "interface".
+  - A connector's label is drawn above the parts, and linked neighbours are spaced so the
+    label fits between them. Inside a container the label used to be hidden under it.
+  - The diagram frame shows its type in full beside the name.
 
 - **Saving a traceability matrix held the screen.** A matrix saved to a new file was written
   twice, a package first and the matrix after, which cost an extra compile and an extra model
