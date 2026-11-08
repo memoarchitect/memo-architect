@@ -7,7 +7,7 @@ const model = (elements: Record<string, any>, relationships: any[]) => ({ elemen
 
 describe('system context view template', () => {
     it('reads the glyph from the side, so a device named *Actor is not a person', () => {
-        // `HospitalEpRecordingSystemActor` is equipment. Deciding the
+        // `InfusionPumpSystemActor` is equipment. Deciding the
         // glyph from the kind string drew it as a stick figure; deciding it
         // from the compass side draws it as the box it is.
         const system = element('ims', 'OperationalEntity', 'IMS', { contextRole: 'systemOfInterest' });

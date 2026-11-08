@@ -86,8 +86,8 @@ export function definitionIndex(
 /**
  * A block definition diagram shows DEFINITIONS.
  *
- * That is what separates a BDD from an IBD: a BDD states that a Data
- * Acquisition Board is made of an FPGA and a relay board — a fact about the
+ * That is what separates a BDD from an IBD: a BDD states that a Processor
+ * Board is made of an FPGA and a memory board — a fact about the
  * types — while an IBD shows the particular instances inside one assembly and
  * how they are wired. Drawing usages on a BDD produces one box per instance of
  * the same type and no statement about the type at all.
@@ -122,11 +122,11 @@ export function definitionLevelElements(
 /**
  * Composition edges projected onto the definitions at both ends.
  *
- * This model declares composition in both places — of 2221 `composes` edges,
- * 2134 sit on a usage (`catheterInterfaceUnit` composes its four blocks) and
- * 86 on a definition (`DataAcquisitionBoard` composes its six). Reading either
- * convention alone gives a broken tree: walking usages stopped at the Data
- * Acquisition Board, and walking definitions stopped at the CIU. Projecting
+ * A real model declares composition in both places — of 2221 `composes` edges,
+ * 2134 sit on a usage (`controlUnit` composes its four blocks) and
+ * 86 on a definition (`ProcessorBoard` composes its six). Reading either
+ * convention alone gives a broken tree: walking usages stopped at the
+ * processor board, and walking definitions stopped at the control unit. Projecting
  * both ends onto definitions reads the two as the one fact they express, and
  * collapses those 2221 edges to 69 distinct def-to-def relationships.
  *
@@ -162,10 +162,10 @@ export function definitionLevelComposition(
  * The element a view is the diagram OF.
  *
  * A block definition diagram is always a BDD of something, so it has one root
- * and everything on it is part of that root. The subject is declared: the CIU
+ * and everything on it is part of that root. The subject is declared: a unit's
  * physical decomposition exposes
- * `..._hardware_ciu::catheterInterfaceUnit` specifically before widening to
- * `..._physical_architecture_ims::*`, and names `HW-IMS-01` in
+ * `..._hardware::controlUnit` specifically before widening to
+ * `..._physical_architecture::*`, and names `HW-UNIT-01` in
  * `includeElementIds`. A wildcard is scope, not subject — it says what may be
  * drawn, not what the diagram is about.
  */
@@ -202,10 +202,10 @@ export function declaredSubject(
 /**
  * The subtree under one root, as a tree in its own right.
  *
- * What a BDD of the CIU may show is the CIU and what the CIU is made of.
+ * What a BDD of a unit may show is the unit and what it is made of.
  * Anything the root does not reach is not part of the subject and is dropped —
  * which is what removes the traceability duplicates and the RFG parts that a
- * model-wide `includeElementKinds` query drags into an IMS view. They are not
+ * model-wide `includeElementKinds` query drags into a system's view. They are not
  * laid out more tidily; they are not on this diagram.
  */
 export function subtreeOf(tree: CompositionTree, rootId: string): CompositionTree {
@@ -561,7 +561,7 @@ export interface CompartmentEntry {
  * kind name is an ontology string resolved at runtime and comparing one to a
  * literal is what `semantic.ts` tells this codebase not to do. Every kind whose
  * registry entry declares `port def` produces elements with `construct: 'port'`
- * — 68 such kinds in the MEMO ontology, and on the IMS physical view the two
+ * — 68 such kinds in the MEMO ontology, and on one physical view the two
  * tests agree on all 79 elements, with no third case either way.
  */
 export const isPortUsage = (el: MemoElement): boolean =>
@@ -575,7 +575,7 @@ export const isPortUsage = (el: MemoElement): boolean =>
  * peer relationship the model does not contain. The rows come from the owner's
  * own `ownedPorts`, which the builder already populates (145 elements carry
  * one), so this reads structure rather than reconstructing it from edges —
- * which would not work anyway: on the IMS physical view all 79 ports resolve an
+ * which would not work anyway: on one physical view all 79 ports resolve an
  * owner and only 9 of them have an edge of any kind.
  */
 export function portCompartmentEntries(

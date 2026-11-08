@@ -82,7 +82,7 @@ export interface ContextViewOptions {
  * The system of interest of a context view, in order: the view's own `subjectElement`; the one element
  * flagged `isSystemOfInterest` (or, among several, the most connected, ties broken by id, never by the
  * order the elements arrived in); and with no flag at all the most connected element. A name that
- * happens to contain "system" decides nothing: an external `hospitalEpRecordingSystem` is not the hub.
+ * happens to contain "system" decides nothing: an external `infusionPumpSystem` is not the hub.
  */
 export function systemOfInterestOf(
     elements: MemoElement[],

@@ -328,7 +328,7 @@ describe('definitionLevelElements', () => {
 
 describe('definitionLevelComposition', () => {
     it('reads composition declared on the usage and on the definition alike', () => {
-        // catheterInterfaceUnit (usage) composes daqBoard (usage) : Board
+        // controlUnit (usage) composes daqBoard (usage) : Board
         const els = [def('CIU'), use('ciu', 'CIU'), def('Board'), use('daqBoard', 'Board')];
         const rels = [rel('composes', 'ciu', 'daqBoard')];
         const out = definitionLevelComposition(rels, record(els), index(els));
