@@ -25,7 +25,7 @@ import type { PortInfo, PortSide } from './templates/interconnection-view';
 import {
     INTERCONNECTION_PORT_SIZE, INNER_HANDLE_SUFFIX, PORT_DIR_COLORS,
     PORT_LABEL_MAX, PORT_LABEL_OFFSET, PORT_LABEL_STACKED_WIDTH,
-    NESTED_PITCH, NESTED_PIN_INSET, NESTED_HOUSING_DEPTH, portAnchorOffset,
+    NESTED_PITCH, NESTED_PIN_INSET, NESTED_HOUSING_DEPTH, portAnchorOffset, INTERCONNECTION_HEADER_HEIGHT,
 } from './templates/interconnection-view';
 import { useInterconnectionRenderer } from '../diagram/renderers/interconnection-renderer';
 
@@ -441,18 +441,20 @@ function ImplicitPort({ side, direction }: { side: 'left' | 'right'; direction: 
 }
 
 /** Compact, non-wrapping SysML part-property identity. */
-function TypedLabel({ name, kind, nameColor, typeColor, frame = false, style }: {
+function TypedLabel({ name, kind, nameColor, typeColor, frame = false, singleLine = false, style }: {
     name: string; kind: string; nameColor: string; typeColor: string; frame?: boolean;
+    /** One name line, so the header keeps the height the layout reserved for it. */
+    singleLine?: boolean;
     style?: Pick<InterconnectionNodeData, 'textColor' | 'fontSize' | 'fontWeight' | 'textAlign'>;
 }) {
     const textAlign = style?.textAlign ?? 'left';
     return (
         <span title={`${name} : ${kind}`} style={{ display: 'flex', flexDirection: frame ? 'row' : 'column', alignItems: textAlign === 'right' ? 'flex-end' : textAlign === 'center' ? 'center' : frame ? 'baseline' : 'flex-start', gap: frame ? 6 : 1, minWidth: 0, overflow: 'hidden', flex: 1, textAlign }}>
             <span style={{
-                display: frame ? 'block' : '-webkit-box', width: '100%', minWidth: 0,
+                display: frame || singleLine ? 'block' : '-webkit-box', width: '100%', minWidth: 0,
                 fontSize: style?.fontSize ?? (frame ? FONT.md : FONT.sm), lineHeight: 1.2, fontWeight: style?.fontWeight ?? 700,
-                color: style?.textColor ?? nameColor, whiteSpace: frame ? 'nowrap' : 'normal', overflow: 'hidden',
-                textOverflow: 'ellipsis', WebkitBoxOrient: 'vertical', WebkitLineClamp: frame ? undefined : 2,
+                color: style?.textColor ?? nameColor, whiteSpace: frame || singleLine ? 'nowrap' : 'normal', overflow: 'hidden',
+                textOverflow: 'ellipsis', WebkitBoxOrient: 'vertical', WebkitLineClamp: frame || singleLine ? undefined : 2,
                 overflowWrap: 'anywhere',
             }}>
                 {name}
@@ -574,6 +576,7 @@ function InterconnectionNodeInner({ id, data, selected, height }: NodeProps) {
         bgColor, fillOpacity, borderColor, textColor, fontSize, fontWeight, textAlign, verticalAlign,
     } = d;
     const [hovered, setHovered] = useState(false);
+    const showsParts = isContainer && !!hasChildren && !isCollapsed;
 
     // The context frame is large — a hover/rest shadow on it reads as noise, so
     // only parts and nested containers lift on hover (Miro-like affordance).
@@ -726,10 +729,11 @@ function InterconnectionNodeInner({ id, data, selected, height }: NodeProps) {
                     )}
                 </div>
             ) : (
-                /* Part property header: `partName : Type` */
+                /* Part property header: `partName : Type`. A part showing its parts has a header exactly as tall as the
+                   band the layout leaves above them, so a child box never covers the title or the type line. */
                 <div ref={headerRef} data-ibd-header style={{
                     display: 'flex', alignItems: verticalAlign === 'top' ? 'flex-start' : verticalAlign === 'bottom' ? 'flex-end' : 'center', gap: 6,
-                    minHeight: 58,
+                    ...(showsParts ? { height: INTERCONNECTION_HEADER_HEIGHT, boxSizing: 'border-box' as const } : { minHeight: 58 }),
                     padding: '7px 10px 6px',
                     background: '#FFFFFF',
                     borderBottom: hasChildren ? '1px solid #E2E8F0' : 'none',
@@ -738,7 +742,7 @@ function InterconnectionNodeInner({ id, data, selected, height }: NodeProps) {
                 }}>
                     {isPersonKind(kind) && <PersonGlyph size={24} color={color} />}
                     <TypedLabel
-                        name={label} kind={kind}
+                        name={label} kind={kind} singleLine={showsParts}
                         nameColor="#0F172A"
                         typeColor={isContainer ? color : '#64748B'}
                         style={{ textColor, fontSize, fontWeight, textAlign }}

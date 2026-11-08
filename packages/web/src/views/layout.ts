@@ -450,6 +450,9 @@ export function resolvedLayoutScore(layout: ResolvedGraphLayout, edges: Resolver
         // horizontal runs before spending space on routing lanes.
         if (Math.abs(dx) > 8 && dy > 8) bendPenalty += 18_000;
     }
+    // A port is fixed to a wall. When the box at the other end is not beyond that wall, the connector has to leave
+    // the wrong way and go round its own box.
+    const portBlocked = backFacingPorts(layout, usable);
     for (let i = 0; i < usable.length; i++) for (let j = i + 1; j < usable.length; j++) {
         const a = usable[i], b = usable[j];
         if (a.source === b.source || a.source === b.target || a.target === b.source || a.target === b.target) continue;
@@ -498,7 +501,35 @@ export function resolvedLayoutScore(layout: ResolvedGraphLayout, edges: Resolver
         + crossings * Math.max(layout.width * layout.height * 0.35, 50_000)
         + routedLength * 6
         + routedBends * 4_000
-        + routedCrossings * Math.max(layout.width * layout.height * 0.45, 70_000);
+        + routedCrossings * Math.max(layout.width * layout.height * 0.45, 70_000)
+        // Weighted above the balanced-footprint penalty a caller may add (2.8 × area × aspect error): a board that is
+        // too wide is still read correctly, a connector sent round its own box is not.
+        + portBlocked * Math.max(layout.width * layout.height * 1.5, 120_000);
+}
+
+/** Connector ends whose port sits on a wall that does not face the box at the other end. */
+export function backFacingPorts(
+    layout: Pick<ResolvedGraphLayout, 'children'>,
+    edges: readonly Pick<ResolverEdge, 'source' | 'target' | 'sourcePort' | 'targetPort'>[],
+): number {
+    const byId = new Map(layout.children.map(n => [n.id, n]));
+    const faces = (from: ResolverChild, portId: string | undefined, to: ResolverChild): boolean => {
+        const side = portId ? from.ports?.find(port => port.id === portId)?.side : undefined;
+        if (!side) return true;
+        if (side === 'right') return to.x >= from.x + from.width;
+        if (side === 'left') return to.x + to.width <= from.x;
+        if (side === 'bottom') return to.y >= from.y + from.height;
+        return to.y + to.height <= from.y;
+    };
+    let blocked = 0;
+    for (const edge of edges) {
+        const source = byId.get(edge.source);
+        const target = byId.get(edge.target);
+        if (!source || !target || source === target) continue;
+        if (!faces(source, edge.sourcePort, target)) blocked++;
+        if (!faces(target, edge.targetPort, source)) blocked++;
+    }
+    return blocked;
 }
 
 /**

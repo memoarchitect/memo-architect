@@ -16,7 +16,7 @@ import {
     PORT_LABEL_STACKED_WIDTH, parsePortSide,
     SIDE_GUTTER, PORT_LABEL_MAX, PORT_LABEL_OFFSET, portCaptionWidth, ibdEdgeLabel,
 } from '../interconnection-view';
-import { compactnessScore, balancedGridColumns, connectivityOrder, resolvedLayoutScore, resolveGraphLayout, routeOrthogonalEdges } from '../../layout';
+import { backFacingPorts, compactnessScore, balancedGridColumns, connectivityOrder, resolvedLayoutScore, resolveGraphLayout, routeOrthogonalEdges } from '../../layout';
 
 function port(id: string, overrides: Partial<MemoElement> = {}): MemoElement {
     return {
@@ -124,6 +124,9 @@ describe('ibdLabelWidth', () => {
     it('does not allow long engineering names to stretch a part card', () => {
         expect(ibdLabelWidth('A')).toBe(96);
         expect(ibdLabelWidth('Part With An Extremely Long Formal Engineering Name That Must Truncate')).toBe(180);
+        // The type line is read in full up to the card cap, so a long definition name is not cut to «…SUBSY…».
+        expect(ibdLabelWidth('Workstation', 'ConnectorInterfaceUnitSubsystem')).toBeGreaterThan(180);
+        expect(ibdLabelWidth('Workstation', 'ConnectorInterfaceUnitSubsystem')).toBeLessThanOrEqual(248);
     });
 });
 
@@ -491,7 +494,39 @@ describe('classifyIbdFlow', () => {
     });
 });
 
+describe('back-facing ports', () => {
+    // Two subsystems linked from an out-port on the right wall to an in-port on the left wall. Stacked, the
+    // connector has to leave the wrong way and go round its own box, which the balanced-footprint preference
+    // used to accept because a side-by-side pair is wide.
+    it('puts linked boxes where their ports face each other, even when that is wide', async () => {
+        const nodes = [
+            { id: 'a', width: 302, height: 162, ports: [{ id: 'a.out', side: 'right' as const }] },
+            { id: 'b', width: 302, height: 122, ports: [{ id: 'b.in', side: 'left' as const }] },
+        ];
+        const edges = [{ id: 'e', source: 'a', target: 'b', sourcePort: 'a.out', targetPort: 'b.in' }];
+        const layout = await resolveGraphLayout({
+            id: 'facing', nodes, edges, gapX: 54, gapY: 58, targetAspect: 1.3, directedFlowAxis: 'AUTO', preferBalancedLayout: true,
+        });
+        const [a, b] = ['a', 'b'].map(id => layout.children.find(c => c.id === id)!);
+        expect(b.x).toBeGreaterThanOrEqual(a.x + a.width);
+        expect(backFacingPorts(layout, edges)).toBe(0);
+    });
+    it('counts each end whose wall does not face the other box', () => {
+        const children = [
+            { id: 'a', x: 0, y: 0, width: 100, height: 50, ports: [{ id: 'a.out', side: 'right' as const }] },
+            { id: 'b', x: 0, y: 100, width: 100, height: 50, ports: [{ id: 'b.in', side: 'left' as const }] },
+        ];
+        expect(backFacingPorts({ children }, [{ source: 'a', target: 'b', sourcePort: 'a.out', targetPort: 'b.in' }])).toBe(2);
+        // A connector anchored to the box, not a port, can leave from any side.
+        expect(backFacingPorts({ children }, [{ source: 'a', target: 'b' }])).toBe(0);
+    });
+});
+
 describe('ibdEdgeLabel', () => {
+    it('names a typed connector by its definition, not by the word "interface"', () => {
+        expect(ibdEdgeLabel(undefined, 'interface', 'ControlLinkInterface')).toBe('ControlLinkInterface');
+        expect(ibdEdgeLabel(undefined, 'interface')).toBe('interface');
+    });
     it('prefers the transported item', () => {
         expect(ibdEdgeLabel('UsbTraffic', 'flow')).toBe('UsbTraffic');
         expect(ibdEdgeLabel('Electrical power', 'bind')).toBe('Electrical power');

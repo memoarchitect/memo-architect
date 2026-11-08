@@ -94,6 +94,9 @@ export const IBD_FLOW_COLORS: Record<IbdFlowKind, string> = {
  */
 const UNLABELLED_WHEN_ITEMLESS = new Set(['flow', 'bind']);
 
+/** Connectors SysML draws without an arrowhead: they relate their ends and have no direction. */
+const UNDIRECTED_CONNECTORS = new Set(['bind', 'interface', 'connection', 'connect']);
+
 /**
  * What a connector writes on itself: the item it transports, if it names one.
  *
@@ -103,11 +106,13 @@ const UNLABELLED_WHEN_ITEMLESS = new Set(['flow', 'bind']);
  * precisely the noise this suppression existed to prevent for the ExchangesWith
  * this replaced. A `bind` never carries an item at all: delegation is identity, so there is
  * nothing in transit to name and "bind" on every boundary connector is pure
- * noise. Any OTHER relationship type is a verb worth reading ("Composes",
+ * noise. A connector typed by a definition (`interface x : ControlLinkInterface`) is
+ * labelled by that definition, which says what the link is; the bare word "interface"
+ * says nothing. Any OTHER relationship type is a verb worth reading ("Composes",
  * "Mitigates"), so it stays.
  */
-export function ibdEdgeLabel(flowItem?: string, relType = ''): string | undefined {
-    return flowItem || (UNLABELLED_WHEN_ITEMLESS.has(toModelType(relType)) ? undefined : relType)
+export function ibdEdgeLabel(flowItem?: string, relType = '', connectorType?: string): string | undefined {
+    return flowItem || connectorType || (UNLABELLED_WHEN_ITEMLESS.has(toModelType(relType)) ? undefined : relType)
         || undefined;
 }
 
@@ -321,14 +326,24 @@ const ROOT_GAP = 90;      // fallback spacing between disconnected roots
 // line grows its owner; an unported leaf remains a compact, movable card.
 const LEAF_MIN_W = 112;
 const LEAF_MIN_H = 72;
+/** The widest a card's title may make it; longer text ellipsizes with a tooltip. */
+const IBD_CARD_MAX_W = 248;
+/** A container's header carries up to three 18px controls (drill, go to view, collapse) and their gaps. */
+export const IBD_HEADER_CONTROLS_W = 72;
 
 /** Rough text width for sizing (kept in step with the node's font sizes). */
 const textWidth = (s: string, px = 7.2) => s.length * px + 20;
 
-/** Stable card width contribution: labels truncate instead of stretching IBDs. */
-export const ibdLabelWidth = (name: string): number => Math.min(
-    Math.max(textWidth(name, 7.1), 96),
-    180,
+/** Width of the type line, «TYPE» in 9px uppercase with letter spacing, as the node draws it. */
+const typeLineWidth = (kind: string): number => (kind ? textWidth(`«${kind}»`, 6.6) : 0);
+
+/**
+ * Stable card width contribution: the name is capped so a long one truncates instead of stretching the IBD.
+ * The type line is sized in full up to the card cap, so «CONNECTORINTERFACEUNITSUBSYSTEM» is read, not cut.
+ */
+export const ibdLabelWidth = (name: string, kind = ''): number => Math.max(
+    Math.min(Math.max(textWidth(name, 7.1), 96), 180),
+    Math.min(typeLineWidth(kind), IBD_CARD_MAX_W),
 );
 
 // ─── Pure derivations (unit-tested; ELK layout itself needs the browser) ──────
@@ -858,12 +873,23 @@ export async function computeInterconnectionLayout(
             if (parent && portEls.has(parent)) {
                 role = portRole(parent);
             } else {
+                // A binding states that two ports are the same port, so its operand order says nothing about
+                // direction. A port that is only bound takes the role of the port it is bound to: a delegated
+                // port faces the same way as the boundary port it is delegated to.
                 let src = 0, tgt = 0;
+                const boundTo: string[] = [];
                 for (const rel of connectors) {
-                    if (rel.sourceId === portId) src++;
-                    if (rel.targetId === portId) tgt++;
+                    const bind = toModelType(rel.type) === 'bind';
+                    if (rel.sourceId === portId) bind ? boundTo.push(rel.targetId) : src++;
+                    if (rel.targetId === portId) bind ? boundTo.push(rel.sourceId) : tgt++;
                 }
-                role = inferPortRole(el, src, tgt);
+                if (src === 0 && tgt === 0 && boundTo.length > 0) {
+                    roleCache.set(portId, inferPortRole(el, 0, 0)); // breaks a cycle of ports bound only to each other
+                    const partner = boundTo.find(id => portEls.has(id));
+                    role = partner ? portRole(partner) : inferPortRole(el, 0, 0);
+                } else {
+                    role = inferPortRole(el, src, tgt);
+                }
             }
         }
         roleCache.set(portId, role);
@@ -934,7 +960,7 @@ export async function computeInterconnectionLayout(
     // Names never dictate diagram geometry. Long engineering identifiers are
     // shown in a tooltip and ellipsized in the card; otherwise a single label
     // can turn an otherwise useful IBD into a several-thousand-pixel strip.
-    const labelWidth = (el: MemoElement) => ibdLabelWidth(el.name);
+    const labelWidth = (el: MemoElement) => ibdLabelWidth(el.name, el.kind);
 
     // ── Leaf sizing: a box tall/wide enough for its header, ports and labels ──
     const leafLayout = (el: MemoElement, ports: string[]): PartLayout => {
@@ -1179,7 +1205,7 @@ export async function computeInterconnectionLayout(
             contentBottom = Math.max(contentBottom, rowStart);
         }
 
-        const headerW = Math.min(labelWidth(el) + 32, 248);
+        const headerW = Math.min(labelWidth(el) + 32, IBD_CARD_MAX_W) + IBD_HEADER_CONTROLS_W;
         // A horizontal wall's ports have to fit ACROSS the frame between the
         // vertical caption gutters, and a bottom wall's captions need room
         // inside above the edge, so both walls can widen or deepen the frame.
@@ -1534,7 +1560,7 @@ export async function computeInterconnectionLayout(
         // without one keeps the previous label.
         const label = bundleCount > 1
             ? `${bundleCount} connections`
-            : (rel.attributes?.name as string | undefined) || ibdEdgeLabel(rel.flowItem, rel.type);
+            : (rel.attributes?.name as string | undefined) || ibdEdgeLabel(rel.flowItem, rel.type, rel.kind);
         // Port endpoints anchor to the port's inner/outer face; a part endpoint
         // anchors to its right (source) / left (target) side so the connector
         // stays a clean horizontal run instead of looping over the box.
@@ -1593,12 +1619,16 @@ export async function computeInterconnectionLayout(
             labelBgPadding: EDGE.labelBgPadding,
             labelBgBorderRadius: EDGE.labelBgRadius,
             labelBgStyle: { ...EDGE.labelBgStyle, fillOpacity: 0.96, stroke: '#E2E8F0', strokeWidth: 1 },
-            markerEnd: {
-                type: 'arrowclosed' as never,
-                color: flowColor,
-                width: EDGE.arrowSize,
-                height: EDGE.arrowSize,
-            },
+            // Only a flow has a direction. A connection, an interface and a binding relate their ends without one, so
+            // an arrowhead on them would state something the model does not.
+            ...(UNDIRECTED_CONNECTORS.has(toModelType(rel.type)) ? {} : {
+                markerEnd: {
+                    type: 'arrowclosed' as never,
+                    color: flowColor,
+                    width: EDGE.arrowSize,
+                    height: EDGE.arrowSize,
+                },
+            }),
             data: {
                 flowCategory: flowKind,
                 sourceOffset: { x: sourcePoint.x - sourceAbs.x, y: sourcePoint.y - sourceAbs.y },

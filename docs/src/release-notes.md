@@ -21,6 +21,18 @@ Versioned under [semantic versioning](https://semver.org/). Before 1.0 a change 
 
 ### Fixed
 
+- **Internal block diagram quality.**
+  - A part showing its parts no longer has its title and type covered by the first child. Its
+    header is one line, as tall as the room the layout leaves for it.
+  - A part's type is shown in full up to the card's width, not cut after a few letters.
+  - Two parts linked from a port on one's right wall to a port on the other's left wall are
+    placed side by side. They used to be stacked, which sent the link round the outside of its
+    own parent.
+  - A port that is only bound to its parent's port faces the same way as that port. The order
+    of a `bind` no longer flips it.
+  - Interfaces, connections and bindings are drawn without an arrowhead; only a flow has a
+    direction. A typed interface is labelled by its definition, not by the word "interface".
+
 - **Saving a traceability matrix held the screen.** A matrix saved to a new file was written
   twice, a package first and the matrix after, which cost an extra compile and an extra model
   rebuild, and the dialog stayed open until the model was rebuilt. It is written once, the
