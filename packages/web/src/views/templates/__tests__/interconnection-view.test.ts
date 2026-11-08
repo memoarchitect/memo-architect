@@ -16,7 +16,7 @@ import {
     PORT_LABEL_STACKED_WIDTH, parsePortSide,
     SIDE_GUTTER, PORT_LABEL_MAX, PORT_LABEL_OFFSET, portCaptionWidth, ibdEdgeLabel,
 } from '../interconnection-view';
-import { backFacingPorts, compactnessScore, balancedGridColumns, connectivityOrder, resolvedLayoutScore, resolveGraphLayout, routeOrthogonalEdges } from '../../layout';
+import { backFacingPorts, READABLE_BOARD_WIDTH, compactnessScore, balancedGridColumns, connectivityOrder, resolvedLayoutScore, resolveGraphLayout, routeOrthogonalEdges } from '../../layout';
 
 function port(id: string, overrides: Partial<MemoElement> = {}): MemoElement {
     return {
@@ -514,6 +514,21 @@ describe('back-facing ports', () => {
         const [a, b] = ['a', 'b'].map(id => layout.children.find(c => c.id === id)!);
         expect(b.x).toBeGreaterThanOrEqual(a.x + a.width);
         expect(backFacingPorts(layout, edges)).toBe(0);
+    });
+    it('does not unroll a large board into a strip to face its ports', async () => {
+        // Six wide cards in a chain, each out-port right and in-port left: facing every port means one row far
+        // wider than a reader can take in, so the compact arrangement the score prefers is kept.
+        const nodes = Array.from({ length: 6 }, (_, i) => ({
+            id: `n${i}`, width: 420, height: 160,
+            ports: [{ id: `n${i}.in`, side: 'left' as const }, { id: `n${i}.out`, side: 'right' as const }],
+        }));
+        const edges = nodes.slice(1).map((n, i) => ({
+            id: `e${i}`, source: `n${i}`, target: n.id, sourcePort: `n${i}.out`, targetPort: `${n.id}.in`,
+        }));
+        const layout = await resolveGraphLayout({
+            id: 'strip', nodes, edges, gapX: 54, gapY: 58, targetAspect: 1.3, directedFlowAxis: 'AUTO', preferBalancedLayout: true,
+        });
+        expect(layout.width).toBeLessThanOrEqual(Math.max(READABLE_BOARD_WIDTH, 6 * 420 / 2));
     });
     it('counts each end whose wall does not face the other box', () => {
         const children = [

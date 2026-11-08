@@ -773,14 +773,21 @@ export async function resolveGraphLayout(options: {
     };
     // A port facing away from its partner is decided first, before any footprint or length: a board that is too
     // wide is still read correctly, a connector sent round its own box is not. No weight expresses that for every
-    // box size, so it is not a weight.
+    // box size, so it is not a weight. It holds only while the arrangement stays a readable width: on a large board
+    // putting every port in front of its partner unrolls the whole board into one strip, which is worse than the
+    // detours it saves, so there the score decides as before.
     const ranked = candidates.map(candidate => ({
         candidate, blocked: backFacingPorts(candidate, edges), score: candidateScore(candidate),
     }));
-    return ranked.reduce((best, next) =>
+    const byScore = ranked.reduce((best, next) => (next.score < best.score ? next : best));
+    const readable = ranked.filter(r => r.candidate.width <= Math.max(READABLE_BOARD_WIDTH, byScore.candidate.width));
+    return readable.reduce((best, next) =>
         next.blocked < best.blocked || (next.blocked === best.blocked && next.score < best.score) ? next : best,
     ).candidate;
 }
+
+/** The widest a board may grow to keep its ports facing their partners. */
+export const READABLE_BOARD_WIDTH = 1200;
 
 export async function computeLayout(
     model: MemoModelDTO,

@@ -27,7 +27,8 @@ Versioned under [semantic versioning](https://semver.org/). Before 1.0 a change 
   - A part's type is shown in full up to the card's width, not cut after a few letters.
   - Two parts linked from a port on one's right wall to a port on the other's left wall are
     placed side by side. They used to be stacked, which sent the link round the outside of its
-    own parent.
+    own parent. This holds while the board stays a readable width; a large board is not
+    unrolled into one strip to achieve it.
   - A port that is only bound to its parent's port faces the same way as that port. The order
     of a `bind` no longer flips it.
   - Interfaces, connections and bindings are drawn without an arrowhead; only a flow has a
