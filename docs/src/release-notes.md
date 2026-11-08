@@ -36,6 +36,7 @@ Versioned under [semantic versioning](https://semver.org/). Before 1.0 a change 
   - A connector's label is drawn above the parts, and linked neighbours are spaced so the
     label fits between them. Inside a container the label used to be hidden under it.
   - The diagram frame shows its type in full beside the name.
+  - A connection labelled in its `@MemoIdentity` shows that label, so a cable reads "Control Cable". An untyped connection with no label prints nothing, not "connect".
 
 - **Saving a traceability matrix held the screen.** A matrix saved to a new file was written
   twice, a package first and the matrix after, which cost an extra compile and an extra model

@@ -14,7 +14,7 @@ import {
     buildPortOwnership, projectPortForDisplay, declaredPortRole,
     ibdLabelWidth, applyPortOrder, portIdFromHandle, INNER_HANDLE_SUFFIX, summarizeConnectors, type PortSide,
     PORT_LABEL_STACKED_WIDTH, parsePortSide,
-    SIDE_GUTTER, PORT_LABEL_MAX, PORT_LABEL_OFFSET, portCaptionWidth, ibdEdgeLabel,
+    SIDE_GUTTER, PORT_LABEL_MAX, PORT_LABEL_OFFSET, portCaptionWidth, ibdEdgeLabel, connectorLabelText,
 } from '../interconnection-view';
 import { backFacingPorts, READABLE_BOARD_WIDTH, compactnessScore, balancedGridColumns, connectivityOrder, resolvedLayoutScore, resolveGraphLayout, routeOrthogonalEdges } from '../../layout';
 
@@ -541,6 +541,14 @@ describe('back-facing ports', () => {
     });
 });
 
+describe('connectorLabelText', () => {
+    it('reads the label a connection declares before its type', () => {
+        expect(connectorLabelText({ type: 'connect', attributes: { label: 'Control Cable' } })).toBe('Control Cable');
+        expect(connectorLabelText({ type: 'connect', attributes: { name: '/command', label: 'Command' } })).toBe('/command');
+        expect(connectorLabelText({ type: 'interface', kind: 'ControlLinkInterface', attributes: {} })).toBe('ControlLinkInterface');
+    });
+});
+
 describe('ibdEdgeLabel', () => {
     it('names a typed connector by its definition, not by the word "interface"', () => {
         expect(ibdEdgeLabel(undefined, 'interface', 'ControlLinkInterface')).toBe('ControlLinkInterface');
@@ -558,6 +566,8 @@ describe('ibdEdgeLabel', () => {
         expect(ibdEdgeLabel('', 'flow')).toBeUndefined();
         // A delegation is identity, so it never carries an item at all.
         expect(ibdEdgeLabel(undefined, 'bind')).toBeUndefined();
+        // An untyped connection joins two ends and the line already says so.
+        expect(ibdEdgeLabel(undefined, 'connect')).toBeUndefined();
         // Matching goes through toModelType, so the source spelling of a
         // definition name works too — one rule, not three.
         expect(ibdEdgeLabel(undefined, 'Flow')).toBeUndefined();

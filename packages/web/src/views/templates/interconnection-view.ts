@@ -92,7 +92,7 @@ export const IBD_FLOW_COLORS: Record<IbdFlowKind, string> = {
  * instance of one carrying no item goes unlabelled rather than printing its own
  * type on the edge.
  */
-const UNLABELLED_WHEN_ITEMLESS = new Set(['flow', 'bind']);
+const UNLABELLED_WHEN_ITEMLESS = new Set(['flow', 'bind', 'connect']);
 
 /** Connectors SysML draws without an arrowhead: they relate their ends and have no direction. */
 const UNDIRECTED_CONNECTORS = new Set(['bind', 'interface', 'connection', 'connect']);
@@ -106,7 +106,8 @@ const UNDIRECTED_CONNECTORS = new Set(['bind', 'interface', 'connection', 'conne
  * precisely the noise this suppression existed to prevent for the ExchangesWith
  * this replaced. A `bind` never carries an item at all: delegation is identity, so there is
  * nothing in transit to name and "bind" on every boundary connector is pure
- * noise. A connector typed by a definition (`interface x : ControlLinkInterface`) is
+ * noise. An untyped, unlabelled `connect` says only that two ends are joined, which the line
+ * already shows. A connector typed by a definition (`interface x : ControlLinkInterface`) is
  * labelled by that definition, which says what the link is; the bare word "interface"
  * says nothing. Any OTHER relationship type is a verb worth reading ("Composes",
  * "Mitigates"), so it stays.
@@ -116,9 +117,13 @@ export function ibdEdgeLabel(flowItem?: string, relType = '', connectorType?: st
         || undefined;
 }
 
-/** What a connector is labelled: its authored name, else what {@link ibdEdgeLabel} gives. */
-function connectorLabelText(rel: MemoRelationship): string | undefined {
-    return (rel.attributes?.name as string | undefined) || ibdEdgeLabel(rel.flowItem, rel.type, rel.kind);
+/**
+ * What a connector is labelled: its authored name, else the label its `@MemoIdentity` gives it (a cable reads
+ * "Control Cable", not "connect"), else what {@link ibdEdgeLabel} gives.
+ */
+export function connectorLabelText(rel: Pick<MemoRelationship, 'attributes' | 'flowItem' | 'type' | 'kind'>): string | undefined {
+    return (rel.attributes?.name as string | undefined) || (rel.attributes?.label as string | undefined)
+        || ibdEdgeLabel(rel.flowItem, rel.type, rel.kind);
 }
 
 export function classifyIbdFlow(flowItem?: string, relType?: string): IbdFlowKind {
