@@ -13,7 +13,7 @@ makes that shared model easy to explore, edit and review.
     MEMO Architect, Tools and the ontology may change before version 1.0. The
     OpenSysML compiler path is newer than SysIDE and has had less use. Use a
     [tagged release](https://github.com/memoarchitect/memo-architect/releases) and
-    an exact npm version (currently 0.18.0) rather than `main` or a floating
+    an exact npm version (currently 0.19.0) rather than `main` or a floating
     range. See the [release notes](release-notes.md).
 
 ## Start with what you need to do
