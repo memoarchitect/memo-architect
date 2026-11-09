@@ -99,7 +99,7 @@ describe('the Releases page', () => {
     it('asks for the changes since the previous release and shows them for the chosen role', async () => {
         diffAnswer = {
             before: { label: 'relPumpA', commit: 'a' }, after: { label: 'relPumpB', commit: 'b' }, previous: true,
-            diff: { added: [], removed: [], changed: [{ id: 'Pump', name: 'Pump', kind: 'System', changes: ['attributes changed'] }], addedRels: [], removedRels: [], summary: {} },
+            diff: { added: [], removed: [], changed: [{ id: 'Pump', name: 'Pump', kind: 'System', changes: ['attributes changed'] }], addedRels: [], removedRels: [], changedRels: [], summary: {} },
         };
         const view = render();
         click(view.querySelector('[data-testid="changes-relPumpB"]'));

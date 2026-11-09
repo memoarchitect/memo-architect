@@ -14,6 +14,8 @@ import { requestImpact } from '../store/ws-client';
 import { projectRows } from '../lib/projects-view';
 import { releaseRecords } from '../lib/releases-view';
 import { words } from '../lib/guide-view';
+import { CONTRACT_LIMITS } from '@memoarchitect/tools/browser';
+import { ContractChanges } from '../components/ContractChanges';
 import { COLOR, FONT } from '../styles/tokens';
 
 type Report = NonNullable<Awaited<ReturnType<typeof requestImpact>>['report']>;
@@ -139,13 +141,14 @@ function byPackage(title: string, items: ImpactItem[], packageOf: (id: string) =
 function Impact({ report, group, packageOf }: {
     report: Report; group: (title: string, items: string[]) => JSX.Element | null; packageOf: (id: string) => string | undefined;
 }) {
-    const empty = report.changed.elements.length === 0 && report.changed.addedLinks + report.changed.removedLinks === 0;
+    const empty = report.changed.elements.length === 0 && report.changed.addedLinks + report.changed.removedLinks + report.changed.changedLinks === 0;
     return (
         <div data-testid="impact-report" style={{ border: `1px solid ${COLOR.border}`, borderRadius: 8, padding: '12px 16px', maxWidth: 900 }}>
             <div style={{ fontSize: FONT.sm }}>
                 Working tree against <b className="mono">{report.base.commit.slice(0, 7)}</b>, where it left {report.target}.
             </div>
             {empty && <p style={{ fontSize: FONT.sm, color: COLOR.muted }}>Nothing has changed.</p>}
+            <ContractChanges report={report.contract} limits={CONTRACT_LIMITS} />
             {byPackage('Changed', report.changed.elements, packageOf, e => `${e.name} (${e.kind}), ${e.via}`)}
             {Object.entries(report.reached).map(([layer, items]) => byPackage(`Reached: ${words(layer)}`, items, packageOf, i => `${i.name} (${i.kind}), by ${i.via}`))}
             {group('Systems', report.systems.map(s => `${s.name} (${s.scope === 'sos' ? 'system of systems' : 'system'})`))}

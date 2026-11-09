@@ -29,6 +29,13 @@ import { actionDrillSource, childrenOf, definitionSubtree, drillPath, drillTarge
 import {
     useEffect, useMemo, useState, useCallback, useRef,
 } from 'react';
+import { FlowWalkthrough, WALK_CURRENT_CLASS, WALK_LANE_CLASS } from './FlowWalkthrough';
+import { animateLayout, layoutsDiffer } from '../lib/animate-layout';
+import { prefersReducedMotion } from '../lib/edge-token';
+import { packAroundExpanded } from '../lib/local-packing';
+import { CanvasSearch } from './CanvasSearch';
+import { NodeNeighbourCard } from './NodeNeighbourCard';
+import { walkEmphasis } from '../lib/flow-walkthrough';
 import {
     ReactFlow, ReactFlowProvider, Background, Controls, ControlButton, MiniMap,
     useNodesState, useEdgesState, useReactFlow, useUpdateNodeInternals, addEdge,
@@ -75,7 +82,7 @@ import {
     INTERCONNECTION_PORT_SIZE, PORT_LABEL_OFFSET, NESTED_PITCH, NESTED_PIN_INSET, NESTED_HOUSING_DEPTH,
     type PortDisplay, type PortSide, type PortInfo,
 } from './templates/interconnection-view';
-import { commonDisplayLevels, findFloatingActions, parameterOfHandle, type ActionFlowDisplayLevel, type ActionFlowLaneGrouping, type ActionFlowNesting } from './templates/actionflow-view';
+import { assignLanes, collectActionFlowActions, commonDisplayLevels, findFloatingActions, laneBoxRect, parameterOfHandle, type ActionFlowDisplayLevel, type ActionFlowLaneGrouping, type ActionFlowLaneStyle, type ActionFlowNesting } from './templates/actionflow-view';
 import { isStateElement } from './templates/statetransition-view';
 import { bendConnector, type Wall } from './templates/connector-bend';
 import { useCaseActorOptions, useCaseMaxDepth, useCaseViewOptions, type UseCaseEdgeStyle } from './templates/use-case-view';
@@ -152,6 +159,9 @@ const LAYOUT_SWITCH_DEBOUNCE_MS = 90;
  * lays out and routes without awaiting) blocks the page, so its progress surface only shows if it was painted first.
  * The timeout covers a hidden tab, where animation frames do not run.
  */
+/** A node's class list without the walkthrough's ring. */
+const withoutWalkCurrent = (className: string | undefined) => (className ?? '').split(' ').filter(c => c && c !== WALK_CURRENT_CLASS && c !== WALK_LANE_CLASS).join(' ');
+
 function nextPaint(): Promise<void> {
     return new Promise(resolve => {
         const fallback = window.setTimeout(resolve, 100);
@@ -980,7 +990,7 @@ function DiagramCanvasInner() {
     const setNodeLayout = readOnly ? (noWrite as unknown as typeof storeSetNodeLayout) : storeSetNodeLayout;
     const mergeDiagramLayouts = readOnly ? (noWrite as unknown as typeof storeMergeDiagramLayouts) : storeMergeDiagramLayouts;
     const updateDiagramElementIds = readOnly ? (noWrite as unknown as typeof storeUpdateDiagramElementIds) : storeUpdateDiagramElementIds;
-    const { fitView, screenToFlowPosition, getViewport, setViewport } = useReactFlow();
+    const { fitView, screenToFlowPosition, getViewport, setViewport, getNodes } = useReactFlow();
 
     const [nodes, setNodes] = useNodesState<FlowNode>([]);
     const [edges, setEdges, onEdgesChange] = useEdgesState<FlowEdge>([]);
@@ -1056,6 +1066,20 @@ function DiagramCanvasInner() {
         geometryFrameRef.current = requestAnimationFrame(() => flushGeometryUpdate());
     }, [flushGeometryUpdate]);
     const [isLayouting, setIsLayouting] = useState(false);
+    // A move between two layouts of one diagram. Its frames are not edits: nothing saves them.
+    const [layoutAnimating, setLayoutAnimating] = useState(false);
+    const layoutAnimatingRef = useRef(false);
+    const cancelLayoutAnimationRef = useRef<(() => void) | null>(null);
+    const laidOutDiagramRef = useRef<string | null>(null);
+    // The one composite the reader just opened or closed, for the layout pass it causes.
+    const expandGestureRef = useRef<string | null>(null);
+    const cancelLayoutAnimation = useCallback(() => {
+        cancelLayoutAnimationRef.current?.();
+        cancelLayoutAnimationRef.current = null;
+        layoutAnimatingRef.current = false;
+        setLayoutAnimating(false);
+    }, []);
+    useEffect(() => () => { cancelLayoutAnimationRef.current?.(); }, []);
     const [layoutEditVersion, setLayoutEditVersion] = useState(0);
     const [layoutError, setLayoutError] = useState<string | null>(null);
     const [layoutVersion, setLayoutVersion] = useState(0);
@@ -1099,7 +1123,20 @@ function DiagramCanvasInner() {
     // Action Flow template (KK-4): allocation lanes are on by default.
     const [swimlanesOn, setSwimlanesOn] = useState(true);
     const [actionFlowDirection, setActionFlowDirection] = useState<'horizontal' | 'vertical'>('horizontal');
-    const [actionFlowLegendOpen, setActionFlowLegendOpen] = useState(true);
+    const [walking, setWalking] = useState(false);
+    const [cardDismissedFor, setCardDismissedFor] = useState<string | null>(null);
+    const [neighbourCardOn, setNeighbourCardOn] = useState(() => {
+        try { return localStorage.getItem('memo.diagram.neighbourCard') !== 'false'; } catch { return true; }
+    });
+    useEffect(() => {
+        try { localStorage.setItem('memo.diagram.neighbourCard', String(neighbourCardOn)); } catch { /* storage disabled */ }
+    }, [neighbourCardOn]);
+    const [actionFlowLegendOpen, setActionFlowLegendOpen] = useState(() => {
+        try { return localStorage.getItem('memo.diagram.legend.open') !== 'false'; } catch { return true; }
+    });
+    useEffect(() => {
+        try { localStorage.setItem('memo.diagram.legend.open', String(actionFlowLegendOpen)); } catch { /* storage disabled */ }
+    }, [actionFlowLegendOpen]);
     // Variants the viewer has switched off, and the one the pointer is on. Cards
     // read these from context, so neither re-runs the layout.
     const [variantsOff, setVariantsOff] = useState<ReadonlySet<string>>(new Set());
@@ -1116,6 +1153,7 @@ function DiagramCanvasInner() {
     }, [nodes]);
     const [actionFlowLegendPlacement, setActionFlowLegendPlacement] = useState<'overlay' | 'above'>('overlay');
     const [actionFlowLaneGrouping, setActionFlowLaneGrouping] = useState<ActionFlowLaneGrouping>('allocation');
+    const [actionFlowLaneStyle, setActionFlowLaneStyle] = useState<ActionFlowLaneStyle>('lanes');
 
     const [actionFlowDisplayLevel, setActionFlowDisplayLevel] = useState<ActionFlowDisplayLevel>('all');
     const [actionFlowLevelsOpen, setActionFlowLevelsOpen] = useState(false);
@@ -1457,7 +1495,7 @@ function DiagramCanvasInner() {
     // Save Layout workflow and rapid pointer moves do not flood the backend.
     useEffect(() => {
         if (routeCancelledRenderRef.current) { routeCancelledRenderRef.current = false; return; }
-        if (portGestureRef.current || routeGestureRef.current || ibdResizeStartRef.current || !selectedDiagramId || isLayouting || nodes.length === 0 || layoutEditVersion === 0) return;
+        if (layoutAnimatingRef.current || portGestureRef.current || routeGestureRef.current || ibdResizeStartRef.current || !selectedDiagramId || isLayouting || nodes.length === 0 || layoutEditVersion === 0) return;
         const commit = () => {
             pendingLayoutSaveRef.current = null;
             const previous = useModelStore.getState().diagramLayouts[selectedDiagramId] ?? { nodes: {}, edges: {} };
@@ -1924,6 +1962,12 @@ function DiagramCanvasInner() {
             return true;
         };
     }, [selectedViewpointId, selectedDiagram, model?.viewpoints, hiddenLayers, focusedInterconnectionId, focusedActionId, model?.elements]);
+    const actionFlowLaneCounts = useMemo((): Record<ActionFlowLaneGrouping, number> => {
+        if (!model || viewKind !== 'actionflow') return { allocation: 0, stage: 0 };
+        const actions = collectActionFlowActions(model, viewpointFilter, expandedActionNodes, focusedActionId ?? undefined);
+        const count = (grouping: ActionFlowLaneGrouping) => assignLanes(actions, model, grouping, actionFlowDisplayLevel).lanes.length;
+        return { allocation: count('allocation'), stage: count('stage') };
+    }, [model, viewKind, viewpointFilter, expandedActionNodes, focusedActionId, actionFlowDisplayLevel]);
 
     // Element → child-view index: for each element that is the subject of another
     // view, map its ID to that view's diagram ID. Used by IBD and action-flow
@@ -2165,6 +2209,7 @@ function DiagramCanvasInner() {
     }, []);
 
     const toggleActionExpand = useCallback((nodeId: string) => {
+        expandGestureRef.current = nodeId;
         setExpandedActionNodes(previous => {
             const next = new Set(previous);
             if (next.has(nodeId)) next.delete(nodeId); else next.add(nodeId);
@@ -2453,6 +2498,11 @@ function DiagramCanvasInner() {
             const members = membersOf(node);
             if (members.length === 0 || !spanMin || !spanMax) return node;
             const column = data.orientation === 'column';
+            if ((data as { boxes?: boolean }).boxes) {
+                const box = laneBoxRect(members.map(member => ({ x: left(member), y: top(member), width: right(member) - left(member), height: bottom(member) - top(member) })), data.orientation ?? 'row');
+                laneRects.set(node.id, box);
+                return { ...node, position: box.position, style: { ...node.style, width: box.width, height: box.height } };
+            }
             // Cross axis: this lane's own members. Flow axis: the whole diagram.
             const minX = column ? Math.min(...members.map(left)) : spanMin.x;
             const maxX = column ? Math.max(...members.map(right)) : spanMax.x;
@@ -3114,22 +3164,50 @@ function DiagramCanvasInner() {
                     },
                 };
             });
-            const positioned = repositionNestedPins(
+            const laidOut = repositionNestedPins(
                 snapPortsToWall(hasSavedGeometry ? placed : alignFacingPorts(placed, preparedEdges as FlowEdge[], forcedSize), forcedSize));
+            // A composite opened on a laid-out flow: the rest stays where the reader left it. Closing the last one
+            // goes back to the fresh layout, which is the one the flow had before anything was opened.
+            const gesture = expandGestureRef.current;
+            expandGestureRef.current = null;
+            const packs = gesture && viewKind === 'actionflow' && actionFlowNesting === 'nested' && !hasSavedGeometry && expandedActionNodes.size > 0;
+            const positioned = (packs ? packAroundExpanded(nodesRef.current, laidOut, gesture, actionFlowDirection === 'vertical' ? 'y' : 'x') as FlowNode[] | undefined : undefined) ?? laidOut;
             // IBD templates already carry their own interaction callbacks and
             // deliberately bypass generic diagramNode wiring. Resize still owns
             // a canvas transaction, rather than falling back to component state.
             const wired = positioned.map(node => node.type === 'interconnectionNode'
                 ? { ...node, data: { ...node.data, onIbdResize: readOnly ? undefined : handleIbdResize, resizeReadOnly: readOnly } }
                 : node);
-            setNodes(interactive ? applyInteractiveData(wired) : wired);
+            const toNodes = interactive ? applyInteractiveData(wired) : wired;
             const fixedEdgeIds = new Set([...preparedEdges.filter(edge => {
                 const saved = savedLayout?.edges?.[edge.id] as {manualRoute?:boolean;points?:unknown} | undefined;
                 return typeof saved?.manualRoute === 'boolean' && (edge.data as Record<string, unknown>).points === saved.points;
             }).map(edge => edge.id), ...restoredIds]);
-            setEdges(reroutePositionedEdges(positioned, preparedEdges, activeRendererRef.current.routeQuality,
-                activeRendererRef.current.forcedPortSize, routingRef.current.type, false, undefined, fixedEdgeIds));
+            const toEdges = reroutePositionedEdges(positioned, preparedEdges, activeRendererRef.current.routeQuality,
+                activeRendererRef.current.forcedPortSize, routingRef.current.type, false, undefined, fixedEdgeIds);
+            cancelLayoutAnimation();
+            const sameDiagram = laidOutDiagramRef.current === (selectedDiagramId ?? null);
+            laidOutDiagramRef.current = selectedDiagramId ?? null;
             setIsLayouting(false);
+            const moves = viewKind === 'actionflow' || viewKind === 'statetransition' || viewKind === 'interconnection';
+            if (moves && sameDiagram && !embed && !prefersReducedMotion() && layoutsDiffer(nodesRef.current, toNodes)) {
+                layoutAnimatingRef.current = true;
+                setLayoutAnimating(true);
+                cancelLayoutAnimationRef.current = animateLayout({
+                    fromNodes: nodesRef.current, fromEdges: edgesRef.current, toNodes, toEdges,
+                    setNodes: setNodes as (nodes: FlowNode[]) => void, setEdges: setEdges as never, getCurrentNodes: getNodes as () => FlowNode[],
+                    onDone: () => {
+                        cancelLayoutAnimationRef.current = null;
+                        layoutAnimatingRef.current = false;
+                        setLayoutAnimating(false);
+                        // Framing reads where the boxes are, so it waits until they have arrived.
+                        setLayoutVersion(v => v + 1);
+                    },
+                });
+                return;
+            }
+            setNodes(toNodes);
+            setEdges(toEdges);
             setLayoutVersion(v => v + 1);
         };
         const fail = (label: string) => (err: unknown) => {
@@ -3143,6 +3221,7 @@ function DiagramCanvasInner() {
             promise: Promise<{ nodes: NotationLayoutNode[]; edges: NotationLayoutEdge[] }>,
             interactive = true,
         ) => {
+            cancelLayoutAnimation();
             setIsLayouting(true);
             setLayoutError(null);
             boundedLayout(promise, label).then(r => apply(r, interactive)).catch(fail(label));
@@ -3212,6 +3291,7 @@ function DiagramCanvasInner() {
                     viewpointFilter,
                     swimlanes: swimlanesOn,
                     laneGrouping: actionFlowLaneGrouping,
+                    laneStyle: actionFlowLaneStyle,
                     displayLevel: actionFlowDisplayLevel,
                     expandedActionIds: expandedActionNodes,
                     onToggleAction: toggleActionExpand,
@@ -3269,7 +3349,7 @@ function DiagramCanvasInner() {
         viewKind, isGeneralTemplate, generalMode, diagramProfile, swimlanesOn, relayoutNonce,
         selectedDiagram?.relationshipTypes, selectedDiagram?.diagramType, selectedDiagram?.name, useCaseDisplayLevel, useCaseEdgeStyle, hiddenUseCaseActorIds,
         layoutProviderId,
-        expandedNodes, collapsedInterconnectionNodes, focusedInterconnectionId, interconnectionPortDisplay, interconnectionConnectionDisplay, showIbdPortText, showIbdConnectionText, edgeLabelVisibility, activeRenderer, portWalls, activeLegend, expandedActionNodes, focusedActionId, visibleActionFlowKinds, actionFlowDirection, actionFlowLaneGrouping, actionFlowDisplayLevel, actionFlowNesting, nodeDirections,
+        expandedNodes, collapsedInterconnectionNodes, focusedInterconnectionId, interconnectionPortDisplay, interconnectionConnectionDisplay, showIbdPortText, showIbdConnectionText, edgeLabelVisibility, activeRenderer, portWalls, activeLegend, expandedActionNodes, focusedActionId, visibleActionFlowKinds, actionFlowDirection, actionFlowLaneGrouping, actionFlowLaneStyle, actionFlowDisplayLevel, actionFlowNesting, nodeDirections,
         collapsedStateNodes, focusedStateId, toggleStateCollapse, drillIntoState, drillIntoAction,
         toggleExpand, toggleInterconnectionCollapse, toggleActionExpand, toggleDirection, selectedDiagramId,
         drillIntoInterconnection,
@@ -3361,28 +3441,66 @@ function DiagramCanvasInner() {
         }));
     }, [selectedElementId, setNodes]);
 
+    // Dimming is one thing, whoever asks for it: Focus Mode and the flow walkthrough.
+    const dimCanvas = useCallback((nodeOpacity: (node: RFNode) => number, edgeOpacity: (edge: RFEdge) => number) => {
+        setNodes(prev => prev.map(n => {
+            const opacity = nodeOpacity(n);
+            return { ...n, style: { ...n.style, opacity, pointerEvents: opacity >= 0.5 ? 'all' : ('none' as any) } };
+        }));
+        setEdges(prev => prev.map(e => ({ ...e, style: { ...e.style, opacity: edgeOpacity(e) } })));
+    }, [setNodes, setEdges]);
+
     // Focus Mode (#22): filter graph to N-hop neighbors using computeImpact
     useEffect(() => {
         if (!focusNodeId || !model) return;
         const impact = computeImpact(model, focusNodeId, 'both', focusDepth);
         const visibleIds = new Set(impact.nodes.map(n => n.elementId));
         visibleIds.add(focusNodeId);
-        setNodes(prev => prev.map(n => ({
-            ...n,
-            style: {
-                ...n.style,
-                opacity: visibleIds.has(n.id) ? 1 : 0.08,
-                pointerEvents: visibleIds.has(n.id) ? 'all' : ('none' as any),
-            },
-        })));
-        setEdges(prev => prev.map(e => ({
-            ...e,
-            style: {
-                ...e.style,
-                opacity: visibleIds.has(e.source) && visibleIds.has(e.target) ? 1 : 0.05,
-            },
-        })));
-    }, [focusNodeId, focusDepth, model, setNodes, setEdges]);
+        dimCanvas(
+            n => (visibleIds.has(n.id) ? 1 : 0.08),
+            e => (visibleIds.has(e.source) && visibleIds.has(e.target) ? 1 : 0.05),
+        );
+    }, [focusNodeId, focusDepth, model, dimCanvas]);
+
+    // Looping animations stop while the canvas is panned or zoomed: each costs a repaint every frame.
+    const setCanvasMoving = useCallback((event: MouseEvent | TouchEvent | null, moving: boolean) => {
+        const canvas = (event?.target as Element | null | undefined)?.closest?.('.memo-diagram-canvas');
+        canvas?.classList.toggle('memo-canvas-moving', moving);
+    }, []);
+
+    // Taking the reader to a box, from the search or the card beside a box.
+    const goToNode = useCallback((id: string) => {
+        fitView({ nodes: [{ id }], duration: 400, padding: 0.6, maxZoom: 1.2 });
+        const target = nodesRef.current.find(node => node.id === id);
+        inspectElement((target?.data as { inspectElementId?: string } | undefined)?.inspectElementId ?? id);
+        setCardDismissedFor(null);
+    }, [fitView, inspectElement]);
+    const nodeLabel = useCallback((id: string) => {
+        const element = model?.elements[id];
+        const data = nodesRef.current.find(node => node.id === id)?.data as { label?: unknown } | undefined;
+        return element?.name ?? element?.shortName ?? (typeof data?.label === 'string' ? data.label : id.slice(id.lastIndexOf(':') + 1));
+    }, [model]);
+
+    // The flow walkthrough: light the way taken and the ways on, ring the current step, and bring them into view.
+    const onWalkStep = useCallback((trail: string[]) => {
+        setWalking(trail.length > 0);
+        if (trail.length === 0) {
+            dimCanvas(() => 1, () => 1);
+            setNodes(prev => prev.map(n => ({ ...n, className: withoutWalkCurrent(n.className) })));
+            fitView({ duration: 400, padding: 0.1 });
+            return;
+        }
+        const current = trail[trail.length - 1];
+        const emphasis = walkEmphasis(trail, edgesRef.current);
+        dimCanvas(n => emphasis.node(n.id), emphasis.edge);
+        setNodes(prev => prev.map(n => {
+            const added = n.id === current ? WALK_CURRENT_CLASS
+                : (n.data as { memberIds?: string[] }).memberIds?.includes(current) ? WALK_LANE_CLASS : '';
+            return { ...n, className: `${withoutWalkCurrent(n.className)} ${added}`.trim() };
+        }));
+        fitView({ nodes: [current, ...emphasis.next].map(id => ({ id })), duration: 400, padding: 0.5, maxZoom: 1.2 });
+    }, [dimCanvas, fitView, setNodes]);
+
 
     // Source file toast auto-dismiss (#38)
     useEffect(() => {
@@ -4304,7 +4422,7 @@ function DiagramCanvasInner() {
             onAutoRoute={readOnly ? undefined : () => autoRouteConnectors(selectedConnectorIds)}
             onSpacing={readOnly ? undefined : (target, more) => changeSpacing(target, more ? SPACING_STEP : -SPACING_STEP)} />,
         swimlanesOn, setSwimlanesOn, actionFlowHasStages,
-        actionFlowLaneGrouping, setActionFlowLaneGrouping,
+        actionFlowLaneGrouping, setActionFlowLaneGrouping, actionFlowLaneStyle, setActionFlowLaneStyle, actionFlowLaneCounts,
         actionFlowDisplayLevels, actionFlowLevelsOpen, setActionFlowLevelsOpen,
         actionFlowDisplayLevel, setActionFlowDisplayLevel,
         actionFlowToolbarPlacement, actionFlowNesting, setActionFlowNesting,
@@ -4511,8 +4629,7 @@ function DiagramCanvasInner() {
                         <button
                             onClick={() => {
                                 setFocusNodeId(null);
-                                setNodes(prev => prev.map(n => ({ ...n, style: { ...n.style, opacity: 1, pointerEvents: 'all' as any } })));
-                                setEdges(prev => prev.map(e => ({ ...e, style: { ...e.style, opacity: 1 } })));
+                                dimCanvas(() => 1, () => 1);
                             }}
                             style={{ marginLeft: 4, padding: '2px 8px', borderRadius: 4, cursor: 'pointer', background: 'rgba(255,255,255,0.15)', color: '#FFFFFF', fontSize: '11px', border: 'none' }}
                         >
@@ -4875,6 +4992,8 @@ function DiagramCanvasInner() {
                 <ActionFlowVariantContext.Provider value={variantState}>
                 <ReactFlow
                     className="memo-diagram-canvas"
+                    onMoveStart={(event) => { setCanvasMoving(event, true); }}
+                    onMoveEnd={(event) => { setCanvasMoving(event, false); }}
 
                     nodes={nodes}
                     edges={edges}
@@ -4977,7 +5096,19 @@ function DiagramCanvasInner() {
                     {readOnly && <Controls position="bottom-right" showFitView={false} showInteractive={false} style={{ zIndex: 6 }}>
                         {viewControls}
                     </Controls>}
+                    {!embed && <CanvasSearch nodes={nodes} model={model} onPick={goToNode} />}
+                    {!embed && neighbourCardOn && !walking && !layoutAnimating && selectedElementId && selectedElementId !== cardDismissedFor
+                        && nodes.some(node => node.id === selectedElementId && !node.hidden && node.type !== 'actionFlowLane') && (
+                        <NodeNeighbourCard nodeId={selectedElementId} edges={edges} model={model} label={nodeLabel} onPick={goToNode}
+                            onClose={() => setCardDismissedFor(selectedElementId)} />
+                    )}
                     {!readOnly && <Controls position="bottom-right" showFitView={false} style={{ zIndex: 6 }}>
+                        <ControlButton
+                            title={neighbourCardOn ? 'Stop showing a card beside the clicked box' : 'Show a card beside the clicked box'}
+                            aria-label="Card beside the clicked box"
+                            aria-pressed={neighbourCardOn}
+                            onClick={() => setNeighbourCardOn(on => !on)}
+                        >{neighbourCardOn ? '▣' : '▢'}</ControlButton>
                         <ControlButton
                             title="Reset this view to its default layout"
                             aria-label="Reset this view to its default layout"
@@ -5030,6 +5161,10 @@ function DiagramCanvasInner() {
                                 background: '#FFFFFF', color: '#6B6B66', fontSize: '13px', cursor: 'pointer',
                             }}
                         >{miniMapOpen ? '\u2013' : '\u25A2'}</button>
+                    )}
+                    {!embed && viewKind === 'actionflow' && actionFlowMode === 'flow' && !focusNodeId && !isLayouting && !layoutAnimating && (
+                        <FlowWalkthrough key={selectedDiagramId ?? ''} diagramId={selectedDiagramId ?? ''} nodes={nodes} edges={edges} model={model} onStep={onWalkStep}
+                            title={selectedDiagram?.name ?? selectedDiagramId ?? ''} />
                     )}
                 </ReactFlow>
                 </ActionFlowVariantContext.Provider>

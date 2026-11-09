@@ -130,11 +130,15 @@ function renderInterfacesTable(body: string, model: MemoModelDTO | null): string
     if (found.length === 0) return `<p><em>No interfaces between ${label(a)} and ${label(b)}.</em></p>`;
     // An interface's ends are positional and the model names no system of interest, so no direction is claimed:
     // each row shows the port on each part, and the order they were declared in is the order of `from`/`to`.
-    const portOn = (f: (typeof found)[number], owner: string) => (f.from.ownerId === owner ? f.from : f.to).portId;
+    const portOn = (f: (typeof found)[number], owner: string) => {
+        const end = f.from.ownerId === owner ? f.from : f.to;
+        return `${label(end.portId)}${end.viaPortId ? ` via ${label(end.viaPortId)}` : ''}`;
+    };
+    const carried = (f: (typeof found)[number]) => [...new Set(f.carries.map(c => c.item ?? 'a flow with no named item'))].join(', ');
     const attributes = (f: (typeof found)[number]) => Object.entries(f.attributes).map(([k, v]) => `${k} = ${v}`).join(', ');
     const rows = found.map(f => `<tr><td>${escapeHtml(f.name)}</td><td>${escapeHtml(f.kind ?? '—')}</td>`
-        + `<td>${label(portOn(f, a))}</td><td>${label(portOn(f, b))}</td><td>${escapeHtml(attributes(f) || '—')}</td></tr>`).join('');
-    return `<table><thead><tr><th>Interface</th><th>Kind</th><th>Port on ${label(a)}</th><th>Port on ${label(b)}</th><th>Attributes</th></tr></thead>`
+        + `<td>${portOn(f, a)}</td><td>${portOn(f, b)}</td><td>${escapeHtml(carried(f) || '—')}</td><td>${escapeHtml(attributes(f) || '—')}</td></tr>`).join('');
+    return `<table><thead><tr><th>Interface</th><th>Kind</th><th>Port on ${label(a)}</th><th>Port on ${label(b)}</th><th>Carries</th><th>Attributes</th></tr></thead>`
         + `<tbody>${rows}</tbody></table>`;
 }
 

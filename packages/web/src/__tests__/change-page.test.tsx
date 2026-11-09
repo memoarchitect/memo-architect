@@ -73,7 +73,8 @@ describe('the Change page', () => {
     it('asks for the impact from HEAD by default, or from the target typed, and shows what the server returns, as returned', async () => {
         answer = { report: {
             target: 'main', base: { commit: 'c8c8c8c8c8', ref: 'main' }, head: 'working tree',
-            changed: { added: 0, removed: 0, changed: 1, addedLinks: 0, removedLinks: 0, elements: [{ id: 'f', name: 'fnDeliverEnergy', kind: 'SystemFunction', layer: 'functional', via: 'changed', depth: 0 }] },
+            contract: { changes: [], summary: { breaking: 0, compatible: 0, unknown: 0 } },
+            changed: { added: 0, removed: 0, changed: 1, addedLinks: 0, removedLinks: 0, changedLinks: 0, elements: [{ id: 'f', name: 'fnDeliverEnergy', kind: 'SystemFunction', layer: 'functional', via: 'changed', depth: 0 }] },
             reached: { requirements: [{ id: 'r', name: 'reqEnergyLimits', kind: 'Requirement', layer: 'requirements', via: 'satisfiedBy', depth: 1 }], verification: [{ id: 'v', name: 'vcEnergyLimits', kind: 'VerificationCase', layer: 'verification', via: 'verifiedBy', depth: 1 }] },
             systems: [{ id: 's', name: 'ManipulatorSystem', scope: 'system' }],
             releases: [{ id: 'a', name: 'relManipulation', status: 'released', commit: 'abc1234', needsNewRelease: true }],

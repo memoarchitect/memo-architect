@@ -151,12 +151,44 @@ body .react-flow {
     .memo-ibd-flow { animation: none; }
 }
 
+/* A move between layouts (lib/animate-layout.ts). Animations rather than transitions: a box or
+   connector that is leaving is re-appended to the graph, and a moved element does not transition. */
+.react-flow__node.memo-layout-enter,
+.react-flow__edge.memo-layout-enter { animation: memo-layout-fade-in 320ms ease-out; }
+.react-flow__node.memo-layout-exit,
+.react-flow__edge.memo-layout-exit { animation: memo-layout-fade-out 260ms ease-in forwards; }
+.react-flow__edge.memo-layout-hold { opacity: 0; }
+@keyframes memo-layout-fade-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes memo-layout-fade-out { from { opacity: 1; } to { opacity: 0; } }
+
+/* The step a walkthrough is on, after EventCatalog's: transform and opacity only, so the pulse runs
+   on the compositor. */
+.react-flow__node.memo-walk-current { z-index: 1000 !important; outline: 3px solid #2DD4A8; outline-offset: 6px; border-radius: 10px; }
+.react-flow__node.memo-walk-current::after {
+    content: ""; position: absolute; inset: -9px; border-radius: 13px; border: 3px solid #2DD4A8;
+    pointer-events: none; animation: memo-walk-pulse 1.6s ease-out infinite;
+}
+@keyframes memo-walk-pulse { from { transform: scale(1); opacity: 0.8; } to { transform: scale(1.12); opacity: 0; } }
+.react-flow__node.memo-walk-lane { box-shadow: inset 0 0 0 2px #2DD4A8; border-radius: 8px; animation: memo-walk-lane-ping 900ms ease-out; }
+@keyframes memo-walk-lane-ping { from { box-shadow: inset 0 0 0 6px #2DD4A8; } to { box-shadow: inset 0 0 0 2px #2DD4A8; } }
+.memo-walk-token { fill: #2DD4A8; stroke: #fff; stroke-width: 1.5; pointer-events: none; }
+.memo-walk-token-halo { fill: #2DD4A8; opacity: 0.28; pointer-events: none; }
+.memo-walk-check { animation: memo-walk-pop 250ms ease-out; }
+@keyframes memo-walk-pop { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) {
+    .react-flow__node.memo-walk-current::after, .react-flow__node.memo-walk-lane, .memo-walk-check { animation: none; }
+}
+
+.memo-canvas-moving .memo-ibd-flow,
+.memo-canvas-moving .react-flow__edge.animated path,
+.memo-canvas-moving .react-flow__node.memo-walk-current::after { animation-play-state: paused; }
+
 /* React Flow sets stroke-width inline on each edge path, so these rules need
    !important to win. The invisible interaction path is untouched: it is
    already 20px wide, so line thickness was never what made an edge hard to
    click. A 1px connector is simply too faint to follow across a dense IBD. */
 .react-flow__edge path {
-    transition: stroke-width 150ms ease;
+    transition: stroke-width 150ms ease, opacity 200ms ease;
 }
 
 .react-flow__edge .react-flow__edge-path {

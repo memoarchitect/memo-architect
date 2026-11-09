@@ -24,7 +24,8 @@ const diff: ModelDiffSummary = {
     changed: [{ id: 'f1', name: 'fnOne', kind: 'SystemFunction', changes: ['attributes changed'] }],
     addedRels: [{ id: 'r', type: 'verifiedBy', source: 'tcOne', target: 'fnOne' }],
     removedRels: [],
-    summary: { added: 2, removed: 0, changed: 1, addedRels: 1, removedRels: 0 },
+    changedRels: [],
+    summary: { added: 2, removed: 0, changed: 1, addedRels: 1, removedRels: 0, changedRels: 0 },
 };
 
 describe('a release diff for a role', () => {

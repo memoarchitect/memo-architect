@@ -29,7 +29,8 @@ import { Fragment, isValidElement, type Dispatch, type ReactNode, type SetStateA
 import type { Edge as RFEdge } from '@xyflow/react';
 import type { MemoModelDTO, DiagramLayout } from '@memoarchitect/tools/browser';
 import type { DiagramExportFormat } from '../export-diagram';
-import type { ActionFlowDisplayLevel, ActionFlowLaneGrouping, ActionFlowNesting } from '../../views/templates/actionflow-view';
+import { LanePicker } from './LanePicker';
+import type { ActionFlowDisplayLevel, ActionFlowLaneGrouping, ActionFlowLaneStyle, ActionFlowNesting } from '../../views/templates/actionflow-view';
 import { edgeHintValue, withViewHint, type UseCaseEdgeStyle } from '../../views/templates/use-case-view';
 import type { PortDisplay } from '../../views/templates/interconnection-view';
 import type { GeneralViewMode } from '../../views/templates/general-view';
@@ -102,6 +103,9 @@ export interface DiagramToolbarContext {
     actionFlowHasStages: boolean;
     actionFlowLaneGrouping: ActionFlowLaneGrouping;
     setActionFlowLaneGrouping: Dispatch<SetStateAction<ActionFlowLaneGrouping>>;
+    actionFlowLaneStyle: ActionFlowLaneStyle;
+    setActionFlowLaneStyle: Dispatch<SetStateAction<ActionFlowLaneStyle>>;
+    actionFlowLaneCounts: Record<ActionFlowLaneGrouping, number>;
     actionFlowDisplayLevels: ActionFlowDisplayLevel[];
     actionFlowLevelsOpen: boolean;
     setActionFlowLevelsOpen: Dispatch<SetStateAction<boolean>>;
@@ -437,13 +441,23 @@ export class ActionFlowToolbar extends BaseDiagramToolbar {
                     onClick={() => ctx.setSwimlanesOn(s => !s)}
                     title="Toggle allocation swimlanes"
                 />
-                {ctx.swimlanesOn && ctx.actionFlowHasStages && (
-                    <IconToggle
-                        icon={<Icon.lanes />}
-                        label={ctx.actionFlowToolbarPlacement === 'left' ? undefined : 'Stage'}
-                        active={ctx.actionFlowLaneGrouping === 'stage'}
-                        onClick={() => ctx.setActionFlowLaneGrouping(current => current === 'stage' ? 'allocation' : 'stage')}
-                        title="Group this flow by its modeled stages"
+                {ctx.swimlanesOn && (
+                    <LanePicker
+                        grouping={ctx.actionFlowLaneGrouping}
+                        onGrouping={ctx.setActionFlowLaneGrouping}
+                        style={ctx.actionFlowLaneStyle}
+                        onStyle={ctx.setActionFlowLaneStyle}
+                        counts={ctx.actionFlowLaneCounts}
+                        hasStages={ctx.actionFlowHasStages}
+                        trigger={(open, toggle) => (
+                            <IconToggle
+                                icon={<Icon.lanes />}
+                                label={ctx.actionFlowToolbarPlacement === 'left' ? undefined : 'Group'}
+                                active={open || ctx.actionFlowLaneGrouping === 'stage' || ctx.actionFlowLaneStyle === 'boxes'}
+                                onClick={toggle}
+                                title="Choose how lanes are grouped and drawn"
+                            />
+                        )}
                     />
                 )}
                 {ctx.supportsToolbarOperation('flowHierarchy') && ctx.swimlanesOn && ctx.actionFlowLaneGrouping === 'allocation' && ctx.actionFlowDisplayLevels.length > 0 && (() => {

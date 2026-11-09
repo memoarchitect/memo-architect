@@ -1,7 +1,9 @@
 import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useModelStore } from '../store/model-store';
 import { LAYER_COLORS } from '../constants';
-import { computeModelDiff, type ModelDiff, type MemoModelDTO, type MemoElement, type MemoRelationship } from '@memoarchitect/tools/browser';
+import { CONTRACT_LIMITS, computeModelDiff, contractChanges, type ModelDiff, type MemoModelDTO, type MemoElement, type MemoRelationship } from '@memoarchitect/tools/browser';
+
+import { ContractChanges } from '../components/ContractChanges';
 
 // ─── Diff ────────────────────────────────────────────────────────────────────
 // The comparison itself is MEMO Tools' (`computeModelDiff`): the Releases page asks the server for the
@@ -126,12 +128,14 @@ export function ModelDiff() {
                             <h2 className="text-sm font-semibold" style={{ color: '#374151' }}>
                                 {totalChanges === 0 ? 'No changes' : `${totalChanges} element changes`}
                             </h2>
-                            {diff.summary.addedRels + diff.summary.removedRels > 0 && (
+                            {diff.summary.addedRels + diff.summary.removedRels + diff.summary.changedRels > 0 && (
                                 <span className="text-xs" style={{ color: '#9CA3AF' }}>
-                                    + {diff.summary.addedRels + diff.summary.removedRels} relationship changes
+                                    + {diff.summary.addedRels + diff.summary.removedRels + diff.summary.changedRels} relationship changes
                                 </span>
                             )}
                         </div>
+
+                        {model && baselineModel && <ContractChanges report={contractChanges(diff, baselineModel, model)} limits={CONTRACT_LIMITS} />}
 
                         {/* Summary badges */}
                         <div className="flex gap-2 mb-4">
@@ -220,12 +224,21 @@ export function ModelDiff() {
                         )}
 
                         {/* Relationship changes */}
-                        {(diff.addedRels.length > 0 || diff.removedRels.length > 0) && (
+                        {(diff.addedRels.length > 0 || diff.removedRels.length > 0 || diff.changedRels.length > 0) && (
                             <div className="mb-4">
                                 <h3 className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: '#6B7280' }}>
                                     Relationship Changes
                                 </h3>
                                 <div className="space-y-1">
+                                    {diff.changedRels.map(({ relationship: rel, changes }) => (
+                                        <div key={rel.id} className="flex items-center gap-2 px-3 py-1.5 text-xs rounded-lg" style={{ background: '#FFFBEB', border: '1px solid #FDE68A' }}>
+                                            <span style={{ color: '#F39C12' }}>{'\u25CF'}</span>
+                                            <span style={{ color: '#374151' }}>{model?.elements[rel.sourceId]?.name || rel.sourceId}</span>
+                                            <span style={{ color: '#2563EB' }}>{rel.type}</span>
+                                            <span style={{ color: '#374151' }}>{model?.elements[rel.targetId]?.name || rel.targetId}</span>
+                                            <span style={{ color: '#9CA3AF' }}>{changes.join(', ')}</span>
+                                        </div>
+                                    ))}
                                     {diff.addedRels.map(rel => (
                                         <div key={rel.id} className="flex items-center gap-2 px-3 py-1.5 text-xs rounded-lg" style={{ background: '#F0FDF4', border: '1px solid #BBF7D0' }}>
                                             <span style={{ color: '#2ECC71' }}>+</span>
@@ -246,7 +259,7 @@ export function ModelDiff() {
                             </div>
                         )}
 
-                        {totalChanges === 0 && diff.addedRels.length === 0 && diff.removedRels.length === 0 && (
+                        {totalChanges === 0 && diff.addedRels.length === 0 && diff.removedRels.length === 0 && diff.changedRels.length === 0 && (
                             <div className="text-center py-8" style={{ color: '#9CA3AF' }}>
                                 <div style={{ fontSize: '24px', marginBottom: '8px' }}>{'\u2713'}</div>
                                 <div className="text-sm">No differences between snapshot and current model</div>

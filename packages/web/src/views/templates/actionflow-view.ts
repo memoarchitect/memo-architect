@@ -271,6 +271,22 @@ const LANE_COLORS = [
 export const UNALLOCATED_LANE = 'Unallocated';
 export const UNSTAGED_LANE = 'Unstaged';
 export type ActionFlowLaneGrouping = 'allocation' | 'stage';
+/** Lanes run the length of the flow; boxes stop at their own members. */
+export type ActionFlowLaneStyle = 'lanes' | 'boxes';
+
+/** The rectangle a group takes around its own members. */
+export function laneBoxRect(members: readonly { x: number; y: number; width: number; height: number }[], orientation: 'row' | 'column') {
+    const column = orientation === 'column';
+    const minX = Math.min(...members.map(m => m.x));
+    const maxX = Math.max(...members.map(m => m.x + m.width));
+    const minY = Math.min(...members.map(m => m.y));
+    const maxY = Math.max(...members.map(m => m.y + m.height));
+    return {
+        position: { x: column ? minX - 36 : minX - 120, y: column ? minY - 32 : minY - 36 },
+        width: maxX - minX + (column ? 72 : 156),
+        height: maxY - minY + (column ? 68 : 72),
+    };
+}
 export type ActionFlowDisplayLevel = 'all' | number;
 
 /** Resolve an allocated element to the ancestor displayed at a requested level. */
@@ -545,6 +561,7 @@ export interface ActionFlowViewOptions {
     swimlanes?: boolean;
     /** Group/highlight actions by performer/component or modeled stage. */
     laneGrouping?: ActionFlowLaneGrouping;
+    laneStyle?: ActionFlowLaneStyle;
     /** Presentation only: group/display the modeled target at L1/L2/L3 ancestry. */
     displayLevel?: ActionFlowDisplayLevel;
     expandedActionIds?: ReadonlySet<string>;
@@ -569,15 +586,20 @@ export interface ActionFlowViewOptions {
 
 export type ActionFlowKind = 'control' | 'data' | 'energy' | 'material';
 
-/**
- * Keep flow rendering and the connection inspector in the same practical
- * engineering vocabulary. A flow item without an explicit energy/material
- * cue is information/data by default.
- */
-export function classifyFlowItem(flowItem?: string): Exclude<ActionFlowKind, 'control'> {
-    const item = flowItem ?? '';
-    if (/energy|power|voltage|current|thermal|heat/i.test(item)) return 'energy';
-    if (/material|fluid|gas|liquid|batch|consumable/i.test(item)) return 'material';
+/** The kind a flow declares, as its bare enum member: `FlowKind::power` is `power`. */
+function declaredFlowKind(rel: Pick<MemoRelationship, 'attributes'>): string | undefined {
+    const declared = rel.attributes?.flowKind ?? rel.attributes?.contentKind;
+    return declared?.slice(declared.lastIndexOf(':') + 1);
+}
+
+const ENERGY_FLOW_KINDS: ReadonlySet<string> = new Set(['power', 'energy', 'mechanicalForce']);
+const MATERIAL_FLOW_KINDS: ReadonlySet<string> = new Set(['material', 'fluid']);
+
+/** The colour family of a flow, from the kind it declares. A flow that declares none is drawn as data. */
+export function classifyFlow(rel: Pick<MemoRelationship, 'attributes'>): Exclude<ActionFlowKind, 'control'> {
+    const kind = declaredFlowKind(rel);
+    if (kind && ENERGY_FLOW_KINDS.has(kind)) return 'energy';
+    if (kind && MATERIAL_FLOW_KINDS.has(kind)) return 'material';
     return 'data';
 }
 
@@ -699,7 +721,7 @@ export async function computeActionFlowViewLayout(
     const graphIds = new Set([...actionIds, ...pseudoIds]);
     const visibleFlows = flowRels.filter(r =>
         graphIds.has(r.sourceId) && graphIds.has(r.targetId)
-        && (!options?.visibleFlowKinds || options.visibleFlowKinds.has(classifyFlowItem(r.flowItem))),
+        && (!options?.visibleFlowKinds || options.visibleFlowKinds.has(classifyFlow(r))),
     );
     const visibleFlowPairs = new Set(visibleFlows.map(r => `${r.sourceId}\u0000${r.targetId}`));
     // When an object flow and succession connect the same actions, render the
@@ -848,11 +870,12 @@ export async function computeActionFlowViewLayout(
             children: childIds.map(buildElkActionNode),
         };
     };
-    const topLevelIds = [
+    // In nested mode an opened composite is both an action and a frame.
+    const topLevelIds = [...new Set([
         ...pseudoIds,
         ...actions.map(el => el.id),
-        ...[...frameChildren.keys()],
-    ].filter(id => !frameOfNode.has(id));
+        ...frameChildren.keys(),
+    ])].filter(id => !frameOfNode.has(id));
 
     const elkGraph: ElkActionNode = {
         id: 'root',
@@ -1208,6 +1231,25 @@ export async function computeActionFlowViewLayout(
         }
     }
 
+    if (swimlanes && options?.laneStyle === 'boxes') {
+        const rects = new Map<string, ReturnType<typeof laneBoxRect>>();
+        for (const lane of laneNodes) {
+            const data = lane.data as { memberIds?: string[]; orientation?: 'row' | 'column' } | undefined;
+            if (!data?.memberIds) continue;
+            const rect = laneBoxRect(data.memberIds.map(id => positions.get(id)!).filter(Boolean), data.orientation ?? 'row');
+            rects.set(lane.id, rect);
+            lane.position = rect.position;
+            lane.style = { ...lane.style, width: rect.width, height: rect.height };
+            lane.data = { ...lane.data, boxes: true };
+        }
+        for (const label of laneNodes) {
+            const rect = rects.get(label.id.replace('__lane_label_', '__lane_'));
+            if (!rect || !label.id.startsWith('__lane_label_')) continue;
+            label.position = rect.position;
+            label.style = { ...label.style, width: rect.width, height: rect.height };
+        }
+    }
+
     // ── ReactFlow nodes ──
     // Lanes, then retained boundaries, then the steps themselves: nodes at equal
     // z paint in array order, so this is what puts a step above its boundary and
@@ -1354,11 +1396,10 @@ export async function computeActionFlowViewLayout(
     };
     const edges: Edge[] = [];
     for (const rel of visibleFlows) {
-        const flowKind = classifyFlowItem(rel.flowItem);
+        const flowKind = classifyFlow(rel);
         const flowColor = FLOW_COLORS[flowKind];
-        const isSignalOrInfo = rel.flowItem
-            ? /signal|error|status|code|report|alarm|response|command|data|reading/i.test(rel.flowItem)
-            : false;
+        // Dashed for a flow declared as information of some kind; undeclared stays solid.
+        const isSignalOrInfo = flowKind === 'data' && declaredFlowKind(rel) !== undefined;
         edges.push({
             id: rel.id,
             source: rel.sourceId,

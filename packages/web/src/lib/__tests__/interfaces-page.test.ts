@@ -62,6 +62,27 @@ describe('interfaces page', () => {
         expect(html).not.toContain('→');
     });
 
+    it('says what crosses an interface, and which port a nested part is reached through', () => {
+        const delegated = {
+            ...model,
+            elements: {
+                ...model.elements,
+                'p::nav::inner': el('p::nav::inner', 'part', { owner: 'p::nav', layer: 'logical' }),
+                'p::nav::inner::deep': el('p::nav::inner::deep', 'port', { owner: 'p::nav::inner' }),
+            },
+            relationships: [
+                ...model.relationships,
+                { id: 'f', type: 'flow', sourceId: 'p::lidar', targetId: 'p::nav', sourceEnd: '', targetEnd: '', file: 'x', flowItem: 'Scan' },
+                { id: 'b', type: 'bind', sourceId: 'p::nav::scanIn', targetId: 'p::nav::inner::deep', sourceEnd: '', targetEnd: '', file: 'x' },
+            ],
+        } as unknown as MemoModelDTO;
+        const direct = renderDashboardHtml('{{interfaces:p::lidar | p::nav}}', delegated, {} as DhfSettings);
+        expect(direct).toContain('<th>Carries</th>');
+        expect(direct).toContain('<td>Scan</td>');
+        const nested = renderDashboardHtml('{{interfaces:p::lidar | p::nav::inner}}', delegated, {} as DhfSettings);
+        expect(nested).toContain('deep via scanIn');
+    });
+
     it('finds a saved page by its directive, and ignores other dashboards', () => {
         const md = interfacesMarkdown(model, 'p::lidar', 'p::nav', 'Lidar and nav');
         const dash = (id: string, content: string) => ({ id, scope: 'user', title: id, content, path: `dashboards/user/${id}.md`, updatedAt: 0 } as const);

@@ -27,6 +27,7 @@ import {
 } from '../components/element-profile/ProfileValue';
 import { ElementRelationships } from '../components/element-profile/ElementRelationships';
 import { AnnotationPanel } from '../components/UnifiedPropertiesPanel';
+import { ElementUsage } from '../components/element-profile/ElementUsage';
 import { fieldEditability } from '../components/element-profile/editability';
 import type { MemoElement, MemoRelationship } from '@memoarchitect/tools/browser';
 
@@ -424,6 +425,8 @@ export function ElementDetailView({ elementId: requestedElementId }: { elementId
                     incoming={relationships.incoming}
                     density={DENSITY}
                 />
+
+                <ElementUsage element={element} />
 
                 {/* Comments, rationales, and notes are model content, so the
                     full element profile must offer the same authoring surface

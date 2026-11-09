@@ -30,7 +30,8 @@ export function diffForRole(diff: ModelDiffSummary, model: MemoModelDTO, role: s
         Object.values(model.elements).some(e => e.name === name && admits(e.kind)));
     const addedRels = diff.addedRels.filter(showsLink);
     const removedRels = diff.removedRels.filter(showsLink);
-    const total = (d: ModelDiffSummary) => d.added.length + d.removed.length + d.changed.length + d.addedRels.length + d.removedRels.length;
-    const shown: ModelDiffSummary = { ...diff, added, removed, changed, addedRels, removedRels };
+    const changedRels = diff.changedRels.filter(showsLink);
+    const total = (d: ModelDiffSummary) => d.added.length + d.removed.length + d.changed.length + d.addedRels.length + d.removedRels.length + d.changedRels.length;
+    const shown: ModelDiffSummary = { ...diff, added, removed, changed, addedRels, removedRels, changedRels };
     return { diff: shown, hidden: total(diff) - total(shown) };
 }

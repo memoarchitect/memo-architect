@@ -59,8 +59,37 @@ action patientBolus {
 
 ## In Architect
 
+- **Walk through** steps along the flow one hop at a time: the current step is
+  ringed, the steps walked are numbered, and at a decision you choose the way
+  on by its guard. Use the arrow keys to move and Esc to stop.
+  - Each step lists what it **checks**: its precondition and postcondition, as an
+    expression or in words, with those of its definition. The model states these and
+    cannot evaluate them, so **Fails** on a check is your call: those before it held,
+    the flow stops there, and those after it are never reached.
+  - **Play** (space) goes on by itself, holding each step long enough to read and
+    sending a dot along the connector. It waits at a decision for your choice, and at
+    a step already walked.
+  - The address follows the walk, so **Copy link** shares the exact step, branches and
+    failed check. A link from before a model change opens as far as it still exists.
+  - **Record** plays from the start and saves a video of the tab, ending with the walk.
+    The browser asks permission first; it is offered where the browser can capture a
+    tab, which means a desktop browser.
+- **Group** in the toolbar chooses what lanes group by, showing how many groups each
+  choice makes, and whether they are drawn as lanes along the whole flow or as boxes
+  around their own steps.
+- Press **/** on any diagram to find a box on it. Only what is drawn is searched: a
+  step folded inside a composite appears once the composite is open.
+- Clicking a box shows a card beside it with what it is connected to; the ▣ control at
+  the bottom right turns the card off.
+- The colour of an item flow comes from the kind it declares with `flowKind`:
+  energy, material or data. A flow that declares none is drawn as data.
 - Composite actions can be **folded** or opened with **drill-down**, and steps
   shown **inline** or **nested**, without changing the model.
+- Opening a composite with steps shown **nested** leaves the rest of the flow where it
+  is and shifts only the boxes the frame now covers.
+- When folding, regrouping lanes or filtering changes the layout, boxes and lanes
+  move to their new places. Connectors hide while the boxes move and fade back in.
+  A very large view, or a system set to reduce motion, changes at once.
 - Variants of a flow show as rows on one flow, with chips to switch between and
   preview them (see [Variability](../layers/variability.md)).
 - Dragging from one pin to another sends the parameter names, so you can author

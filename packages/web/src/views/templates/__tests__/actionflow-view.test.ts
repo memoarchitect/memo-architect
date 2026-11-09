@@ -5,7 +5,7 @@ import type { MemoElement, MemoModelDTO, MemoRelationship } from '@memoarchitect
 import {
     collectActionFlowActions, collectNestedActionFlowActions,
     actionPortNames, parameterOfHandle, assignLanes, UNALLOCATED_LANE, UNSTAGED_LANE,
-    classifyFlowItem, isControlNode, activityNodeType, displayElementAtLevel, displayNameAtLevel, commonDisplayLevels,
+    classifyFlow, isControlNode, activityNodeType, displayElementAtLevel, displayNameAtLevel, commonDisplayLevels,
     findFloatingActions, flatExpandedGroups, findFeedbackSuccessionIds, computeActionFlowViewLayout,
 } from '../actionflow-view';
 
@@ -270,11 +270,16 @@ describe('assignLanes', () => {
     });
 });
 
-describe('classifyFlowItem', () => {
-    it('classifies data, energy, and material flows for renderer visibility', () => {
-        expect(classifyFlowItem('ClinicalDataPacket')).toBe('data');
-        expect(classifyFlowItem('BatteryEnergy')).toBe('energy');
-        expect(classifyFlowItem('MedicationMaterialBatch')).toBe('material');
+describe('classifyFlow', () => {
+    const declared = (attributes?: Record<string, string>) => classifyFlow({ attributes });
+    it('reads the kind the flow declares', () => {
+        expect(declared({ flowKind: 'FlowKind::power' })).toBe('energy');
+        expect(declared({ contentKind: 'FlowContentKind::fluid' })).toBe('material');
+        expect(declared({ flowKind: 'FlowKind::command' })).toBe('data');
+    });
+    it('draws a flow that declares no kind as data, and never reads the name of its item', () => {
+        expect(declared(undefined)).toBe('data');
+        expect(classifyFlow({ attributes: {}, flowItem: 'BatteryEnergy' } as Parameters<typeof classifyFlow>[0])).toBe('data');
     });
 });
 
@@ -634,5 +639,29 @@ describe('parameterOfHandle', () => {
         expect(parameterOfHandle('right')).toBeUndefined();
         expect(parameterOfHandle('in::x')).toBeUndefined();
         expect(parameterOfHandle(null)).toBeUndefined();
+    });
+});
+
+describe('computeActionFlowViewLayout: a composite opened in nested mode', () => {
+    const wrapper = el('w');
+    const composite = el('c', { parentAction: 'w' });
+    const inner = el('s', { parentAction: 'c' });
+    it('draws the composite once, as a frame holding its steps', async () => {
+        const { nodes } = await computeActionFlowViewLayout(model([wrapper, composite, inner]), { nesting: 'nested', expandedActionIds: new Set(['c']) });
+        expect(nodes.filter(node => node.id === 'c')).toHaveLength(1);
+        expect(nodes.find(node => node.id === 's')?.parentId).toBe('c');
+    });
+});
+
+describe('computeActionFlowViewLayout: groups drawn as boxes', () => {
+    const widths = (nodes: Awaited<ReturnType<typeof computeActionFlowViewLayout>>['nodes']) => nodes.filter(node => node.type === 'actionFlowLane').map(node => node.style?.width);
+    it('stops a box at its own members, where a lane runs the length of the flow', async () => {
+        const flow = model([
+            el('w'), el('a', { parentAction: 'w', allocatedTo: 'p1' }), el('b', { parentAction: 'w', allocatedTo: 'p2' }), el('p1'), el('p2'),
+        ], [{ id: 'r', type: 'succession', sourceId: 'a', targetId: 'b' } as MemoRelationship]);
+        const lanes = await computeActionFlowViewLayout(flow, { swimlanes: true });
+        const boxes = await computeActionFlowViewLayout(flow, { swimlanes: true, laneStyle: 'boxes' });
+        expect(new Set(widths(lanes.nodes)).size).toBe(1);
+        expect(Number(widths(boxes.nodes)[0])).toBeLessThan(Number(widths(lanes.nodes)[0]));
     });
 });

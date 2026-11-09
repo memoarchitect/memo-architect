@@ -166,13 +166,14 @@ function DiffBody({ diff: { diff, hidden } }: { diff: { diff: ModelDiffSummary; 
         <div style={{ margin: '6px 0' }}><div style={{ fontSize: FONT.xs, color: COLOR.muted, fontWeight: 600 }}>{title} ({items.length})</div>
             <ul style={{ margin: '2px 0', paddingLeft: 18, fontSize: FONT.sm }}>{items.map(item => <li key={item}>{item}</li>)}</ul></div>
     );
-    const empty = diff.added.length + diff.removed.length + diff.changed.length + diff.addedRels.length + diff.removedRels.length === 0;
+    const empty = diff.added.length + diff.removed.length + diff.changed.length + diff.addedRels.length + diff.removedRels.length + diff.changedRels.length === 0;
     return (
         <div>
             {empty && <p style={{ fontSize: FONT.sm, color: COLOR.muted }}>Nothing changed{hidden > 0 ? ' that this role sees' : ''}.</p>}
             {list('Added', diff.added.map(e => `${e.name} (${e.kind})`))}
             {list('Removed', diff.removed.map(e => `${e.name} (${e.kind})`))}
             {list('Changed', diff.changed.map(e => `${e.name} (${e.kind}): ${e.changes.join(', ')}`))}
+            {list('Links changed', diff.changedRels.map(r => `${r.source} ${r.type} ${r.target}: ${r.changes.join(', ')}`))}
             {list('Links added', diff.addedRels.map(r => `${r.source} ${r.type} ${r.target}`))}
             {list('Links removed', diff.removedRels.map(r => `${r.source} ${r.type} ${r.target}`))}
             {hidden > 0 && <p style={{ fontSize: FONT.xs, color: COLOR.muted }}>{hidden} change(s) are outside this role's viewpoints.</p>}
