@@ -665,3 +665,31 @@ describe('computeActionFlowViewLayout: groups drawn as boxes', () => {
         expect(Number(widths(boxes.nodes)[0])).toBeLessThan(Number(widths(lanes.nodes)[0]));
     });
 });
+
+describe('groups inside groups', () => {
+    const flow = () => model([
+        el('w'), el('p1'), el('p2'),
+        el('a', { parentAction: 'w', allocatedTo: 'p1', attributes: { stage: 'prep' } }),
+        el('b', { parentAction: 'w', allocatedTo: 'p1', attributes: { stage: 'run' } }),
+        el('c', { parentAction: 'w', allocatedTo: 'p2', attributes: { stage: 'run' } }),
+    ], [{ id: 'r1', type: 'succession', sourceId: 'a', targetId: 'b' } as MemoRelationship, { id: 'r2', type: 'succession', sourceId: 'b', targetId: 'c' } as MemoRelationship]);
+    it('makes one lane per allocation and stage, each knowing its allocation', () => {
+        const actions = ['a', 'b', 'c'].map(id => flow().elements[id]);
+        const { lanes } = assignLanes(actions, flow(), 'allocation-stage');
+        expect(lanes.map(lane => [lane.label, lane.group?.id])).toEqual([['prep', 'p1'], ['run', 'p1'], ['run', 'p2']]);
+    });
+    it('draws an outer box around the boxes of each allocation, enclosing them', async () => {
+        const { nodes } = await computeActionFlowViewLayout(flow(), { swimlanes: true, laneGrouping: 'allocation-stage' });
+        const outer = nodes.find(node => node.id === '__lane_outer_p1')!;
+        const inner = nodes.filter(node => node.id === '__lane_p1 / prep' || node.id === '__lane_p1 / run');
+        expect(inner).toHaveLength(2);
+        for (const box of inner) {
+            expect(box.position.x).toBeGreaterThan(outer.position.x);
+            expect(box.position.y).toBeGreaterThan(outer.position.y);
+            expect(box.position.x + Number(box.style?.width)).toBeLessThan(outer.position.x + Number(outer.style?.width));
+            expect(box.position.y + Number(box.style?.height)).toBeLessThan(outer.position.y + Number(outer.style?.height));
+        }
+        expect(nodes.some(node => node.id === '__lane_label_outer_p1')).toBe(true);
+    });
+});
+

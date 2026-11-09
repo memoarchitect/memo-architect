@@ -453,7 +453,7 @@ export class ActionFlowToolbar extends BaseDiagramToolbar {
                             <IconToggle
                                 icon={<Icon.lanes />}
                                 label={ctx.actionFlowToolbarPlacement === 'left' ? undefined : 'Group'}
-                                active={open || ctx.actionFlowLaneGrouping === 'stage' || ctx.actionFlowLaneStyle === 'boxes'}
+                                active={open || ctx.actionFlowLaneGrouping !== 'allocation' || ctx.actionFlowLaneStyle === 'boxes'}
                                 onClick={toggle}
                                 title="Choose how lanes are grouped and drawn"
                             />

@@ -11,6 +11,7 @@ import { LayoutSaveObservation } from '../diagram/layout-save-observation';
 import { useModelStore } from './model-store';
 import type { DhfDoc, DhfSettings } from './model-store';
 import { isReadOnlyMessage } from '@memoarchitect/tools/browser';
+import type { DefinitionVersion } from '@memoarchitect/tools/browser';
 import type { ServerMessage, RestartRequiredMessage, SourceCoherenceMessage, EditConflictMessage, ModelMutationPrecondition, DiagramCreateMessage, DiagramUpdateMessage, DiagramDeleteMessage, DiagramParseMessage, DiagramLayout, CsvImportMessage, DiagramSourceResultMessage, DhfDocDTO, DhfRepoTemplateInfo, ScreenCaptureUploadResultMessage, WorkspaceRevision, ElementMutationResultMessage, PackageMutationResultMessage, MethodologySourceResultMessage, DashboardScope, RuleFormPayload, RulePreviewResultMessage, RuleCreateResultMessage, SourceImportPayload, SourceImportResultMessage, SuspectReviewResultMessage, ReleaseCreateResultMessage, ReleaseDiffResultMessage, DeviceDhfResultMessage, GuideResultMessage, ImpactResultMessage, DiagramResultMessage, QueryResultMessage } from '@memoarchitect/tools/browser';
 import type {
     RelationshipCreateRequest, RelationshipCreateResultMessage,
@@ -136,7 +137,9 @@ const impactRequests = new Map<string, PendingRequest<ImpactResultMessage['paylo
 const diagramRequests = new Map<string, PendingRequest<DiagramResultMessage['payload'] & { requestId: string }>>();
 const queryRequests = new Map<string, PendingRequest<QueryResultMessage['payload'] & { requestId: string }>>();
 const deviceDhfRequests = new Map<string, PendingRequest<DeviceDhfResultMessage['payload'] & { requestId: string }>>();
+type DefinitionHistoryResult = { requestId: string; error?: string; versions?: DefinitionVersion[] };
 const releaseDiffRequests = new Map<string, PendingRequest<ReleaseDiffResultMessage['payload'] & { requestId: string }>>();
+const definitionHistoryRequests = new Map<string, PendingRequest<DefinitionHistoryResult>>();
 
 /**
  * Resolve an in-flight mutation with the server's answer.
@@ -174,7 +177,7 @@ const WRITE_REQUEST_TIMEOUT_MS = 120_000;
 
 /** Fail every in-flight mutation, so no pending row is left waiting forever. */
 function rejectRelationshipRequests(message: string): void {
-    for (const map of [relationshipCreateRequests, relationshipDeleteRequests, relationshipUpdateRequests, elementDeleteRequests, screenCaptureUploadRequests, packageMutationRequests, sourceImportRequests, suspectReviewRequests, releaseCreateRequests, releaseDiffRequests, deviceDhfRequests, guideRequests, impactRequests, diagramRequests, queryRequests] as Map<string, PendingRequest<any>>[]) {
+    for (const map of [definitionHistoryRequests, relationshipCreateRequests, relationshipDeleteRequests, relationshipUpdateRequests, elementDeleteRequests, screenCaptureUploadRequests, packageMutationRequests, sourceImportRequests, suspectReviewRequests, releaseCreateRequests, releaseDiffRequests, deviceDhfRequests, guideRequests, impactRequests, diagramRequests, queryRequests] as Map<string, PendingRequest<any>>[]) {
         for (const pending of map.values()) {
             clearTimeout(pending.timer);
             pending.reject(new Error(message));
@@ -207,7 +210,7 @@ function rejectRelationshipRequests(message: string): void {
 
 function sendRelationshipRequest<T extends { requestId: string }>(
     type: 'relationship:create' | 'relationship:delete' | 'relationship:update' | 'element:delete'
-        | 'import:preview' | 'import:apply' | 'suspect:review' | 'release:create' | 'release:diff' | 'dhf:device:generate' | 'guide:evaluate' | 'impact:compute'
+        | 'import:preview' | 'import:apply' | 'suspect:review' | 'release:create' | 'release:diff' | 'definition:history' | 'dhf:device:generate' | 'guide:evaluate' | 'impact:compute'
         | 'diagram:create' | 'diagram:update' | 'query:run',
     request: Record<string, unknown>,
     pending: Map<string, PendingRequest<T>>,
@@ -433,6 +436,9 @@ function handleMessage(msg: ExtendedServerMessage): void {
             break;
         case 'release:diff:result':
             settleRelationshipRequest(msg.payload as ReleaseDiffResultMessage['payload'] & { requestId: string }, releaseDiffRequests);
+            break;
+        case 'definition:history:result':
+            settleRelationshipRequest(msg.payload as DefinitionHistoryResult, definitionHistoryRequests);
             break;
         case 'source-import:result':
             settleRelationshipRequest(msg.payload, sourceImportRequests);
@@ -941,6 +947,11 @@ export function requestDeviceDhf(device: string): Promise<DeviceDhfResultMessage
 /** What changed in `release` since `against` (another record's id, or 'previous'). */
 export function requestReleaseDiff(release: string, against: string): Promise<ReleaseDiffResultMessage['payload'] & { requestId: string }> {
     return sendRelationshipRequest('release:diff', { release, against }, releaseDiffRequests);
+}
+
+/** One definition in every release and the working version, newest first. */
+export function requestDefinitionHistory(definition: string): Promise<DefinitionHistoryResult> {
+    return sendRelationshipRequest('definition:history', { definition }, definitionHistoryRequests);
 }
 
 /**

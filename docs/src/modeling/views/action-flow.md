@@ -76,7 +76,8 @@ action patientBolus {
     tab, which means a desktop browser.
 - **Group** in the toolbar chooses what lanes group by, showing how many groups each
   choice makes, and whether they are drawn as lanes along the whole flow or as boxes
-  around their own steps.
+  around their own steps. **Allocation, then stage** nests one inside the other, as
+  boxes. The choice is kept in the address, so a link opens the flow the same way.
 - Press **/** on any diagram to find a box on it. Only what is drawn is searched: a
   step folded inside a composite appears once the composite is open.
 - Clicking a box shows a card beside it with what it is connected to; the ▣ control at

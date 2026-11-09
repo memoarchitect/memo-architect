@@ -270,23 +270,28 @@ const LANE_COLORS = [
 
 export const UNALLOCATED_LANE = 'Unallocated';
 export const UNSTAGED_LANE = 'Unstaged';
-export type ActionFlowLaneGrouping = 'allocation' | 'stage';
+export type ActionFlowLaneGrouping = 'allocation' | 'stage' | 'allocation-stage';
 /** Lanes run the length of the flow; boxes stop at their own members. */
 export type ActionFlowLaneStyle = 'lanes' | 'boxes';
 
 /** The rectangle a group takes around its own members. */
-export function laneBoxRect(members: readonly { x: number; y: number; width: number; height: number }[], orientation: 'row' | 'column') {
+export function laneBoxRect(members: readonly { x: number; y: number; width: number; height: number }[], orientation: 'row' | 'column', outerBy = 0) {
     const column = orientation === 'column';
     const minX = Math.min(...members.map(m => m.x));
     const maxX = Math.max(...members.map(m => m.x + m.width));
     const minY = Math.min(...members.map(m => m.y));
     const maxY = Math.max(...members.map(m => m.y + m.height));
+    // A group around groups stands clear of them and keeps a strip of its own for its name.
+    const strip = outerBy > 0 ? 30 : 0;
     return {
-        position: { x: column ? minX - 36 : minX - 120, y: column ? minY - 32 : minY - 36 },
-        width: maxX - minX + (column ? 72 : 156),
-        height: maxY - minY + (column ? 68 : 72),
+        position: { x: (column ? minX - 36 : minX - 120) - outerBy - (column ? 0 : strip), y: (column ? minY - 32 : minY - 36) - outerBy - (column ? strip : 0) },
+        width: maxX - minX + (column ? 72 : 156) + outerBy * 2 + (column ? 0 : strip),
+        height: maxY - minY + (column ? 68 : 72) + outerBy * 2 + (column ? strip : 0),
     };
 }
+
+/** How far a group around groups stands out from them. */
+export const LANE_OUTER_MARGIN = 14;
 export type ActionFlowDisplayLevel = 'all' | number;
 
 /** Resolve an allocated element to the ancestor displayed at a requested level. */
@@ -344,6 +349,8 @@ export interface LaneInfo {
     label: string;
     color: string;
     inspectElementId?: string;
+    /** The group this one sits inside, when groups are nested. */
+    group?: { id: string; label: string };
 }
 
 /**
@@ -365,18 +372,21 @@ export function assignLanes(
         const allocatedLane = el.allocatedTo
             ? displayElementAtLevel(el.allocatedTo, model, displayLevel).id
             : UNALLOCATED_LANE;
-        const laneId = grouping === 'stage'
-            ? (el.attributes['stage'] || el.attributes['phase'] || UNSTAGED_LANE)
-            : allocatedLane;
+        const stage = el.attributes['stage'] || el.attributes['phase'] || UNSTAGED_LANE;
+        const nested = grouping === 'allocation-stage';
+        const laneId = grouping === 'stage' ? stage : nested ? `${allocatedLane} / ${stage}` : allocatedLane;
         laneOf.set(el.id, laneId);
         if (!seen.has(laneId)) {
             const lane: LaneInfo = {
                 id: laneId,
-                label: grouping === 'allocation' && laneId !== UNALLOCATED_LANE
+                label: nested ? stage : grouping === 'allocation' && laneId !== UNALLOCATED_LANE
                     ? (model.elements[laneId]?.name ?? laneId)
                     : laneId,
+                ...(nested ? { group: { id: allocatedLane, label: model.elements[allocatedLane]?.name ?? allocatedLane } } : {}),
                 color: LANE_COLORS[seen.size % LANE_COLORS.length],
-                inspectElementId: grouping === 'allocation' && laneId !== UNALLOCATED_LANE
+                inspectElementId: nested && allocatedLane !== UNALLOCATED_LANE
+                    ? allocatedLane
+                    : grouping === 'allocation' && laneId !== UNALLOCATED_LANE
                     ? laneId
                     : Object.values(model.elements).find(candidate => candidate.id === laneId || candidate.name === laneId)?.id
                         ?? el.id,
@@ -950,7 +960,8 @@ export async function computeActionFlowViewLayout(
         }
         const orderedLanes = [...lanes].sort((a, b) => {
             const mean = (ys: number[]) => ys.reduce((s, y) => s + y, 0) / ys.length;
-            return mean(laneY.get(a.id) ?? [0]) - mean(laneY.get(b.id) ?? [0]);
+            const groupY = (lane: LaneInfo) => mean(lanes.filter(other => lane.group && other.group?.id === lane.group.id).flatMap(other => laneY.get(other.id) ?? []).concat(lane.group ? [] : (laneY.get(lane.id) ?? [0])));
+            return groupY(a) - groupY(b) || mean(laneY.get(a.id) ?? [0]) - mean(laneY.get(b.id) ?? [0]);
         });
 
         let minX = Infinity;
@@ -1017,7 +1028,10 @@ export async function computeActionFlowViewLayout(
         }
 
         let columnLeft = 0;
-        for (const lane of lanes) {
+        // Groups inside one group stand side by side.
+        const groupOrder = [...new Set(lanes.map(lane => lane.group?.id ?? lane.id))];
+        const columns = [...lanes].sort((a, b) => groupOrder.indexOf(a.group?.id ?? a.id) - groupOrder.indexOf(b.group?.id ?? b.id));
+        for (const lane of columns) {
             const members = actions
                 .filter(el => laneOf.get(el.id) === lane.id)
                 .sort((a, b) => positions.get(a.id)!.y - positions.get(b.id)!.y
@@ -1231,7 +1245,7 @@ export async function computeActionFlowViewLayout(
         }
     }
 
-    if (swimlanes && options?.laneStyle === 'boxes') {
+    if (swimlanes && (options?.laneStyle === 'boxes' || options?.laneGrouping === 'allocation-stage')) {
         const rects = new Map<string, ReturnType<typeof laneBoxRect>>();
         for (const lane of laneNodes) {
             const data = lane.data as { memberIds?: string[]; orientation?: 'row' | 'column' } | undefined;
@@ -1247,6 +1261,19 @@ export async function computeActionFlowViewLayout(
             if (!rect || !label.id.startsWith('__lane_label_')) continue;
             label.position = rect.position;
             label.style = { ...label.style, width: rect.width, height: rect.height };
+        }
+        for (const group of new Map(lanes.flatMap(lane => (lane.group ? [[lane.group.id, lane] as const] : []))).values()) {
+            const inner = lanes.filter(lane => lane.group?.id === group.group!.id);
+            const memberIds = laneNodes.filter(node => inner.some(lane => node.id === `__lane_${lane.id}`)).flatMap(node => (node.data as { memberIds: string[] }).memberIds);
+            const orientation = direction === 'vertical' ? 'column' : 'row';
+            const rect = laneBoxRect(memberIds.map(id => positions.get(id)!), orientation, LANE_OUTER_MARGIN);
+            const info: LaneInfo = { id: `outer_${group.group!.id}`, label: group.group!.label, color: group.color };
+            laneNodes.push({
+                id: `__lane_${info.id}`, type: 'actionFlowLane', position: rect.position,
+                data: { label: info.label, color: info.color, orientation, inspectElementId: group.inspectElementId, memberIds, isFrame: true, boxes: true, outer: true },
+                style: { width: rect.width, height: rect.height }, draggable: false, selectable: false, zIndex: -2,
+            });
+            laneNodes.push(laneLabelNode(info, orientation, rect.position, { width: rect.width, height: rect.height }));
         }
     }
 

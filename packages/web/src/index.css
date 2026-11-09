@@ -168,6 +168,7 @@ body .react-flow {
     content: ""; position: absolute; inset: -9px; border-radius: 13px; border: 3px solid #2DD4A8;
     pointer-events: none; animation: memo-walk-pulse 1.6s ease-out infinite;
 }
+@keyframes memo-region-saving { from { opacity: 1; } to { opacity: 0.55; } }
 @keyframes memo-walk-pulse { from { transform: scale(1); opacity: 0.8; } to { transform: scale(1.12); opacity: 0; } }
 .react-flow__node.memo-walk-lane { box-shadow: inset 0 0 0 2px #2DD4A8; border-radius: 8px; animation: memo-walk-lane-ping 900ms ease-out; }
 @keyframes memo-walk-lane-ping { from { box-shadow: inset 0 0 0 6px #2DD4A8; } to { box-shadow: inset 0 0 0 2px #2DD4A8; } }

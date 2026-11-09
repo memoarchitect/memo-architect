@@ -40,7 +40,7 @@ function makeContext(overrides: Partial<DiagramToolbarContext> = {}): DiagramToo
         mergeDiagramLayouts: noop, setRelayoutNonce: noop,
 
         swimlanesOn: true, setSwimlanesOn: noop, actionFlowHasStages: true,
-        actionFlowLaneGrouping: 'stage', actionFlowLaneStyle: 'lanes', setActionFlowLaneStyle: noop, actionFlowLaneCounts: { allocation: 2, stage: 3 }, setActionFlowLaneGrouping: noop,
+        actionFlowLaneGrouping: 'stage', actionFlowLaneStyle: 'lanes', setActionFlowLaneStyle: noop, actionFlowLaneCounts: { allocation: 2, stage: 3, 'allocation-stage': 4 }, setActionFlowLaneGrouping: noop,
         actionFlowDisplayLevels: [1, 2], actionFlowLevelsOpen: true, setActionFlowLevelsOpen: noop,
         actionFlowDisplayLevel: 'all', setActionFlowDisplayLevel: noop,
         actionFlowToolbarPlacement: 'left',

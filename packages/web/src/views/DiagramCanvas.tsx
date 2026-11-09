@@ -34,6 +34,7 @@ import { animateLayout, layoutsDiffer } from '../lib/animate-layout';
 import { prefersReducedMotion } from '../lib/edge-token';
 import { packAroundExpanded } from '../lib/local-packing';
 import { CanvasSearch } from './CanvasSearch';
+import { LaneLink, linkedLanes } from './LaneLink';
 import { NodeNeighbourCard } from './NodeNeighbourCard';
 import { walkEmphasis } from '../lib/flow-walkthrough';
 import {
@@ -82,7 +83,7 @@ import {
     INTERCONNECTION_PORT_SIZE, PORT_LABEL_OFFSET, NESTED_PITCH, NESTED_PIN_INSET, NESTED_HOUSING_DEPTH,
     type PortDisplay, type PortSide, type PortInfo,
 } from './templates/interconnection-view';
-import { assignLanes, collectActionFlowActions, commonDisplayLevels, findFloatingActions, laneBoxRect, parameterOfHandle, type ActionFlowDisplayLevel, type ActionFlowLaneGrouping, type ActionFlowLaneStyle, type ActionFlowNesting } from './templates/actionflow-view';
+import { assignLanes, collectActionFlowActions, commonDisplayLevels, findFloatingActions, LANE_OUTER_MARGIN, laneBoxRect, parameterOfHandle, type ActionFlowDisplayLevel, type ActionFlowLaneGrouping, type ActionFlowLaneStyle, type ActionFlowNesting } from './templates/actionflow-view';
 import { isStateElement } from './templates/statetransition-view';
 import { bendConnector, type Wall } from './templates/connector-bend';
 import { useCaseActorOptions, useCaseMaxDepth, useCaseViewOptions, type UseCaseEdgeStyle } from './templates/use-case-view';
@@ -1152,8 +1153,13 @@ function DiagramCanvasInner() {
         return [...seen].map(([id, v]) => ({ id, ...v }));
     }, [nodes]);
     const [actionFlowLegendPlacement, setActionFlowLegendPlacement] = useState<'overlay' | 'above'>('overlay');
-    const [actionFlowLaneGrouping, setActionFlowLaneGrouping] = useState<ActionFlowLaneGrouping>('allocation');
-    const [actionFlowLaneStyle, setActionFlowLaneStyle] = useState<ActionFlowLaneStyle>('lanes');
+    const [actionFlowLaneGrouping, setActionFlowLaneGrouping] = useState<ActionFlowLaneGrouping>(() => (embed ? 'allocation' : linkedLanes().grouping));
+    const [actionFlowLaneStyle, setActionFlowLaneStyle] = useState<ActionFlowLaneStyle>(() => (embed ? 'lanes' : linkedLanes().style));
+    const openingDiagramRef = useRef<string | null | undefined>(undefined);
+    // Set by the picker: only the reader's own choice is written to the address.
+    const laneChoiceRef = useRef(false);
+    const chooseLaneGrouping = useCallback<typeof setActionFlowLaneGrouping>(value => { laneChoiceRef.current = true; setActionFlowLaneGrouping(value); }, []);
+    const chooseLaneStyle = useCallback<typeof setActionFlowLaneStyle>(value => { laneChoiceRef.current = true; setActionFlowLaneStyle(value); }, []);
 
     const [actionFlowDisplayLevel, setActionFlowDisplayLevel] = useState<ActionFlowDisplayLevel>('all');
     const [actionFlowLevelsOpen, setActionFlowLevelsOpen] = useState(false);
@@ -1841,7 +1847,13 @@ function DiagramCanvasInner() {
         setUseCaseEdgeStyle(useCaseViewOptions(selectedDiagram?.properties).edgeStyle ?? 'straight');
         setHiddenUseCaseActorIds(new Set());
         setSwimlanesOn(true);
-        setActionFlowLaneGrouping('allocation');
+        // The diagram the page opened on keeps what its address asked for; any other starts from the defaults.
+        if (openingDiagramRef.current === undefined && selectedDiagramId) openingDiagramRef.current = selectedDiagramId;
+        if (selectedDiagramId && selectedDiagramId !== openingDiagramRef.current) {
+            openingDiagramRef.current = null;
+            setActionFlowLaneGrouping('allocation');
+            setActionFlowLaneStyle('lanes');
+        }
         setActionFlowDisplayLevel('all');
         const expandedHint = selectedDiagram?.properties?.styleHint?.startsWith('expanded:')
             ? selectedDiagram.properties.styleHint.slice('expanded:'.length).split(',').map(id => id.trim()).filter(Boolean)
@@ -1963,10 +1975,10 @@ function DiagramCanvasInner() {
         };
     }, [selectedViewpointId, selectedDiagram, model?.viewpoints, hiddenLayers, focusedInterconnectionId, focusedActionId, model?.elements]);
     const actionFlowLaneCounts = useMemo((): Record<ActionFlowLaneGrouping, number> => {
-        if (!model || viewKind !== 'actionflow') return { allocation: 0, stage: 0 };
+        if (!model || viewKind !== 'actionflow') return { allocation: 0, stage: 0, 'allocation-stage': 0 };
         const actions = collectActionFlowActions(model, viewpointFilter, expandedActionNodes, focusedActionId ?? undefined);
         const count = (grouping: ActionFlowLaneGrouping) => assignLanes(actions, model, grouping, actionFlowDisplayLevel).lanes.length;
-        return { allocation: count('allocation'), stage: count('stage') };
+        return { allocation: count('allocation'), stage: count('stage'), 'allocation-stage': count('allocation-stage') };
     }, [model, viewKind, viewpointFilter, expandedActionNodes, focusedActionId, actionFlowDisplayLevel]);
 
     // Element → child-view index: for each element that is the subject of another
@@ -2499,7 +2511,7 @@ function DiagramCanvasInner() {
             if (members.length === 0 || !spanMin || !spanMax) return node;
             const column = data.orientation === 'column';
             if ((data as { boxes?: boolean }).boxes) {
-                const box = laneBoxRect(members.map(member => ({ x: left(member), y: top(member), width: right(member) - left(member), height: bottom(member) - top(member) })), data.orientation ?? 'row');
+                const box = laneBoxRect(members.map(member => ({ x: left(member), y: top(member), width: right(member) - left(member), height: bottom(member) - top(member) })), data.orientation ?? 'row', (data as { outer?: boolean }).outer ? LANE_OUTER_MARGIN : 0);
                 laneRects.set(node.id, box);
                 return { ...node, position: box.position, style: { ...node.style, width: box.width, height: box.height } };
             }
@@ -3495,7 +3507,7 @@ function DiagramCanvasInner() {
         dimCanvas(n => emphasis.node(n.id), emphasis.edge);
         setNodes(prev => prev.map(n => {
             const added = n.id === current ? WALK_CURRENT_CLASS
-                : (n.data as { memberIds?: string[] }).memberIds?.includes(current) ? WALK_LANE_CLASS : '';
+                : !(n.data as { outer?: boolean }).outer && (n.data as { memberIds?: string[] }).memberIds?.includes(current) ? WALK_LANE_CLASS : '';
             return { ...n, className: `${withoutWalkCurrent(n.className)} ${added}`.trim() };
         }));
         fitView({ nodes: [current, ...emphasis.next].map(id => ({ id })), duration: 400, padding: 0.5, maxZoom: 1.2 });
@@ -4422,7 +4434,7 @@ function DiagramCanvasInner() {
             onAutoRoute={readOnly ? undefined : () => autoRouteConnectors(selectedConnectorIds)}
             onSpacing={readOnly ? undefined : (target, more) => changeSpacing(target, more ? SPACING_STEP : -SPACING_STEP)} />,
         swimlanesOn, setSwimlanesOn, actionFlowHasStages,
-        actionFlowLaneGrouping, setActionFlowLaneGrouping, actionFlowLaneStyle, setActionFlowLaneStyle, actionFlowLaneCounts,
+        actionFlowLaneGrouping, setActionFlowLaneGrouping: chooseLaneGrouping, actionFlowLaneStyle, setActionFlowLaneStyle: chooseLaneStyle, actionFlowLaneCounts,
         actionFlowDisplayLevels, actionFlowLevelsOpen, setActionFlowLevelsOpen,
         actionFlowDisplayLevel, setActionFlowDisplayLevel,
         actionFlowToolbarPlacement, actionFlowNesting, setActionFlowNesting,
@@ -5097,6 +5109,9 @@ function DiagramCanvasInner() {
                         {viewControls}
                     </Controls>}
                     {!embed && <CanvasSearch nodes={nodes} model={model} onPick={goToNode} />}
+                    {!embed && viewKind === 'actionflow' && (
+                        <LaneLink grouping={actionFlowLaneGrouping} style={actionFlowLaneStyle} chosen={laneChoiceRef} />
+                    )}
                     {!embed && neighbourCardOn && !walking && !layoutAnimating && selectedElementId && selectedElementId !== cardDismissedFor
                         && nodes.some(node => node.id === selectedElementId && !node.hidden && node.type !== 'actionFlowLane') && (
                         <NodeNeighbourCard nodeId={selectedElementId} edges={edges} model={model} label={nodeLabel} onPick={goToNode}

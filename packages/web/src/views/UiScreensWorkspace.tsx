@@ -209,7 +209,10 @@ export function UiScreensWorkspace() {
     const [captureId, setCaptureId] = useState<string>();
     const [drawMode, setDrawMode] = useState(false);
     const [build, setBuild] = useState('');
-    const [status, setStatus] = useState('');
+    const [status, setStatusText] = useState('');
+    const [statusFailed, setStatusFailed] = useState(false);
+    const setStatus = (text: string, failed = false) => { setStatusText(text); setStatusFailed(failed); };
+    const [savingRegions, setSavingRegions] = useState<{ id: string; bounds: Rect; name: string }[]>([]);
     const [createScreenOpen, setCreateScreenOpen] = useState(false);
     const [screenName, setScreenName] = useState('NewUIScreen');
     const [assetLibraryOpen, setAssetLibraryOpen] = useState(false);
@@ -273,6 +276,8 @@ export function UiScreensWorkspace() {
     }, [stopResize]);
 
     const proposalElementIds = useRef(new Map<string, string>());
+    // One save per proposal, however many clicks or children ask for it.
+    const proposalSaves = useRef(new Map<string, Promise<string | undefined>>());
     const uploadInputRef = useRef<HTMLInputElement>(null);
 
     const layouts = useMemo(
@@ -570,6 +575,7 @@ export function UiScreensWorkspace() {
             setStatus('Add or capture a screen before drawing regions.');
             return undefined;
         }
+        setDrawMode(false);
         setStatus('Saving region…');
         try {
             // Read the model as it is NOW, not as this render saw it: accepting several regions in a row
@@ -604,11 +610,10 @@ export function UiScreensWorkspace() {
                 },
             });
             const savedId = await awaitSavedElement(id, useModelStore.getState().model?.elements[id]);
-            setDrawMode(false);
             setStatus('Region saved.');
             return savedId;
         } catch (error) {
-            setStatus(error instanceof Error ? error.message : String(error));
+            setStatus(`The region was not saved. ${error instanceof Error ? error.message : String(error)}`, true);
             return undefined;
         }
     };
@@ -674,7 +679,7 @@ export function UiScreensWorkspace() {
     };
 
     const detectRegions = async () => {
-        if (!scene.imageUri) return setStatus('Attach a screen-capture asset before detecting regions.');
+        if (!scene.imageUri) return setStatus('Attach a screen-capture asset before detecting regions.', true);
         setStatus('Detecting nested boundaries…');
         try {
             const detected = await detectBoundariesFromImage(scene.imageUri);
@@ -691,15 +696,27 @@ export function UiScreensWorkspace() {
                 ? `${next.length} boundary proposal${next.length === 1 ? '' : 's'} found. Accept or reject each box.`
                 : 'No strong rectangular boundaries were detected; draw regions manually.');
         } catch (error) {
-            setStatus(error instanceof Error ? error.message : String(error));
+            setStatus(`Detection failed. ${error instanceof Error ? error.message : String(error)}`, true);
         }
     };
 
-    const acceptProposal = async (proposalId: string, name?: string): Promise<string | undefined> => {
+    const markProposal = (proposalId: string, status: ScreenRegionProposal['status']) =>
+        setProposals(current => current.map(candidate => (candidate.id === proposalId ? { ...candidate, status } : candidate)));
+
+    const acceptProposal = (proposalId: string, name?: string): Promise<string | undefined> => {
+        const running = proposalSaves.current.get(proposalId);
+        if (running) return running;
+        const save = saveProposal(proposalId, name).finally(() => proposalSaves.current.delete(proposalId));
+        proposalSaves.current.set(proposalId, save);
+        return save;
+    };
+
+    const saveProposal = async (proposalId: string, name?: string): Promise<string | undefined> => {
         const existing = proposalElementIds.current.get(proposalId);
         if (existing) return existing;
         const proposal = proposals.find(candidate => candidate.id === proposalId);
         if (!proposal || proposal.status === 'rejected') return undefined;
+        markProposal(proposalId, 'saving');
         let parentElementId: string | undefined;
         let authoredBounds = proposal.bounds;
         if (proposal.parentId) {
@@ -717,8 +734,9 @@ export function UiScreensWorkspace() {
         });
         if (elementId) {
             proposalElementIds.current.set(proposalId, elementId);
-            setProposals(current => current.map(candidate =>
-                candidate.id === proposalId ? { ...candidate, status: 'accepted' } : candidate));
+            markProposal(proposalId, 'accepted');
+        } else {
+            markProposal(proposalId, 'pending');
         }
         return elementId;
     };
@@ -869,7 +887,9 @@ export function UiScreensWorkspace() {
                                 <IconButton icon={<span aria-hidden>✓</span>} label="Accept all" onClick={() => void acceptAllProposals()}
                                     title="Accept every pending detected region" />
                             )}
-                            {status && <span role="status" className="truncate" style={{ marginLeft: 'auto', fontSize: FONT.xs, color: '#6B7280', maxWidth: 180 }}>{status}</span>}
+                            {status && (statusFailed
+                                ? <span role="alert" style={{ marginLeft: 'auto', fontSize: FONT.xs, fontWeight: 600, color: '#B91C1C', background: '#FEE2E2', padding: '3px 8px', borderRadius: 5, maxWidth: 460 }}>{status}</span>
+                                : <span role="status" className="truncate" title={status} style={{ marginLeft: 'auto', fontSize: FONT.xs, color: '#6B7280', maxWidth: 320 }}>{status}</span>)}
                           </div>
                         </div>
                         {captureId === '__none__' ? (
@@ -902,7 +922,12 @@ export function UiScreensWorkspace() {
                                 proposals={proposals}
                                 onAcceptProposal={(id, name) => void acceptProposal(id, name)}
                                 onRejectProposal={rejectProposal}
-                                onCreateBounds={(bounds, name) => void createRegion(bounds, { name })}
+                                savingRegions={savingRegions}
+                                onCreateBounds={(bounds, name) => {
+                                    const id = `saving-${Date.now()}`;
+                                    setSavingRegions(current => [...current, { id, bounds, name }]);
+                                    void createRegion(bounds, { name }).finally(() => setSavingRegions(current => current.filter(region => region.id !== id)));
+                                }}
                                 onBoundsChange={(id, bounds) => persistElementAttributes(id, boundsAttributes(bounds))}
                             />
                         )}

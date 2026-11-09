@@ -14,7 +14,7 @@
 // `disclosureKind` distinguishes that from a layout defect.
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { useMemo, useState, useCallback, useEffect, useRef } from 'react';
+import { useMemo, useState, useCallback, useEffect, useRef, type CSSProperties } from 'react';
 import type { DiagramDTO, MemoElement, MemoModelDTO } from '@memoarchitect/tools/browser';
 import { useModelStore } from '../store/model-store';
 import { FONT } from '../styles/tokens';
@@ -32,6 +32,8 @@ interface ScreenLayoutViewProps {
     drawMode?: boolean;
     newElementDefaultName?: string;
     onCreateBounds?: (bounds: Rect, name: string) => void;
+    /** Regions on their way to the model: the box stays where it was drawn until the rebuild brings it back. */
+    savingRegions?: { id: string; bounds: Rect; name: string }[];
     onBoundsChange?: (elementId: string, bounds: Rect) => void;
     proposals?: ScreenRegionProposal[];
     onAcceptProposal?: (id: string, name?: string) => void;
@@ -43,8 +45,19 @@ export interface ScreenRegionProposal {
     bounds: Rect;
     confidence: number;
     parentId?: string;
-    status: 'pending' | 'accepted' | 'rejected';
+    status: 'pending' | 'saving' | 'accepted' | 'rejected';
 }
+
+const savingBox = (bounds: Rect): CSSProperties => ({
+    position: 'absolute', zIndex: 60, pointerEvents: 'none', boxSizing: 'border-box',
+    left: `${bounds.x * 100}%`, top: `${bounds.y * 100}%`, width: `${bounds.width * 100}%`, height: `${bounds.height * 100}%`,
+    border: '2px dashed #0F766E', borderRadius: 3, background: '#2DD4A826',
+    animation: 'memo-region-saving 1.1s ease-in-out infinite alternate',
+});
+const SAVING_LABEL: CSSProperties = {
+    position: 'absolute', top: 2, left: 2, padding: '1px 6px', borderRadius: 4, whiteSpace: 'nowrap',
+    background: '#0F766E', color: '#FFFFFF', fontSize: 10, fontWeight: 600,
+};
 
 /** Fallback stroke per form kind, used when the model sets no boundaryColor. */
 const FORM_COLORS: Record<string, string> = {
@@ -82,7 +95,7 @@ const clamp = (value: number, min = 0, max = 1) => Math.max(min, Math.min(max, v
 
 export function ScreenLayoutView({
     diagram, model, captureId, viewpointFilter, editable = false, drawMode = false,
-    newElementDefaultName = 'New UIElement', onCreateBounds, onBoundsChange,
+    newElementDefaultName = 'New UIElement', onCreateBounds, savingRegions = [], onBoundsChange,
     proposals = [], onAcceptProposal, onRejectProposal,
 }: ScreenLayoutViewProps) {
     // A geometry canvas owns its route. Selection updates the shared inspector
@@ -417,6 +430,16 @@ export function ScreenLayoutView({
                             </div>
                         );
                     })}
+                    {savingRegions.map(region => (
+                        <div key={region.id} data-testid="region-saving" style={savingBox(region.bounds)}>
+                            <span style={SAVING_LABEL}>Saving {region.name}…</span>
+                        </div>
+                    ))}
+                    {!drawMode && proposals.filter(proposal => proposal.status === 'saving').map(proposal => (
+                        <div key={proposal.id} data-testid="region-saving" style={savingBox(proposal.bounds)}>
+                            <span style={SAVING_LABEL}>Saving…</span>
+                        </div>
+                    ))}
                     {!drawMode && proposals.filter(proposal => proposal.status === 'pending').map((proposal, index) => (
                         <div key={proposal.id} title={`Detected boundary · ${Math.round(proposal.confidence * 100)}% confidence`} style={{
                             position: 'absolute', zIndex: 20 + index,
