@@ -390,6 +390,18 @@ export interface ModelState {
     createRelationship: (request: RelationshipCreateInput) => Promise<RelationshipCreateOutcome>;
     deleteRelationship: (relationshipId: string) => Promise<RelationshipDeleteOutcome>;
     deleteModelElement: (elementId: string) => Promise<{ success: boolean; error?: string }>;
+    /**
+     * Delete several elements, one at a time (each write waits for the previous recompile),
+     * carrying on past a refusal and reporting which ones could not be deleted.
+     */
+    /**
+     * Delete a viewpoint and the views bound to it. The views go first: if any cannot be deleted
+     * the viewpoint is kept, because removing it would leave the survivors referring to nothing.
+     * The viewpoint's own declaration takes its nested viewpoints with it.
+     */
+    deleteViewpoint: (viewpointElementId: string, viewElementIds: string[]) =>
+        Promise<{ success: boolean; deletedViews: number; error?: string }>;
+    deleteModelElements: (elementIds: string[]) => Promise<{ deleted: number; failed: { id: string; error: string }[] }>;
     dismissPendingRelationship: (pendingId: string) => void;
 
     // ─── Actions ──────────────────────────────────────────────────────────
@@ -464,8 +476,11 @@ export interface ModelState {
     renamePackage: (qualifiedName: string, name: string) => Promise<PackageMutationResult>;
     /** Re-parent a package, moving everything it declares with it. */
     movePackage: (qualifiedName: string, targetParent: string) => Promise<PackageMutationResult>;
-    /** Remove a package declaration, lifting its members into the enclosing scope. */
-    deletePackage: (qualifiedName: string) => Promise<PackageMutationResult>;
+    /**
+     * Remove a package declaration. By default its members are lifted into the
+     * enclosing scope; `deleteContents` removes them with it.
+     */
+    deletePackage: (qualifiedName: string, options?: { deleteContents?: boolean }) => Promise<PackageMutationResult>;
     addElement: (kind: string, name: string, targetPackage: string) => void;
     createModelElement: (element: Omit<MemoElement, 'id'> & { id?: string; package?: string }) => string;
     /** Why a created element's write failed, by element id. The optimistic copy is gone by then. */
@@ -1002,6 +1017,34 @@ export const useModelStore = create<ModelState>((set, get) => ({
         }
     },
 
+    deleteModelElements: async (elementIds) => {
+        let deleted = 0;
+        const failed: { id: string; error: string }[] = [];
+        for (const id of elementIds) {
+            // An element removed with an earlier one (a view with its parent) is already gone.
+            if (!get().model?.elements[id]) { deleted += 1; continue; }
+            const result = await get().deleteModelElement(id);
+            if (result.success) deleted += 1;
+            else failed.push({ id, error: result.error ?? 'The element could not be deleted.' });
+        }
+        return { deleted, failed };
+    },
+
+    deleteViewpoint: async (viewpointElementId, viewElementIds) => {
+        const views = await get().deleteModelElements(viewElementIds);
+        if (views.failed.length > 0) {
+            return {
+                success: false, deletedViews: views.deleted,
+                error: `${views.failed.length} view${views.failed.length === 1 ? '' : 's'} bound to the viewpoint could not be deleted, `
+                    + `so the viewpoint was kept:\n${views.failed.slice(0, 5).map(f => `${f.id}: ${f.error}`).join('\n')}`,
+            };
+        }
+        const result = await get().deleteModelElement(viewpointElementId);
+        return result.success
+            ? { success: true, deletedViews: views.deleted }
+            : { success: false, deletedViews: views.deleted, error: result.error ?? 'The viewpoint could not be deleted.' };
+    },
+
     dismissPendingRelationship: (pendingId) => set(s => ({
         pendingRelationships: s.pendingRelationships.filter(p => p.pendingId !== pendingId),
     })),
@@ -1298,8 +1341,8 @@ export const useModelStore = create<ModelState>((set, get) => ({
         sendPackageMutation('package:rename', { qualifiedName, name }),
     movePackage: (qualifiedName, targetParent) =>
         sendPackageMutation('package:move', { qualifiedName, targetParent }),
-    deletePackage: (qualifiedName) =>
-        sendPackageMutation('package:delete', { qualifiedName }),
+    deletePackage: (qualifiedName, options) =>
+        sendPackageMutation('package:delete', { qualifiedName, ...(options?.deleteContents ? { deleteContents: true } : {}) }),
     addElement: (kind, name, targetPackage) => {
         const s = get();
         if (!s.model) return;

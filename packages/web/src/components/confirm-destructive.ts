@@ -47,6 +47,47 @@ export const confirmAnnotationDelete = (): Promise<boolean> =>
         message: "Its text is part of this diagram's saved layout, not the model. This cannot be undone.",
     });
 
+/**
+ * Deleting a viewpoint deletes the viewpoints nested inside it and every view bound to it or to them.
+ *
+ * The counts are the point: a viewpoint row shows neither, and a view left bound to a viewpoint
+ * that no longer exists would not compile, so the views cannot be kept.
+ */
+export const confirmViewpointDelete = (label: string, nestedViewpoints: number, views: number, generatedViews: number): Promise<boolean> => {
+    const parts = [
+        nestedViewpoints > 0 ? `${nestedViewpoints} nested viewpoint${nestedViewpoints === 1 ? '' : 's'}` : '',
+        views > 0 ? `${views} bound view${views === 1 ? '' : 's'}` : '',
+    ].filter(Boolean);
+    const gone = parts.length > 0 ? `${parts.join(' and ')} will be deleted with it. The elements those views show are not deleted. ` : '';
+    // A generated view has no declaration of its own: it is drawn from the viewpoint, so it goes with it.
+    const generated = generatedViews > 0
+        ? `${generatedViews} generated view${generatedViews === 1 ? '' : 's'} drawn from it will no longer appear. ` : '';
+    return confirmDialog({
+        title: `Delete the “${label}” viewpoint?`, danger: true, confirmLabel: parts.length + generatedViews > 0 ? 'Delete all' : 'Delete',
+        message: (gone + generated || 'No views or nested viewpoints depend on it. ') + 'This cannot be undone.',
+    });
+};
+
+/** Deleting a selection takes each element's relationships with it, like deleting them one by one. */
+export const confirmBulkElementDelete = (count: number): Promise<boolean> =>
+    confirmDialog({
+        title: `Delete ${count} selected element${count === 1 ? '' : 's'}?`, danger: true, confirmLabel: `Delete ${count}`,
+        message: 'All incoming and outgoing relationships of each will also be deleted. This cannot be undone.',
+    });
+
+/**
+ * Deleting a package with its contents removes every declaration inside it.
+ *
+ * The count is the point: "everything it declares" is invisible from a folder
+ * row. Other files that refer to the members are not rewritten, so say so.
+ */
+export const confirmPackageContentsDelete = (name: string, memberCount: number): Promise<boolean> =>
+    confirmDialog({
+        title: `Delete “${name}” and everything in it?`, danger: true, confirmLabel: 'Delete all',
+        message: `${memberCount} element${memberCount === 1 ? '' : 's'} declared inside it will be deleted with it. `
+            + 'References to them from other files are not updated and will stop resolving. This cannot be undone.',
+    });
+
 /** A DHF document is a file on disk; removing it unlinks that file. */
 export const confirmDocumentDelete = (title: string): Promise<boolean> =>
     confirmDialog({

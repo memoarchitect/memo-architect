@@ -21,7 +21,7 @@ import { FavoriteToggle, favoriteActionLabel, useIsFavorite } from './FavoriteTo
 import { LAYER_COLORS, LAYER_LABELS, LAYER_ORDER, normalizeLayerId, DIAGRAM_TYPE_META, VIEW_KIND_META, viewNaming, resolveActionFlowDiagramType } from '../constants';
 import { FONT, COLOR, ICON } from '../styles/tokens';
 import { WorkingSetsPanel as WorkingSetsContent } from './WorkingSetsPanel';
-import { confirmDocumentDelete, confirmElementDelete, confirmViewDelete } from './confirm-destructive';
+import { confirmViewpointDelete, confirmBulkElementDelete, confirmDocumentDelete, confirmElementDelete, confirmPackageContentsDelete, confirmViewDelete } from './confirm-destructive';
 import { OntologyBrowserTab } from './OntologyBrowserTab';
 import { DashboardSidebar } from './DashboardSidebar';
 import { ExplorerElementIdentity } from './ExplorerElementIdentity';
@@ -229,6 +229,7 @@ function ElementContextMenu({ menu, onClose }: { menu: CtxMenuState; onClose: ()
     const renamePackage = useModelStore(s => s.renamePackage);
     const deletePackage = useModelStore(s => s.deletePackage);
     const deleteModelElement = useModelStore(s => s.deleteModelElement);
+    const modelForCounts = useModelStore(s => s.model);
     const selectAllElements = useModelStore(s => s.selectAllElements);
     const availableOntologies = useModelStore(s => s.availableOntologies);
     const setExplorerTab = useModelStore(s => s.setExplorerTab);
@@ -366,6 +367,17 @@ function ElementContextMenu({ menu, onClose }: { menu: CtxMenuState; onClose: ()
                         void reportPackageResult(deletePackage(packageName));
                     }
                 }
+            },
+            {
+                label: 'Delete Package and contents…',
+                danger: true,
+                action: async () => {
+                    const inside = Object.values(modelForCounts?.elements ?? {})
+                        .filter(el => el.package === packageName || el.package?.startsWith(`${packageName}::`)).length;
+                    if (await confirmPackageContentsDelete(packageName.split('::').pop() ?? packageName, inside)) {
+                        void reportPackageResult(deletePackage(packageName, { deleteContents: true }));
+                    }
+                }
             }
         ];
     } else if (menu.type === 'view-package' && menu.packageName) {
@@ -396,6 +408,17 @@ function ElementContextMenu({ menu, onClose }: { menu: CtxMenuState; onClose: ()
                         + 'Everything it declares, the views included, moves into the enclosing package. '
                         + 'Qualified names that refer to it will need updating by hand.')) {
                         void reportPackageResult(deletePackage(packageName));
+                    }
+                }
+            },
+            {
+                label: 'Delete Package and contents…',
+                danger: true,
+                action: async () => {
+                    const inside = Object.values(modelForCounts?.elements ?? {})
+                        .filter(el => el.package === packageName || el.package?.startsWith(`${packageName}::`)).length;
+                    if (await confirmPackageContentsDelete(packageName.split('::').pop() ?? packageName, inside)) {
+                        void reportPackageResult(deletePackage(packageName, { deleteContents: true }));
                     }
                 }
             }
@@ -2058,6 +2081,23 @@ function ModelExplorerContent({ searchTerm }: { searchTerm: string }) {
     }, [groupTree]);
 
     const selectionCount = selectedElementIds.size;
+    const deleteModelElements = useModelStore(s => s.deleteModelElements);
+    const [bulkDeleting, setBulkDeleting] = useState(false);
+    const deleteSelection = async () => {
+        const ids = [...selectedElementIds];
+        if (bulkDeleting || ids.length === 0 || !await confirmBulkElementDelete(ids.length)) return;
+        setBulkDeleting(true);
+        try {
+            const { failed } = await deleteModelElements(ids);
+            if (failed.length > 0) {
+                await alertDialog(`${failed.length} of ${ids.length} could not be deleted:\n\n`
+                    + failed.slice(0, 5).map(f => `${f.id}: ${f.error}`).join('\n')
+                    + (failed.length > 5 ? `\n…and ${failed.length - 5} more.` : ''));
+            }
+        } finally {
+            setBulkDeleting(false);
+        }
+    };
 
     if (explorerMode === 'navigator') {
         return (
@@ -2116,8 +2156,14 @@ function ModelExplorerContent({ searchTerm }: { searchTerm: string }) {
                     <span style={{ color: '#92400E', fontWeight: 600 }}>{selectionCount} selected</span>
                     <span style={{ color: '#B45309' }}>— Cmd/Ctrl+click to multi-select</span>
                     <button
-                        onClick={clearElementSelection}
+                        onClick={() => void deleteSelection()}
+                        disabled={bulkDeleting}
                         className="ml-auto px-2 py-0.5 rounded"
+                        style={{ color: '#FFFFFF', background: '#DC2626', fontSize: '12px', fontWeight: 500, opacity: bulkDeleting ? 0.6 : 1 }}
+                    >{bulkDeleting ? 'Deleting…' : 'Delete…'}</button>
+                    <button
+                        onClick={clearElementSelection}
+                        className="px-2 py-0.5 rounded"
                         style={{ color: '#92400E', background: '#FDE68A', fontSize: '12px', fontWeight: 500 }}
                     >Clear</button>
                 </div>
@@ -2722,6 +2768,7 @@ function ViewExplorerContent({ searchTerm }: { searchTerm: string }) {
     const selectViewpoint = useModelStore(s => s.selectViewpoint);
     const dashboards = useModelStore(s => s.dashboards);
     const deleteDiagram = useModelStore(s => s.deleteDiagram);
+    const deleteViewpoint = useModelStore(s => s.deleteViewpoint);
     const createPackage = useModelStore(s => s.createPackage);
     const moveElementToPackage = useModelStore(s => s.moveElementToPackage);
     const navigate = useNavigate();
@@ -3047,6 +3094,21 @@ function ViewExplorerContent({ searchTerm }: { searchTerm: string }) {
         );
     };
 
+    /** A viewpoint, the viewpoints nested in it, and the views bound to any of them: what deleting it removes. */
+    const removeViewpoint = async (vp: ViewpointDTO) => {
+        if (!vp.elementId) return;
+        const family: ViewpointDTO[] = [];
+        const walk = (node: ViewpointDTO) => { family.push(node); (viewpointChildren.get(node.id) ?? []).forEach(walk); };
+        walk(vp);
+        const bound = family.flatMap(node => getDiagramsForViewpoint(model, node.id));
+        const authoredViews = [...new Set(bound.filter(diag => diag.elementId && !diag.auto).map(diag => diag.elementId!))];
+        // A view with no declaration of its own is drawn from the viewpoint and goes with it.
+        const generatedViews = new Set(bound.filter(diag => !diag.elementId || diag.auto).map(diag => diag.id)).size;
+        if (!await confirmViewpointDelete(viewpointLabels.get(vp.id) ?? vp.label, family.length - 1, authoredViews.length, generatedViews)) return;
+        const result = await deleteViewpoint(vp.elementId, authoredViews);
+        if (!result.success) void alertDialog(result.error ?? 'The viewpoint could not be deleted.');
+    };
+
     /**
      * One viewpoint branch, and beneath it the viewpoints it frames.
      *
@@ -3075,7 +3137,7 @@ function ViewExplorerContent({ searchTerm }: { searchTerm: string }) {
                 return (
                     <div key={vp.id} className="mb-0.5" style={{ marginLeft: depth ? '14px' : 0 }}>
                         <div
-                            className="flex items-center gap-1.5 px-2 py-1.5 cursor-pointer select-none"
+                            className="flex items-center gap-1.5 px-2 py-1.5 cursor-pointer select-none group"
                             style={{ borderRadius: '4px', margin: '0 4px' }}
                             onMouseEnter={e => e.currentTarget.style.background = '#F0F0ED'}
                             onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
@@ -3085,6 +3147,16 @@ function ViewExplorerContent({ searchTerm }: { searchTerm: string }) {
                             <FolderIcon open={isExpanded} color={vpColor} />
                             <span className="font-semibold flex-1 truncate" style={{ color: COLOR.primary, fontSize: FONT.explorer.group }}>{viewpointLabels.get(vp.id) ?? vp.label}</span>
                             <FavoriteToggle favorite={{ type: 'viewpoint', ref: vp.id }} size={12} />
+                            {vp.elementId && vp.writable !== false && (
+                                <button
+                                    type="button"
+                                    className="opacity-0 group-hover:opacity-100 focus:opacity-100"
+                                    title="Delete viewpoint and its views"
+                                    aria-label={`Delete the ${viewpointLabels.get(vp.id) ?? vp.label} viewpoint`}
+                                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#DC2626', fontSize: '12px', padding: '0 2px', lineHeight: 1 }}
+                                    onClick={e => { e.stopPropagation(); void removeViewpoint(vp); }}
+                                >×</button>
+                            )}
                             <ExplorerCountBadge
                                 count={familyCount}
                                 color={vpColor}
