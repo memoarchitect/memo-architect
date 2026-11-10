@@ -2,6 +2,38 @@
 
 Versioned under [semantic versioning](https://semver.org/). Before 1.0 a breaking change to the ontology raises the minor number; any other release raises the patch. Every release is tagged in the repository. The notes for all three packages are also on [memoarchitect.com/releases.html](https://memoarchitect.com/releases.html).
 
+## 0.20.0
+
+### Breaking
+
+- Follows the ontology: `minValue`, `maxValue` and `signalRange` are gone and `bitRateBps` is a quantity.
+
+### Added
+
+- **Walk through an action flow** one step at a time, choosing the way on at a decision. Each
+  step lists its checks, and **Fails** shows where the flow stops. Space plays it, **Copy link**
+  shares the exact step and branches, and **Record** saves a video of the tab.
+- **Smooth layout changes.** Folding, regrouping lanes and filtering move boxes to their new
+  places on action flows, state machines and interconnection views. Opening a composite with
+  nested steps leaves the rest of the flow where it is.
+- **Search a diagram** with `/`, and a **card beside a clicked box** lists what it is connected
+  to. The ▣ control turns the card off.
+- **Lane options.** **Group** in the toolbar shows how many groups each choice makes, draws them
+  as lanes or boxes, and can nest allocation and stage. The choice is kept in the address.
+- **Where used** on an item, port or interface definition, with a **Versions** tab when the
+  model has releases.
+- **Breaking-change verdicts** on Model Diff and Impact, with who is affected. The Interfaces
+  page shows what each interface carries.
+
+### Fixed
+
+- Confirming a UI region, or accepting a detected one, now shows at once that it is saving, and
+  a failed save is a visible error.
+- Opening a composite with steps shown nested no longer fails with a duplicate id.
+- A flow's colour comes from its declared `flowKind`, not from its item's name. A flow that
+  declares none is drawn as data.
+- The action flow legend stays closed once closed.
+
 ## 0.19.0
 
 ### Added

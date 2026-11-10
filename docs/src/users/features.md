@@ -63,6 +63,9 @@ interconnection (IBD), action flow, state transition, sequence, grid and
 browser. The **Role** control narrows the list to the viewpoints written for
 your role.
 
+Press **/** on a diagram to find a box on it, and click a box for a card of what
+it is connected to. An action flow can be walked through step by step.
+
 See [Views and diagrams](../modeling/views/index.md) for what each diagram
 shows, and [Viewpoints and Diagrams](viewpoints-diagrams.md) for how to add and
 edit views.
@@ -86,7 +89,8 @@ See the [Operational layer](../modeling/layers/operational.md).
 **Purpose:** connect the user interface to the model.
 
 Load screen captures, detect regions, label each as a UI element and accept it
-into the model. Each region links to its traceability. See
+into the model. A region shows **Saving…** until the rebuilt model brings it back.
+Each region links to its traceability. See
 [Human factors](../modeling/layers/human-factors.md).
 
 ### Interfaces
@@ -94,7 +98,8 @@ into the model. Each region links to its traceability. See
 **Purpose:** list every interface between two parts.
 
 Pick two parts—of any kind or layer—and Architect lists every interface between
-them: ports, connectors and what flows. Save the result as a markdown page. The
+them: ports, connectors and the items each carries. An interface delegated to a
+nested part through `bind` is shown via its parent's port. Save the result as a markdown page. The
 same list is available from a terminal: `memo-architect interfaces <a> <b>`.
 
 ## Model
@@ -107,7 +112,9 @@ same list is available from a terminal: `memo-architect interfaces <a> <b>`.
 with a system filter. The explorer groups elements by kind (requirements by
 requirement type, use cases by declared level) and, if you switch it on, by
 package. Search by name or id, select an element, and follow its relationships
-in the Properties panel.
+in the Properties panel. An item, port or interface definition has a **Where used**
+section: its producers, consumers, flows and, when the model has releases, its
+versions.
 
 See [Choosing Elements](elements.md), [Connecting Elements](relationships.md)
 and [Layers](../modeling/layers/index.md).
