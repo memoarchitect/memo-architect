@@ -1,31 +1,39 @@
 // ─── Add Relationship Dialog ──────────────────────────────────────────────────
 //
-// Authors a model relationship from the currently selected element. Legality
-// comes entirely from the ontology registries via the shared resolver in
-// @memoarchitect/tools/browser — the same functions the diagram picker, the
-// canvas, and the server all use.
+// Pick the kind of element to link to, then the element. The kind is a dropdown
+// of what the ontology allows this element to relate to; the elements of that
+// kind are a table that can be searched. The ones already linked are at the top
+// and can be removed there, so one table shows and edits a kind's links.
 //
-// Two entry paths lead to the same confirmation:
-//   relationship-first — choose direction and type, then a compatible element
-//   target-first       — choose any element, then only the legal links to it
+// Legality comes entirely from the ontology registries via the shared resolver
+// in @memoarchitect/tools/browser — the same functions the diagram picker, the
+// canvas, and the server all use.
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
     compatibleRelationshipTargets,
-    describeRelationship,
-    groupTargetsByKindAndLayer,
-    isUniversalRelationship,
-    legalRelationshipsForElement,
     legalRelationshipTypes,
+    type LegalRelationshipOption,
     type MemoElement,
+    type MemoModelDTO,
+    type OntologyRegistriesDTO,
     type RelationshipDefinitionDTO,
     type RelationshipDirection,
-    type OntologyRegistriesDTO,
-    type MemoModelDTO,
 } from '@memoarchitect/tools/browser';
-import { LAYER_COLORS } from '../constants';
-import { FONT } from '../styles/tokens';
+import { COLOR, FONT } from '../styles/tokens';
+import { elementIdTitle } from '../lib/trace-labels';
+import { humanizeKind } from '../lib/humanize-kind';
+
+type Outcome = void | { success: boolean; error?: string };
+
+export interface ExistingLink {
+    type: string;
+    direction: RelationshipDirection;
+    otherId: string;
+    /** Present when the link can be removed from here. */
+    relationshipId?: string;
+}
 
 export interface AddRelationshipDialogProps {
     element: MemoElement;
@@ -34,42 +42,53 @@ export interface AddRelationshipDialogProps {
     /** Diagram in scope, so the server can report view-profile fit. */
     diagramId?: string;
     onCancel: () => void;
+    /** The dialog stays open after a link, so several can be added; a caller that wants it closed closes it. */
     onConfirm: (request: {
         type: string;
         sourceId: string;
         targetId: string;
         direction: RelationshipDirection;
-    }) => void;
-    /** Full-screen legacy shell or an embedded relationship browser. */
-    presentation?: 'modal' | 'inline';
+    }) => Outcome | Promise<Outcome>;
+    onRemove?: (relationshipId: string) => Outcome | Promise<Outcome>;
     /** Narrow what the dialog offers. Absent, it offers everything the ontology allows. */
     offered?: (definition: RelationshipDefinitionDTO, direction: RelationshipDirection) => boolean;
     /** Narrow the elements offered at the far end of a relation. */
     targetAllowed?: (definition: RelationshipDefinitionDTO, direction: RelationshipDirection, target: MemoElement) => boolean;
     /** What the header calls this dialog, for one that offers less than every relation. */
     title?: string;
+    /** The element's existing links, shown first in the table and marked linked. */
+    existing?: ExistingLink[];
 }
 
-type Flow = 'relationship-first' | 'target-first';
+/** Rows drawn at most; searching narrows them. */
+const MAX_ROWS = 200;
 
-const PANEL_BG = '#FFFFFF';
-const BORDER = '#E5E5E0';
-const ACCENT = '#2DD4A8';
+/** `Satisfies →` for a link this element makes, `← Satisfies` for one made to it. */
+export function choiceLabel(definition: RelationshipDefinitionDTO, direction: RelationshipDirection): string {
+    return direction === 'outgoing' ? `${definition.label} →` : `← ${definition.label}`;
+}
+
+const selectStyle: React.CSSProperties = {
+    width: '100%', padding: '9px 12px', borderRadius: 10, fontSize: FONT.sm, color: COLOR.primary,
+    border: `1px solid ${COLOR.border}`, background: COLOR.surface, outline: 'none',
+};
+
+const fieldLabel: React.CSSProperties = { display: 'block', fontSize: 11, fontWeight: 600, color: COLOR.muted, marginBottom: 5 };
+
+const COLUMNS = '132px minmax(0, 1fr) 150px';
 
 export function AddRelationshipDialog({
-    element, model, registries, onCancel, onConfirm, presentation = 'modal', offered, targetAllowed, title,
+    element, model, registries, onCancel, onConfirm, onRemove, title, offered, targetAllowed, existing = [],
 }: AddRelationshipDialogProps) {
-    const inline = presentation === 'inline';
-    const [flow, setFlow] = useState<Flow>('relationship-first');
-    const [direction, setDirection] = useState<RelationshipDirection | null>(null);
-    const [selectedType, setSelectedType] = useState<string | null>(null);
-    const [selectedTargetId, setSelectedTargetId] = useState<string | null>(null);
-
-    // Target search filters
+    const [chosenKind, setChosenKind] = useState<string | undefined>(undefined);
+    const [chosenKey, setChosenKey] = useState<string | undefined>(undefined);
     const [query, setQuery] = useState('');
-    const [kindFilter, setKindFilter] = useState('');
-    const [layerFilter, setLayerFilter] = useState('');
-    const [packageFilter, setPackageFilter] = useState('');
+    const [active, setActive] = useState(0);
+    const [busy, setBusy] = useState<string | null>(null);
+    const [error, setError] = useState<string | null>(null);
+    // Links made from here that the model has not echoed back yet, so a row reads linked at once.
+    const [added, setAdded] = useState<Set<string>>(new Set());
+    const searchRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
         const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onCancel(); };
@@ -77,538 +96,250 @@ export function AddRelationshipDialog({
         return () => document.removeEventListener('keydown', handler);
     }, [onCancel]);
 
-    // ─── Relationship-first: legal types for the selected element ───────────
-
-    const legalForElement = useMemo(
-        () => legalRelationshipsForElement(element, registries)
-            .map(entry => ({
-                definition: entry.definition,
-                directions: offered ? entry.directions.filter(d => offered(entry.definition, d)) : entry.directions,
-            }))
-            .filter(entry => entry.directions.length > 0),
-        [element, registries, offered]);
-
-    // A dialog offering one relation in one direction has nothing to ask first.
-    useEffect(() => {
-        if (legalForElement.length === 1 && legalForElement[0].directions.length === 1) {
-            setDirection(legalForElement[0].directions[0]);
-            setSelectedType(legalForElement[0].definition.name);
+    // The kinds of element this one may relate to, each with the relationships that reach it. Legality
+    // is by kind, so one element of each kind stands for the rest.
+    const kinds = useMemo(() => {
+        const byKind = new Map<string, MemoElement[]>();
+        for (const candidate of Object.values(model.elements)) {
+            if (candidate.id === element.id) continue;
+            byKind.set(candidate.kind, [...(byKind.get(candidate.kind) ?? []), candidate]);
         }
-    }, [legalForElement]);
-
-    /**
-     * Types offered once a direction is chosen — the element must fit that end.
-     * Order comes from the resolver (most specific first), so a universal
-     * relation like MemoLink stays at the bottom of the list.
-     */
-    const typesForDirection = useMemo(() => {
-        if (!direction) return [];
-        return legalForElement
-            .filter(entry => entry.directions.includes(direction))
-            .map(entry => entry.definition);
-    }, [legalForElement, direction]);
-
-    /** Directions the element can take at all, across every relationship type. */
-    const availableDirections = useMemo(() => {
-        const directions = new Set<RelationshipDirection>();
-        for (const entry of legalForElement) {
-            for (const d of entry.directions) directions.add(d);
+        const result: { kind: string; count: number; options: LegalRelationshipOption[] }[] = [];
+        for (const [kind, members] of byKind) {
+            const options = legalRelationshipTypes(element, members[0], registries)
+                .filter(option => !offered || offered(option.definition, option.direction))
+                .filter(option => !targetAllowed || members.some(m => targetAllowed(option.definition, option.direction, m)));
+            if (options.length > 0) result.push({ kind, count: members.length, options });
         }
-        return Array.from(directions);
-    }, [legalForElement]);
+        return result.sort((a, b) => humanizeKind(a.kind).localeCompare(humanizeKind(b.kind)));
+    }, [element, model.elements, registries, offered, targetAllowed]);
 
-    const definition: RelationshipDefinitionDTO | undefined = useMemo(
-        () => typesForDirection.find(d => d.name === selectedType)
-            ?? registries.relationships.find(d => d.name === selectedType),
-        [typesForDirection, registries, selectedType]);
-
-    // ─── Compatible opposite endpoints (complete model, not just this view) ─
-
-    const candidates = useMemo(() => {
-        if (!definition || !direction) return [];
-        return compatibleRelationshipTargets(element, definition, direction, model, registries, {
-            query,
-            kind: kindFilter || undefined,
-            layer: layerFilter || undefined,
-            package: packageFilter || undefined,
-        }).filter(candidate => !targetAllowed || targetAllowed(definition, direction, candidate.element));
-    }, [definition, direction, element, model, registries, query, kindFilter, layerFilter, packageFilter, targetAllowed]);
-
-    const groupedCandidates = useMemo(() => groupTargetsByKindAndLayer(candidates), [candidates]);
-
-    // ─── Target-first: pick any element, then only the legal links ──────────
-
-    const searchResults = useMemo(() => {
-        const needle = query.trim().toLowerCase();
-        return Object.values(model.elements)
-            .filter(el => el.id !== element.id)
-            .filter(el => !kindFilter || el.kind === kindFilter)
-            .filter(el => !layerFilter || el.layer === layerFilter)
-            .filter(el => !packageFilter || el.package === packageFilter)
-            .filter(el => !needle || [el.name, el.id, el.shortId, el.kind]
-                .filter(Boolean).join(' ').toLowerCase().includes(needle))
-            .sort((a, b) => a.name.localeCompare(b.name))
-            .slice(0, 200);
-    }, [model, element.id, query, kindFilter, layerFilter, packageFilter]);
-
-    const targetElement = selectedTargetId ? model.elements[selectedTargetId] : undefined;
-
-    /** Every legal (type, direction) pair between the two chosen elements. */
-    const optionsForTarget = useMemo(() => {
-        if (!targetElement) return [];
-        return legalRelationshipTypes(element, targetElement, registries).filter(option =>
-            (!offered || offered(option.definition, option.direction))
-            && (!targetAllowed || targetAllowed(option.definition, option.direction, targetElement)));
-    }, [element, targetElement, registries, offered, targetAllowed]);
-
-    // Exactly one legal choice is preselected — but never auto-confirmed.
-    useEffect(() => {
-        if (flow !== 'target-first' || !targetElement) return;
-        if (optionsForTarget.length === 1) {
-            setSelectedType(optionsForTarget[0].definition.name);
-            setDirection(optionsForTarget[0].direction);
-        } else {
-            setSelectedType(null);
-            setDirection(null);
+    // Open on the kind this element already has most links to; else the first.
+    const defaultKind = useMemo(() => {
+        const linkedPer = new Map<string, number>();
+        for (const link of existing) {
+            const kind = model.elements[link.otherId]?.kind;
+            if (kind) linkedPer.set(kind, (linkedPer.get(kind) ?? 0) + 1);
         }
-    }, [flow, targetElement, optionsForTarget]);
+        const withLinks = kinds.filter(k => linkedPer.has(k.kind)).sort((a, b) => linkedPer.get(b.kind)! - linkedPer.get(a.kind)!);
+        return (withLinks[0] ?? kinds[0])?.kind;
+    }, [kinds, existing, model.elements]);
 
-    // ─── Resolved request ──────────────────────────────────────────────────
+    const kind = kinds.find(k => k.kind === chosenKind) ?? kinds.find(k => k.kind === defaultKind);
+    const choices = kind?.options ?? [];
+    // Open on the relationship already used most toward this kind, else the most specific one.
+    const usedMost = useMemo(() => {
+        const uses = new Map<string, number>();
+        for (const link of existing) {
+            if (model.elements[link.otherId]?.kind !== kind?.kind) continue;
+            const key = `${link.type}::${link.direction}`;
+            uses.set(key, (uses.get(key) ?? 0) + 1);
+        }
+        return choices.filter(o => uses.has(`${o.definition.name}::${o.direction}`))
+            .sort((a, b) => uses.get(`${b.definition.name}::${b.direction}`)! - uses.get(`${a.definition.name}::${a.direction}`)!)[0];
+    }, [existing, choices, kind?.kind, model.elements]);
+    const choice = choices.find(o => `${o.definition.name}::${o.direction}` === chosenKey) ?? usedMost ?? choices[0];
 
-    /**
-     * Normalize to source→target. An incoming relationship puts the opposite
-     * element on the source end, which is what the server persists.
-     */
-    const request = useMemo(() => {
-        if (!definition || !direction || !selectedTargetId) return null;
-        return direction === 'outgoing'
-            ? { type: definition.name, sourceId: element.id, targetId: selectedTargetId, direction }
-            : { type: definition.name, sourceId: selectedTargetId, targetId: element.id, direction };
-    }, [definition, direction, selectedTargetId, element.id]);
+    const linkedLinks = useMemo(() => new Map(
+        choice
+            ? existing.filter(e => e.type === choice.definition.name && e.direction === choice.direction).map(e => [e.otherId, e] as const)
+            : []),
+    [existing, choice]);
 
-    const preview = useMemo(() => {
-        if (!request || !definition) return null;
-        return describeRelationship(
-            definition,
-            model.elements[request.sourceId],
-            model.elements[request.targetId],
-            { sourceId: request.sourceId, targetId: request.targetId });
-    }, [request, definition, model]);
+    const rows = useMemo(() => {
+        if (!choice || !kind) return [];
+        const targets = compatibleRelationshipTargets(element, choice.definition, choice.direction, model, registries, {
+            query: query.trim(), kind: kind.kind,
+        }).map(candidate => candidate.element)
+            .filter(candidate => !targetAllowed || targetAllowed(choice.definition, choice.direction, candidate));
+        const isLinked = (candidate: MemoElement) => linkedLinks.has(candidate.id) || added.has(addedKey(choice, candidate.id));
+        return [...targets].sort((a, b) =>
+            Number(isLinked(b)) - Number(isLinked(a)) || a.name.localeCompare(b.name)).slice(0, MAX_ROWS);
+    }, [choice, kind, element, model, registries, query, targetAllowed, linkedLinks, added]);
 
-    const resetFlow = useCallback((next: Flow) => {
-        setFlow(next);
-        setDirection(null);
-        setSelectedType(null);
-        setSelectedTargetId(null);
-        setQuery('');
-    }, []);
+    useEffect(() => { setActive(0); }, [kind?.kind, choice?.definition.name, choice?.direction, query]);
 
-    // Filter option lists come from the model, so they never offer an empty set.
-    const kinds = useMemo(
-        () => Array.from(new Set(Object.values(model.elements).map(el => el.kind))).sort(),
-        [model]);
-    const layers = useMemo(
-        () => Array.from(new Set(Object.values(model.elements).map(el => el.layer))).sort(),
-        [model]);
-    const packages = useMemo(
-        () => Array.from(new Set(Object.values(model.elements)
-            .map(el => el.package).filter((p): p is string => !!p))).sort(),
-        [model]);
+    const linkedCount = rows.filter(r => linkedLinks.has(r.id) || (choice && added.has(addedKey(choice, r.id)))).length;
+
+    const run = async (key: string, action: () => Outcome | Promise<Outcome>, onDone?: () => void) => {
+        setBusy(key); setError(null);
+        try {
+            const outcome = await action();
+            if (outcome && outcome.success === false) setError(outcome.error ?? 'That did not work.');
+            else onDone?.();
+        } finally {
+            setBusy(null);
+        }
+    };
+
+    const link = (candidate: MemoElement) => {
+        if (!choice) return;
+        const request = choice.direction === 'outgoing'
+            ? { type: choice.definition.name, sourceId: element.id, targetId: candidate.id, direction: 'outgoing' as const }
+            : { type: choice.definition.name, sourceId: candidate.id, targetId: element.id, direction: 'incoming' as const };
+        void run(candidate.id, () => onConfirm(request), () => setAdded(prev => new Set(prev).add(addedKey(choice, candidate.id))));
+    };
+
+    const unlink = (candidate: MemoElement, relationshipId: string) => {
+        if (!onRemove || !choice) return;
+        void run(candidate.id, () => onRemove(relationshipId));
+    };
+
+    const onKeyDown = (event: React.KeyboardEvent) => {
+        if (event.key === 'ArrowDown') { event.preventDefault(); setActive(i => Math.min(i + 1, rows.length - 1)); }
+        else if (event.key === 'ArrowUp') { event.preventDefault(); setActive(i => Math.max(i - 1, 0)); }
+        else if (event.key === 'Enter' && rows[active]) {
+            event.preventDefault();
+            const candidate = rows[active];
+            if (!linkedLinks.has(candidate.id) && !(choice && added.has(addedKey(choice, candidate.id)))) link(candidate);
+        }
+    };
 
     return (
         <div
-            className={inline ? 'mt-3' : 'fixed inset-0 z-50 flex items-center justify-center'}
-            style={inline ? undefined : { background: 'rgba(15,23,42,0.35)' }}
-            onClick={inline ? undefined : onCancel}
-            role={inline ? 'region' : 'dialog'}
-            aria-modal={inline ? undefined : true}
-            aria-label={inline ? 'Browse allowed relationships' : 'Add relationship'}
+            role="dialog" aria-modal="true" aria-label={title ?? 'Add relationship'}
+            onClick={onCancel}
+            style={{ position: 'fixed', inset: 0, zIndex: 200, background: 'rgba(8,39,68,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}
         >
             <div
-                className="flex flex-col rounded-xl overflow-hidden"
+                onClick={e => e.stopPropagation()}
                 style={{
-                    width: inline ? '100%' : 560,
-                    maxHeight: inline ? 'none' : '80vh', background: PANEL_BG,
-                    border: `1px solid ${BORDER}`,
-                    boxShadow: inline ? 'none' : '0 16px 48px rgba(0,0,0,0.22)',
+                    width: 'min(920px, 100%)', height: 'min(640px, 100%)', display: 'flex', flexDirection: 'column',
+                    background: COLOR.surface, borderRadius: 16, boxShadow: '0 30px 80px rgba(8,39,68,0.35)', overflow: 'hidden',
                 }}
-                onClick={inline ? undefined : e => e.stopPropagation()}
             >
-                {/* Header */}
-                <div className="px-4 py-3" style={{ borderBottom: `1px solid ${BORDER}` }}>
-                    <div className="text-sm font-semibold" style={{ color: '#1a1a1a' }}>
-                        {title ?? (inline ? 'Browse Allowed Relationships' : 'Add Relationship')}
+                <div style={{ padding: '20px 24px 14px', display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+                    <div style={{ minWidth: 0, flex: 1 }}>
+                        <div style={{ fontSize: 18, fontWeight: 650, color: COLOR.primary, letterSpacing: '-0.01em' }}>{title ?? 'Relationships'}</div>
+                        <div className="truncate" style={{ fontSize: FONT.sm, color: COLOR.muted, marginTop: 2 }}>
+                            {element.name} · {humanizeKind(element.kind)}
+                        </div>
                     </div>
-                    <div className="text-xs mt-0.5" style={{ color: '#6B7280' }}>
-                        from <span style={{ fontWeight: 500, color: '#374151' }}>{element.name}</span>
-                        {' '}<span style={{ color: '#9CA3AF' }}>({element.kind})</span>
-                    </div>
-                    <div className="flex gap-1 mt-2">
-                        <FlowTab
-                            active={flow === 'relationship-first'}
-                            label="Choose relationship"
-                            onClick={() => resetFlow('relationship-first')}
-                        />
-                        <FlowTab
-                            active={flow === 'target-first'}
-                            label="Choose element"
-                            onClick={() => resetFlow('target-first')}
-                        />
-                    </div>
+                    <button onClick={onCancel} aria-label="Close"
+                        style={{ width: 32, height: 32, border: 0, borderRadius: 8, background: COLOR.surfaceAlt, color: COLOR.muted, cursor: 'pointer', fontSize: 18, lineHeight: 1 }}>×</button>
                 </div>
 
-                <div className="flex-1 overflow-y-auto px-4 py-3">
-                    {flow === 'relationship-first' ? (
-                        <>
-                            <FieldLabel>Direction</FieldLabel>
-                            {availableDirections.length === 0 ? (
-                                <Empty>
-                                    The ontology defines no relationship that a {element.kind} can take part in.
-                                </Empty>
-                            ) : (
-                                <div className="flex gap-2 mb-3">
-                                    {availableDirections.includes('outgoing') && (
-                                        <DirectionButton
-                                            active={direction === 'outgoing'}
-                                            onClick={() => { setDirection('outgoing'); setSelectedType(null); setSelectedTargetId(null); }}
-                                            title="Outgoing"
-                                            subtitle={`${element.name} → other`}
-                                        />
-                                    )}
-                                    {availableDirections.includes('incoming') && (
-                                        <DirectionButton
-                                            active={direction === 'incoming'}
-                                            onClick={() => { setDirection('incoming'); setSelectedType(null); setSelectedTargetId(null); }}
-                                            title="Incoming"
-                                            subtitle={`other → ${element.name}`}
-                                        />
-                                    )}
+                {kinds.length === 0 ? (
+                    <div style={{ padding: '8px 24px 24px', fontSize: FONT.sm, color: COLOR.faint }}>
+                        The ontology defines no relationship that a {humanizeKind(element.kind).toLowerCase()} can take part in.
+                    </div>
+                ) : (
+                    <>
+                        <div style={{ padding: '0 24px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 14 }}>
+                            <label>
+                                <span style={fieldLabel}>Link to</span>
+                                <select
+                                    aria-label="Element type"
+                                    value={kind?.kind}
+                                    onChange={e => { setChosenKind(e.target.value); setChosenKey(undefined); setQuery(''); searchRef.current?.focus(); }}
+                                    style={selectStyle}
+                                >
+                                    {kinds.map(k => (
+                                        <option key={k.kind} value={k.kind}>{humanizeKind(k.kind)} ({k.count})</option>
+                                    ))}
+                                </select>
+                            </label>
+                            <label>
+                                <span style={fieldLabel}>Relationship</span>
+                                <select
+                                    aria-label="Relationship"
+                                    value={choice ? `${choice.definition.name}::${choice.direction}` : ''}
+                                    onChange={e => setChosenKey(e.target.value)}
+                                    disabled={choices.length < 2}
+                                    style={{ ...selectStyle, background: choices.length < 2 ? COLOR.surfaceAlt : COLOR.surface }}
+                                >
+                                    {choices.map(o => (
+                                        <option key={`${o.definition.name}::${o.direction}`} value={`${o.definition.name}::${o.direction}`}>
+                                            {choiceLabel(o.definition, o.direction)}
+                                        </option>
+                                    ))}
+                                </select>
+                            </label>
+                        </div>
+
+                        <div style={{ padding: '14px 24px 12px' }}>
+                            <input
+                                ref={searchRef}
+                                autoFocus
+                                value={query}
+                                onChange={e => setQuery(e.target.value)}
+                                onKeyDown={onKeyDown}
+                                placeholder={`Search ${kind ? humanizeKind(kind.kind).toLowerCase() : 'elements'} by id or name`}
+                                aria-label="Search elements"
+                                autoComplete="off"
+                                style={{ ...selectStyle, background: COLOR.surfaceAlt, border: '1px solid transparent' }}
+                            />
+                        </div>
+
+                        <div style={{ display: 'grid', gridTemplateColumns: COLUMNS, gap: 12, padding: '8px 24px', borderTop: `1px solid ${COLOR.borderLight}`, borderBottom: `1px solid ${COLOR.borderLight}`, fontSize: 11, fontWeight: 600, color: COLOR.muted, letterSpacing: '0.04em' }}>
+                            <span>ID</span><span>NAME</span><span style={{ textAlign: 'right' }}>STATUS</span>
+                        </div>
+                        <div role="listbox" aria-label="Elements" style={{ flex: 1, overflowY: 'auto', minHeight: 0 }}>
+                            {rows.length === 0 && (
+                                <div style={{ padding: '28px 24px', fontSize: FONT.sm, color: COLOR.faint }}>
+                                    {query.trim() ? 'No element matches that search.' : 'No element of this type can take part in this relationship.'}
                                 </div>
                             )}
-
-                            {direction && (
-                                <>
-                                    <FieldLabel>Relationship type</FieldLabel>
-                                    {typesForDirection.length === 0 ? (
-                                        <Empty>No relationship type allows a {element.kind} on that end.</Empty>
-                                    ) : (
-                                        <div className="mb-3" style={{ maxHeight: 160, overflowY: 'auto' }}>
-                                            {typesForDirection.map(def => (
-                                                <TypeRow
-                                                    key={def.name}
-                                                    definition={def}
-                                                    direction={direction}
-                                                    selected={selectedType === def.name}
-                                                    onClick={() => { setSelectedType(def.name); setSelectedTargetId(null); }}
-                                                />
-                                            ))}
-                                        </div>
-                                    )}
-                                </>
-                            )}
-
-                            {definition && direction && (
-                                <>
-                                    <FieldLabel>
-                                        {direction === 'outgoing'
-                                            ? `${definition.targetEnd.name} element`
-                                            : `${definition.sourceEnd.name} element`}
-                                    </FieldLabel>
-                                    <Filters
-                                        query={query} setQuery={setQuery}
-                                        kinds={kinds} kindFilter={kindFilter} setKindFilter={setKindFilter}
-                                        layers={layers} layerFilter={layerFilter} setLayerFilter={setLayerFilter}
-                                        packages={packages} packageFilter={packageFilter} setPackageFilter={setPackageFilter}
-                                    />
-                                    {candidates.length === 0 ? (
-                                        <Empty>No element in the model can occupy that end.</Empty>
-                                    ) : (
-                                        <div style={{ maxHeight: 220, overflowY: 'auto' }}>
-                                            {groupedCandidates.map(group => (
-                                                <div key={`${group.layer}-${group.kind}`}>
-                                                    <GroupHeader layer={group.layer} kind={group.kind} count={group.elements.length} />
-                                                    {group.elements.map(candidate => (
-                                                        <ElementRow
-                                                            key={candidate.id}
-                                                            element={candidate}
-                                                            selected={selectedTargetId === candidate.id}
-                                                            onClick={() => setSelectedTargetId(candidate.id)}
-                                                        />
-                                                    ))}
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
-                                </>
-                            )}
-                        </>
-                    ) : (
-                        <>
-                            <FieldLabel>Element to link</FieldLabel>
-                            <Filters
-                                query={query} setQuery={setQuery}
-                                kinds={kinds} kindFilter={kindFilter} setKindFilter={setKindFilter}
-                                layers={layers} layerFilter={layerFilter} setLayerFilter={setLayerFilter}
-                                packages={packages} packageFilter={packageFilter} setPackageFilter={setPackageFilter}
-                            />
-                            <div style={{ maxHeight: 200, overflowY: 'auto' }}>
-                                {searchResults.map(candidate => (
-                                    <ElementRow
+                            {rows.map((candidate, index) => {
+                                const { id, title: name } = elementIdTitle(candidate, candidate.id);
+                                const existingLink = linkedLinks.get(candidate.id);
+                                const isLinked = !!existingLink || (!!choice && added.has(addedKey(choice, candidate.id)));
+                                const working = busy === candidate.id;
+                                return (
+                                    <div
                                         key={candidate.id}
-                                        element={candidate}
-                                        selected={selectedTargetId === candidate.id}
-                                        onClick={() => setSelectedTargetId(candidate.id)}
-                                    />
-                                ))}
-                                {searchResults.length === 0 && <Empty>No element matches that search.</Empty>}
-                            </div>
-
-                            {targetElement && (
-                                <>
-                                    <FieldLabel>Legal relationships</FieldLabel>
-                                    {optionsForTarget.length === 0 ? (
-                                        <Empty>
-                                            The ontology defines no relationship between a {element.kind} and
-                                            a {targetElement.kind}.
-                                        </Empty>
-                                    ) : (
-                                        <div style={{ maxHeight: 160, overflowY: 'auto' }}>
-                                            {optionsForTarget.map(option => (
-                                                <TypeRow
-                                                    key={`${option.definition.name}-${option.direction}`}
-                                                    definition={option.definition}
-                                                    direction={option.direction}
-                                                    selected={
-                                                        selectedType === option.definition.name &&
-                                                        direction === option.direction
-                                                    }
-                                                    onClick={() => {
-                                                        setSelectedType(option.definition.name);
-                                                        setDirection(option.direction);
-                                                    }}
-                                                />
-                                            ))}
-                                        </div>
-                                    )}
-                                </>
-                            )}
-                        </>
-                    )}
-                </div>
-
-                {/* Preview + confirm */}
-                <div className="px-4 py-3" style={{ borderTop: `1px solid ${BORDER}`, background: '#FAFAF8' }}>
-                    {preview ? (
-                        <div
-                            className="text-xs mb-2 px-2 py-1.5 rounded"
-                            style={{ background: '#F0FDF9', color: '#0F766E', border: '1px solid #99F6E4' }}
-                        >
-                            {preview}
+                                        role="option" aria-selected={index === active}
+                                        onMouseEnter={() => setActive(index)}
+                                        style={{
+                                            display: 'grid', gridTemplateColumns: COLUMNS, gap: 12, alignItems: 'center',
+                                            padding: '9px 24px', fontSize: FONT.sm, color: COLOR.primary,
+                                            background: index === active ? COLOR.surfaceAlt : 'transparent',
+                                        }}
+                                    >
+                                        <span className="font-mono truncate" style={{ fontSize: 12, color: COLOR.muted }}>{id ?? '—'}</span>
+                                        <span className="truncate" title={name}>{name}</span>
+                                        <span style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 10 }}>
+                                            {isLinked ? (
+                                                <>
+                                                    <span style={{ color: '#0F766E', fontWeight: 600, fontSize: FONT.xs }}>✓ Linked</span>
+                                                    {existingLink?.relationshipId && onRemove && (
+                                                        <button onClick={() => unlink(candidate, existingLink.relationshipId!)} disabled={working}
+                                                            style={{ border: 0, background: 'none', cursor: 'pointer', color: COLOR.muted, fontSize: FONT.xs, padding: 0, textDecoration: 'underline' }}>
+                                                            Remove
+                                                        </button>
+                                                    )}
+                                                </>
+                                            ) : (
+                                                <button onClick={() => link(candidate)} disabled={working}
+                                                    style={{
+                                                        padding: '4px 14px', borderRadius: 999, fontSize: FONT.xs, fontWeight: 600, cursor: 'pointer',
+                                                        border: `1px solid ${COLOR.border}`, background: COLOR.surface, color: COLOR.primary,
+                                                    }}>
+                                                    {working ? 'Linking…' : 'Link'}
+                                                </button>
+                                            )}
+                                        </span>
+                                    </div>
+                                );
+                            })}
                         </div>
-                    ) : (
-                        <div className="text-xs mb-2" style={{ color: '#9CA3AF' }}>
-                            Choose a relationship type and an element to see the preview.
-                        </div>
-                    )}
-                    <div className="flex justify-end gap-2">
-                        <button
-                            onClick={onCancel}
-                            className="px-3 py-1.5 rounded text-xs font-medium"
-                            style={{ background: '#F0F0ED', color: '#374151', border: 'none', cursor: 'pointer' }}
-                        >
-                            Cancel
-                        </button>
-                        <button
-                            onClick={() => request && onConfirm(request)}
-                            disabled={!request}
-                            className="px-3 py-1.5 rounded text-xs font-medium"
-                            style={{
-                                background: request ? ACCENT : '#E5E5E0',
-                                color: request ? '#FFFFFF' : '#9CA3AF',
-                                border: 'none', cursor: request ? 'pointer' : 'not-allowed',
-                            }}
-                        >
-                            Create relationship
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    );
-}
-
-// ─── Presentation pieces ────────────────────────────────────────────────────
-
-function FlowTab({ active, label, onClick }: { active: boolean; label: string; onClick: () => void }) {
-    return (
-        <button
-            onClick={onClick}
-            className="px-2 py-1 rounded"
-            style={{
-                fontSize: FONT.xs,
-                fontWeight: active ? 600 : 400,
-                background: active ? '#2DD4A818' : 'transparent',
-                color: active ? '#0F766E' : '#6B7280',
-                border: 'none', cursor: 'pointer',
-            }}
-        >
-            {label}
-        </button>
-    );
-}
-
-function FieldLabel({ children }: { children: React.ReactNode }) {
-    return (
-        <div className="mb-1.5" style={{ fontSize: '10px', fontWeight: 600, color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-            {children}
-        </div>
-    );
-}
-
-function Empty({ children }: { children: React.ReactNode }) {
-    return <div className="text-xs py-2 mb-2" style={{ color: '#9CA3AF' }}>{children}</div>;
-}
-
-function DirectionButton({ active, onClick, title, subtitle }: {
-    active: boolean; onClick: () => void; title: string; subtitle: string;
-}) {
-    return (
-        <button
-            onClick={onClick}
-            className="flex-1 px-2 py-1.5 rounded text-left"
-            style={{
-                background: active ? '#2DD4A818' : '#F7F7F5',
-                border: `1px solid ${active ? ACCENT : BORDER}`,
-                cursor: 'pointer',
-            }}
-        >
-            <div style={{ fontSize: FONT.xs, fontWeight: 500, color: '#1a1a1a' }}>{title}</div>
-            <div style={{ fontSize: '10px', color: '#9CA3AF' }}>{subtitle}</div>
-        </button>
-    );
-}
-
-function TypeRow({ definition, direction, selected, onClick }: {
-    definition: RelationshipDefinitionDTO;
-    direction: RelationshipDirection;
-    selected: boolean;
-    onClick: () => void;
-}) {
-    // Show the end the opposite element will occupy — that is what the user is
-    // about to pick, and it names the constraint the ontology will enforce.
-    const oppositeEnd = direction === 'outgoing' ? definition.targetEnd : definition.sourceEnd;
-    const universal = isUniversalRelationship(definition);
-    return (
-        <button
-            onClick={onClick}
-            className="w-full text-left px-2 py-1.5 rounded"
-            style={{
-                background: selected ? '#2DD4A818' : 'transparent',
-                border: 'none', cursor: 'pointer', display: 'block',
-            }}
-            onMouseEnter={e => { if (!selected) e.currentTarget.style.background = '#F7F7F5'; }}
-            onMouseLeave={e => { if (!selected) e.currentTarget.style.background = 'transparent'; }}
-        >
-            <div className="flex items-center gap-1.5">
-                <span style={{ fontSize: FONT.xs, fontWeight: 500, color: '#1a1a1a' }}>{definition.label}</span>
-                <span style={{ fontSize: '9px', color: '#9CA3AF' }}>{direction === 'outgoing' ? '→' : '←'}</span>
-                <span style={{ fontSize: '10px', color: '#6B7280' }}>
-                    {oppositeEnd.type ?? 'any element'}
-                </span>
-                {universal && (
-                    <span
-                        className="px-1 rounded"
-                        style={{ fontSize: '9px', background: '#FEF3C7', color: '#92400E' }}
-                        title="Joins any two elements. Prefer a relation that carries the meaning."
-                    >
-                        fallback
-                    </span>
+                    </>
                 )}
-            </div>
-            {definition.description && (
-                <div style={{ fontSize: '10px', color: '#9CA3AF' }} className="truncate">
-                    {definition.description}
+
+                <div style={{ padding: '12px 24px', borderTop: `1px solid ${COLOR.borderLight}`, display: 'flex', alignItems: 'center', gap: 12, background: '#FAFCFD' }}>
+                    <span style={{ fontSize: FONT.xs, color: error ? '#DC2626' : COLOR.muted }}>
+                        {error ?? (rows.length === MAX_ROWS ? `Showing the first ${MAX_ROWS}. Search to narrow.` : `${linkedCount} linked`)}
+                    </span>
+                    <button onClick={onCancel}
+                        style={{ marginLeft: 'auto', padding: '7px 20px', borderRadius: 999, border: 0, background: COLOR.primary, color: '#fff', fontSize: FONT.sm, fontWeight: 600, cursor: 'pointer' }}>
+                        Done
+                    </button>
                 </div>
-            )}
-        </button>
-    );
-}
-
-function GroupHeader({ layer, kind, count }: { layer: string; kind: string; count: number }) {
-    const color = LAYER_COLORS[layer] || '#666';
-    return (
-        <div className="flex items-center gap-1.5 px-1 pt-2 pb-1">
-            <span className="w-2 h-2 flex-shrink-0" style={{ background: color, borderRadius: '2px' }} />
-            <span style={{ fontSize: '10px', fontWeight: 600, color: '#6B7280' }}>{kind}</span>
-            <span style={{ fontSize: '10px', color: '#9CA3AF' }}>· {layer}</span>
-            <span className="ml-auto" style={{ fontSize: '10px', color: '#D1D5DB' }}>{count}</span>
-        </div>
-    );
-}
-
-function ElementRow({ element, selected, onClick }: {
-    element: MemoElement; selected: boolean; onClick: () => void;
-}) {
-    const color = LAYER_COLORS[element.layer] || '#666';
-    return (
-        <button
-            onClick={onClick}
-            className="w-full flex items-center gap-1.5 px-2 py-1 rounded text-left"
-            style={{
-                background: selected ? '#2DD4A818' : 'transparent',
-                border: 'none', cursor: 'pointer',
-            }}
-            onMouseEnter={e => { if (!selected) e.currentTarget.style.background = '#F7F7F5'; }}
-            onMouseLeave={e => { if (!selected) e.currentTarget.style.background = 'transparent'; }}
-        >
-            <span className="truncate" style={{ fontSize: FONT.xs, color: '#1a1a1a' }}>{element.name}</span>
-            <span
-                className="ml-auto flex-shrink-0 px-1 rounded"
-                style={{ background: color + '15', color, fontSize: FONT.badge }}
-            >
-                {element.kind}
-            </span>
-        </button>
-    );
-}
-
-function Filters({
-    query, setQuery, kinds, kindFilter, setKindFilter,
-    layers, layerFilter, setLayerFilter, packages, packageFilter, setPackageFilter,
-}: {
-    query: string; setQuery: (v: string) => void;
-    kinds: string[]; kindFilter: string; setKindFilter: (v: string) => void;
-    layers: string[]; layerFilter: string; setLayerFilter: (v: string) => void;
-    packages: string[]; packageFilter: string; setPackageFilter: (v: string) => void;
-}) {
-    const selectStyle = {
-        fontSize: '10px', background: '#F7F7F5', border: `1px solid ${BORDER}`,
-        color: '#374151', borderRadius: 4, padding: '2px 4px', flex: 1, minWidth: 0,
-    } as const;
-    return (
-        <div className="mb-2">
-            <input
-                value={query}
-                onChange={e => setQuery(e.target.value)}
-                placeholder="Search by name, ID or kind…"
-                aria-label="Search elements"
-                className="w-full px-2 py-1 rounded focus:outline-none mb-1.5"
-                style={{ fontSize: FONT.xs, background: '#F7F7F5', border: `1px solid ${BORDER}`, color: '#374151' }}
-            />
-            <div className="flex gap-1">
-                <select aria-label="Filter by kind" value={kindFilter} onChange={e => setKindFilter(e.target.value)} style={selectStyle}>
-                    <option value="">All kinds</option>
-                    {kinds.map(k => <option key={k} value={k}>{k}</option>)}
-                </select>
-                <select aria-label="Filter by layer" value={layerFilter} onChange={e => setLayerFilter(e.target.value)} style={selectStyle}>
-                    <option value="">All layers</option>
-                    {layers.map(l => <option key={l} value={l}>{l}</option>)}
-                </select>
-                <select aria-label="Filter by package" value={packageFilter} onChange={e => setPackageFilter(e.target.value)} style={selectStyle}>
-                    <option value="">All packages</option>
-                    {packages.map(p => <option key={p} value={p}>{p}</option>)}
-                </select>
             </div>
         </div>
     );
+}
+
+function addedKey(choice: LegalRelationshipOption, otherId: string): string {
+    return `${choice.definition.name}::${choice.direction}::${otherId}`;
 }
