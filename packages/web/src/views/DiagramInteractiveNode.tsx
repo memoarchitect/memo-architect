@@ -14,6 +14,8 @@ import { Handle, Position, NodeResizer, type NodeProps } from '@xyflow/react';
 import { FONT } from '../styles/tokens';
 import type { CompartmentEntry } from './templates/composition-tree';
 import { isPersonKind, PersonGlyph } from './PersonGlyph';
+import { typeLabel } from '../lib/ontology-labels';
+import { useModelStore } from '../store/model-store';
 
 export interface DiagramInteractiveNodeData extends Record<string, unknown> {
     label: string;
@@ -117,7 +119,7 @@ export const DiagramInteractiveNode = memo(function DiagramInteractiveNode(
                     fontSize: '9px', fontWeight: 700, color: borderColor,
                     letterSpacing: '0.06em', marginBottom: 2,
                     }}>
-                        {d.kind}
+                        {typeLabel(useModelStore.getState().model, d.kind)}
                     </div>
 
                     {editing ? (
@@ -140,7 +142,7 @@ export const DiagramInteractiveNode = memo(function DiagramInteractiveNode(
                             fontSize: FONT.sm, fontWeight: 500, color: '#1a1a1a',
                             lineHeight: 1.3, wordBreak: 'break-word',
                         }}>
-                            {d.label || d.kind}
+                            {d.label || typeLabel(useModelStore.getState().model, d.kind)}
                         </div>
                     )}
 

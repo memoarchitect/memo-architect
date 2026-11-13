@@ -544,7 +544,8 @@ describe('back-facing ports', () => {
 describe('connectorLabelText', () => {
     it('reads the label a connection declares before its type', () => {
         expect(connectorLabelText({ type: 'connect', attributes: { label: 'Control Cable' } })).toBe('Control Cable');
-        expect(connectorLabelText({ type: 'connect', attributes: { name: '/command', label: 'Command' } })).toBe('/command');
+        expect(connectorLabelText({ type: 'connect', attributes: { name: '/command', label: 'Command' } })).toBe('Command');
+        expect(connectorLabelText({ type: 'connect', attributes: { name: '/command' } })).toBe('/command');
         expect(connectorLabelText({ type: 'interface', kind: 'ControlLinkInterface', attributes: {} })).toBe('ControlLinkInterface');
     });
 });

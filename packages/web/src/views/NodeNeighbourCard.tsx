@@ -7,6 +7,8 @@ import { NodeToolbar, Position } from '@xyflow/react';
 import type { MemoModelDTO } from '@memoarchitect/tools/browser';
 import { neighbourGroups, type NeighbourEdge } from '../lib/node-neighbours';
 import { COLOR, FONT } from '../styles/tokens';
+import { typeLabel } from '../lib/ontology-labels';
+import { useModelStore } from '../store/model-store';
 
 export function NodeNeighbourCard({ nodeId, edges, model, label, onPick, onClose }: {
     nodeId: string;
@@ -25,7 +27,7 @@ export function NodeNeighbourCard({ nodeId, edges, model, label, onPick, onClose
                     <b style={{ flex: 1, minWidth: 0, fontSize: FONT.sm, color: COLOR.primary, overflowWrap: 'anywhere' }}>{label(nodeId)}</b>
                     <button type="button" aria-label="Close this card" onClick={onClose} style={{ border: 'none', background: 'none', cursor: 'pointer', color: COLOR.muted, padding: 0 }}>×</button>
                 </div>
-                {element?.kind && <div style={{ color: COLOR.muted }}>{[element.shortId, element.kind].filter(Boolean).join(' · ')}</div>}
+                {element?.kind && <div style={{ color: COLOR.muted }}>{[element.shortId, typeLabel(useModelStore.getState().model, element.kind)].filter(Boolean).join(' · ')}</div>}
                 {element?.doc && <p style={{ margin: '4px 0 0', color: COLOR.secondary, display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{element.doc}</p>}
                 {groups.length === 0 && <p style={{ margin: '6px 0 0', color: COLOR.muted }}>Not connected to anything on this diagram.</p>}
                 {groups.map(group => (

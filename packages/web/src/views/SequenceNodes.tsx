@@ -9,6 +9,8 @@
 import { memo } from 'react';
 import { Handle, Position, type NodeProps } from '@xyflow/react';
 import { FONT, SHADOW } from '../styles/tokens';
+import { typeLabel } from '../lib/ontology-labels';
+import { useModelStore } from '../store/model-store';
 
 const LIFELINE_COLOR = '#3498DB';
 
@@ -106,7 +108,7 @@ function SeqOccurrenceNodeInner({ data, selected }: NodeProps) {
                 boxShadow: selected ? SHADOW.selected : SHADOW.sm,
                 position: 'relative',
             }}
-            title={d.kind}
+            title={typeLabel(useModelStore.getState().model, d.kind)}
         >
             <Handle type="source" id="right" position={Position.Right} style={anchorHandleStyle} />
             <Handle type="target" id="right" position={Position.Right} style={anchorHandleStyle} />

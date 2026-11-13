@@ -32,6 +32,7 @@ import {
     buildViewpointFilter, computeDiagramScene, nonCanvasKind, resolveViewKind,
 } from './scene-source';
 import { notationSceneToSvg, type NotationScene, type NotationNode } from '../../notation-scene';
+import { typeLabel } from '../../../lib/ontology-labels';
 
 const CANVAS_BG = '#F7F7F5';
 const SCENE_TIMEOUT_MS = 8_000;
@@ -323,7 +324,7 @@ export function MaxGraphCanvas() {
                 const vertex = graph.insertVertex({
                     parent: cellParent,
                     id: node.id,
-                    value: node.kind && !node.isFrame ? `${node.label}\n«${node.kind}»` : node.label,
+                    value: node.kind && !node.isFrame ? `${node.label}\n«${typeLabel(useModelStore.getState().model, node.kind)}»` : node.label,
                     x: node.x,
                     y: node.y,
                     width: node.width,

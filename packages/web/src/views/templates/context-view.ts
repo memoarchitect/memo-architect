@@ -63,7 +63,7 @@ const contextSide = (relationship: MemoRelationship): Side | undefined =>
     parseContextSide(relationship.attributes?.contextSide);
 
 const contextLabel = (relationship: MemoRelationship): string =>
-    relationship.attributes?.interactionLabel || `«${relationshipType(relationship.type)}»`;
+    relationship.attributes?.interactionLabel || `«${relationship.type}»`;
 
 export interface ContextViewOptions {
     viewpointFilter?: (element: MemoElement) => boolean;

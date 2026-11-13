@@ -9,6 +9,8 @@
 import { memo, useState } from 'react';
 import { Handle, Position, type NodeProps } from '@xyflow/react';
 import { FONT, SHADOW } from '../styles/tokens';
+import { typeLabel } from '../lib/ontology-labels';
+import { useModelStore } from '../store/model-store';
 
 export interface StateNodeData extends Record<string, unknown> {
     label: string;
@@ -121,14 +123,14 @@ function StateNodeInner({ data, selected }: NodeProps) {
                     flexDirection: 'column',
                     justifyContent: 'center',
                 }}
-                title={d.kind}
+                title={typeLabel(useModelStore.getState().model, d.kind)}
             >
                 <FallbackHandles />
                 <span style={{ fontSize: FONT.xs, fontWeight: 600, color: '#374151', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                     {d.label}
                 </span>
                 <span style={{ fontSize: '8px', fontWeight: 700, color: d.color, letterSpacing: '0.05em' }}>
-                    {d.kind}
+                    {typeLabel(useModelStore.getState().model, d.kind)}
                 </span>
             </div>
         );
@@ -168,7 +170,7 @@ function StateNodeInner({ data, selected }: NodeProps) {
                         {d.label}
                     </span>
                     <span style={{ fontSize: '8px', fontWeight: 700, color: d.isMachine ? '#94A3B8' : `${d.color}AA`, letterSpacing: '0.06em' }}>
-                        {d.kind}
+                        {typeLabel(useModelStore.getState().model, d.kind)}
                     </span>
                 </div>
             </div>

@@ -118,11 +118,11 @@ export function ibdEdgeLabel(flowItem?: string, relType = '', connectorType?: st
 }
 
 /**
- * What a connector is labelled: its authored name, else the label its `@MemoIdentity` gives it (a cable reads
- * "Control Cable", not "connect"), else what {@link ibdEdgeLabel} gives.
+ * What a connector is labelled: the label its `@MemoIdentity` gives it (a cable reads "Control Cable", not
+ * "connect"), else its declared name, else what {@link ibdEdgeLabel} gives.
  */
 export function connectorLabelText(rel: Pick<MemoRelationship, 'attributes' | 'flowItem' | 'type' | 'kind'>): string | undefined {
-    return (rel.attributes?.name as string | undefined) || (rel.attributes?.label as string | undefined)
+    return (rel.attributes?.label as string | undefined) || (rel.attributes?.name as string | undefined)
         || ibdEdgeLabel(rel.flowItem, rel.type, rel.kind);
 }
 

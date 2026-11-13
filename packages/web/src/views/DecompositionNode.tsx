@@ -10,6 +10,8 @@ import { Handle, Position, type NodeProps } from '@xyflow/react';
 import type { MemoElement } from '@memoarchitect/tools/browser';
 import { FONT } from '../styles/tokens';
 import { isPersonKind, PersonGlyph } from './PersonGlyph';
+import { typeLabel } from '../lib/ontology-labels';
+import { useModelStore } from '../store/model-store';
 
 export interface DecompositionNodeData {
     element: MemoElement;
@@ -152,7 +154,7 @@ function DecompositionNodeInner({ data }: NodeProps) {
                     paddingLeft: hasChildren ? '26px' : '14px',
                 }}>
                     <span style={{ fontSize: FONT.badge, color: '#9CA3AF' }}>
-                        {element.kind}
+                        {typeLabel(useModelStore.getState().model, element.kind)}
                     </span>
                     {hasChildren && !isExpanded && (
                         // Just the count, in a circle. "3 parts (collapsed)"

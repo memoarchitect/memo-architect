@@ -28,6 +28,7 @@ import {
     NESTED_PITCH, NESTED_PIN_INSET, NESTED_HOUSING_DEPTH, portAnchorOffset, INTERCONNECTION_HEADER_HEIGHT,
 } from './templates/interconnection-view';
 import { useInterconnectionRenderer } from '../diagram/renderers/interconnection-renderer';
+import { typeLabel } from '../lib/ontology-labels';
 
 export interface InterconnectionNodeData extends Record<string, unknown> {
     onIbdResize?: IbdResizeHandler;
@@ -449,7 +450,7 @@ function TypedLabel({ name, kind, nameColor, typeColor, frame = false, singleLin
 }) {
     const textAlign = style?.textAlign ?? 'left';
     return (
-        <span title={`${name} : ${kind}`} style={{ display: 'flex', flexDirection: frame ? 'row' : 'column', alignItems: textAlign === 'right' ? 'flex-end' : textAlign === 'center' ? 'center' : frame ? 'baseline' : 'flex-start', gap: frame ? 6 : 1, minWidth: 0, overflow: 'hidden', flex: 1, textAlign }}>
+        <span title={`${name} : ${typeLabel(useModelStore.getState().model, kind)}`} style={{ display: 'flex', flexDirection: frame ? 'row' : 'column', alignItems: textAlign === 'right' ? 'flex-end' : textAlign === 'center' ? 'center' : frame ? 'baseline' : 'flex-start', gap: frame ? 6 : 1, minWidth: 0, overflow: 'hidden', flex: 1, textAlign }}>
             <span style={{
                 // In the frame bar the name and type share one row: the name takes only its own width, and when the
                 // row is short the type gives way first, so neither is squeezed to an ellipsis while there is room.
@@ -463,7 +464,7 @@ function TypedLabel({ name, kind, nameColor, typeColor, frame = false, singleLin
                 {name}
             </span>
             <span style={{ display: 'block', maxWidth: '100%', minWidth: frame ? 0 : undefined, flex: frame ? '0 100 auto' : undefined, fontSize: '9px', lineHeight: 1.15, fontWeight: 650, letterSpacing: '0.055em', color: style?.textColor ?? typeColor, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                {frame ? `: ${kind}` : `«${kind}»`}
+                {frame ? `: ${typeLabel(useModelStore.getState().model, kind)}` : `«${typeLabel(useModelStore.getState().model, kind)}»`}
             </span>
         </span>
     );
