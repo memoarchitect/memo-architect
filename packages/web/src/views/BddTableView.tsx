@@ -24,6 +24,7 @@ import {
     childKindOptions, declaredNameFor, defaultPlacement, linkCategory, linksByRow, placementWrites, rowLinkCategories,
     rowMayHold, targetMayHold, viewInsertionPoint, type RowLink, type StepPlacement, type TableLinkCategory,
 } from './templates/table-authoring';
+import { ontologyLabel } from '../lib/ontology-labels';
 
 const INDENT = 18;
 const LINE = '#E5E5E0';
@@ -332,7 +333,7 @@ export function BddTableView({
                                         )}
                                     </span>
                                 </td>
-                                <td style={cell}>{row.element.kind}</td>
+                                <td style={cell}>{ontologyLabel(useModelStore.getState().model?.registries, row.element.kind)}</td>
                                 <td style={cell}>{typedBy}</td>
                                 <td style={{ ...cell, color: MUTED }}>{row.element.attributes.providedId ?? ''}</td>
                                 <td style={cell}>{linkList(rowLinks?.allocation)}</td>

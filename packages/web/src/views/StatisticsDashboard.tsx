@@ -3,6 +3,7 @@ import { useModelStore } from '../store/model-store';
 import { useScopedModel, useScopedValidation } from '../store/scoped-model';
 import { LAYER_COLORS, LAYER_LABELS, LAYER_ORDER } from '../constants';
 import type { MemoModelDTO, MemoElement } from '@memoarchitect/tools/browser';
+import { ontologyLabel } from '../lib/ontology-labels';
 
 // ─── Statistics Computation ─────────────────────────────────────────────────
 
@@ -247,7 +248,7 @@ export function StatisticsDashboard() {
                             {stats.topKinds.map((k, idx) => (
                                 <div key={`${k.kind}-${idx}`} className="flex items-center gap-2 text-xs">
                                     <span className="w-2 h-2 rounded-full" style={{ background: LAYER_COLORS[k.layer] || '#95A5A6' }} />
-                                    <span className="flex-1 truncate" style={{ color: '#374151' }}>{k.kind}</span>
+                                    <span className="flex-1 truncate" style={{ color: '#374151' }}>{ontologyLabel(useModelStore.getState().model?.registries, k.kind)}</span>
                                     <span className="font-medium" style={{ color: '#6B7280' }}>{k.count}</span>
                                 </div>
                             ))}
@@ -263,7 +264,7 @@ export function StatisticsDashboard() {
                             {stats.relTypes.map((r, idx) => (
                                 <div key={`${r.type}-${idx}`} className="flex items-center gap-2 text-xs">
                                     <span className="w-2 h-2 rounded-full" style={{ background: '#4A90D9' }} />
-                                    <span className="flex-1 truncate" style={{ color: '#374151' }}>{r.type}</span>
+                                    <span className="flex-1 truncate" style={{ color: '#374151' }}>{ontologyLabel(useModelStore.getState().model?.registries, r.type)}</span>
                                     <span className="font-medium" style={{ color: '#6B7280' }}>{r.count}</span>
                                 </div>
                             ))}

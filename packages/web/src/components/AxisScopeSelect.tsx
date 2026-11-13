@@ -21,6 +21,8 @@ import type { LayerSummary } from '../analysis/dsm-hierarchy';
 import { flattenKindTree, kindTree, type KindParents } from '../analysis/kind-hierarchy';
 import { LAYER_COLORS } from '../constants';
 import { COLOR, FONT, SHADOW } from '../styles/tokens';
+import { ontologyLabel } from '../lib/ontology-labels';
+import { useModelStore } from '../store/model-store';
 
 /** What an axis lists: a whole layer, or one kind within it. */
 export interface AxisScope {
@@ -200,7 +202,7 @@ export function AxisScopeSelect({
                                         onClick={() => choose({ layer: entry.layer, kind: node.kind })}
                                         style={{ ...rowStyle(value.kind === node.kind, true), paddingLeft: 26 + depth * 13 }}
                                     >
-                                        <span style={{ flex: 1, color: COLOR.secondary }}>{node.kind}</span>
+                                        <span style={{ flex: 1, color: COLOR.secondary }}>{ontologyLabel(useModelStore.getState().model?.registries, node.kind)}</span>
                                         <span style={{ color: COLOR.faint, fontSize: '11px' }}>{node.totalCount}</span>
                                     </div>
                                 ))}

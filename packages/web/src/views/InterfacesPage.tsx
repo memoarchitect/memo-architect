@@ -25,6 +25,7 @@ import { MatrixSystemSelect } from '../components/MatrixSystemSelect';
 import { explorerTaxonomy } from '../components/ExplorerPanel';
 import { ActionButton, ControlIcon } from '../components/TraceControls';
 import { COLOR, FONT } from '../styles/tokens';
+import { ontologyLabel } from '../lib/ontology-labels';
 
 const field: React.CSSProperties = {
     padding: '7px 9px', border: `1px solid ${COLOR.border}`, borderRadius: '7px', fontSize: FONT.sm, color: COLOR.primary,
@@ -74,7 +75,7 @@ function PartChooser({ title, chosen, onChoose, candidates, parents, kindOptions
                                     background: on ? COLOR.surfaceAlt : 'transparent', fontWeight: on ? 600 : 400,
                                 }}
                             >
-                                <span>{part.name}</span><span style={{ color: COLOR.faint }}>{part.kind}</span>
+                                <span>{part.name}</span><span style={{ color: COLOR.faint }}>{ontologyLabel(useModelStore.getState().model?.registries, part.kind)}</span>
                             </button>
                         );
                     })}

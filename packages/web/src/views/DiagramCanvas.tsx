@@ -132,6 +132,7 @@ import { exportDiagram, type DiagramExportFormat } from '../diagram/export-diagr
 import { selectedLayoutProviderId } from '../diagram/layout-selection';
 import { projectLayoutToNotationScene, type NotationLayoutNode, type NotationLayoutEdge } from '../diagram/notation-scene';
 import { confirmAnnotationDelete } from '../components/confirm-destructive';
+import { ontologyLabel } from '../lib/ontology-labels';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -4824,7 +4825,7 @@ function DiagramCanvasInner() {
                         }}>
                         <span style={{ fontWeight: 700 }}>BDD warning:</span>{' '}
                         a block diagram should hold one kind of element, but this one mixes{' '}
-                        {bddMixedKinds.kinds.map(k => `${k.kind} (${k.count})`).join(', ')}.
+                        {bddMixedKinds.kinds.map(k => `${ontologyLabel(useModelStore.getState().model?.registries, k.kind)} (${k.count})`).join(', ')}.
                     </div>
                 )}
                 {bddTreeIssue && !isLayouting && (

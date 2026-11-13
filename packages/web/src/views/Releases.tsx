@@ -18,6 +18,7 @@ import { variabilityView } from '../lib/variability-view';
 import { diffForRole } from '../lib/release-diff-view';
 import { featuresByMarket, regulatedDevices } from '../lib/devices-view';
 import { COLOR, FONT } from '../styles/tokens';
+import { ontologyLabel } from '../lib/ontology-labels';
 
 const STATUS_FALLBACK = ['proposed', 'draft', 'inReview', 'approved', 'released', 'deprecated', 'retired'];
 
@@ -173,9 +174,9 @@ function DiffBody({ diff: { diff, hidden } }: { diff: { diff: ModelDiffSummary; 
             {list('Added', diff.added.map(e => `${e.name} (${e.kind})`))}
             {list('Removed', diff.removed.map(e => `${e.name} (${e.kind})`))}
             {list('Changed', diff.changed.map(e => `${e.name} (${e.kind}): ${e.changes.join(', ')}`))}
-            {list('Links changed', diff.changedRels.map(r => `${r.source} ${r.type} ${r.target}: ${r.changes.join(', ')}`))}
-            {list('Links added', diff.addedRels.map(r => `${r.source} ${r.type} ${r.target}`))}
-            {list('Links removed', diff.removedRels.map(r => `${r.source} ${r.type} ${r.target}`))}
+            {list('Links changed', diff.changedRels.map(r => `${r.source} ${ontologyLabel(useModelStore.getState().model?.registries, r.type)} ${r.target}: ${r.changes.join(', ')}`))}
+            {list('Links added', diff.addedRels.map(r => `${r.source} ${ontologyLabel(useModelStore.getState().model?.registries, r.type)} ${r.target}`))}
+            {list('Links removed', diff.removedRels.map(r => `${r.source} ${ontologyLabel(useModelStore.getState().model?.registries, r.type)} ${r.target}`))}
             {hidden > 0 && <p style={{ fontSize: FONT.xs, color: COLOR.muted }}>{hidden} change(s) are outside this role's viewpoints.</p>}
         </div>
     );

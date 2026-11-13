@@ -13,6 +13,8 @@ import { TypeFilterSelect } from './TypeFilterSelect';
 import { evaluateAxis, type AxisEvaluation } from '../lib/axis-evaluation';
 import type { AxisDraft } from '../lib/matrix-views';
 import { COLOR, FONT } from '../styles/tokens';
+import { ontologyLabel } from '../lib/ontology-labels';
+import { useModelStore } from '../store/model-store';
 
 interface Props {
     label: string;
@@ -112,7 +114,7 @@ export function MatrixAxisEditor({ label, draft, onChange, editable, elementOpti
                     {evaluation.preview.map(row => (
                         <li key={row.id} title={row.id} style={{ fontSize: '11px', color: COLOR.primary, display: 'flex', gap: '6px' }}>
                             <span className="truncate" style={{ flex: 1 }}>{row.name}</span>
-                            <span style={{ color: COLOR.faint }}>{row.kind}</span>
+                            <span style={{ color: COLOR.faint }}>{ontologyLabel(useModelStore.getState().model?.registries, row.kind)}</span>
                         </li>
                     ))}
                     {evaluation.count > evaluation.preview.length && (

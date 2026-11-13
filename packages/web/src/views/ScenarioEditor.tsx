@@ -11,6 +11,7 @@ import { ExplorerCountBadge } from '../components/ExplorerCountBadge';
 import { MemoBrandMark } from '../components/MemoBrandMark';
 import type { MemoElement, MemoRelationship } from '@memoarchitect/tools/browser';
 import { relationshipsOfType } from '@memoarchitect/tools/browser';
+import { ontologyLabel } from '../lib/ontology-labels';
 
 const SCENARIO_VIEW_GROUPS = [
     { label: 'Activity diagram', types: new Set(['act']) },
@@ -627,7 +628,7 @@ export function ScenarioEditor({ explorerOnly = false }: { explorerOnly?: boolea
                                         >
                                             <span className="w-2 h-2 rounded-full" style={{ background: LAYER_COLORS[el.layer] || '#95A5A6' }} />
                                             <span style={{ color: '#374151' }}>{el.name}</span>
-                                            <span style={{ color: '#9CA3AF' }}>{el.kind}</span>
+                                            <span style={{ color: '#9CA3AF' }}>{ontologyLabel(useModelStore.getState().model?.registries, el.kind)}</span>
                                         </div>
                                     ))}
                                 </div>
@@ -648,7 +649,7 @@ export function ScenarioEditor({ explorerOnly = false }: { explorerOnly?: boolea
                                             onClick={() => openElementProfile(otherId)}
                                         >
                                             <span style={{ color: '#9CA3AF' }}>{direction}</span>
-                                            <span className="font-medium" style={{ color: '#2563EB' }}>{rel.type}</span>
+                                            <span className="font-medium" style={{ color: '#2563EB' }}>{ontologyLabel(useModelStore.getState().model?.registries, rel.type)}</span>
                                             <span style={{ color: '#374151' }}>{other?.name || otherId}</span>
                                             {other && (
                                                 <span className="ml-auto px-1.5 py-0.5 rounded text-xs"

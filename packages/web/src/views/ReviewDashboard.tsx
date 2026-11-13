@@ -4,6 +4,7 @@ import { useScopedModel } from '../store/scoped-model';
 import { LAYER_COLORS } from '../constants';
 import type { MemoModelDTO } from '@memoarchitect/tools/browser';
 import { relationshipsOfType } from '@memoarchitect/tools/browser';
+import { ontologyLabel } from '../lib/ontology-labels';
 
 // ─── First-Review Dashboard (#132) ─────────────────────────────────────────
 //
@@ -83,7 +84,7 @@ function ArchitectureSection({ model }: { model: MemoModelDTO }) {
                                         padding: '3px 0', display: 'flex', alignItems: 'center', gap: '6px',
                                     }}
                                 >
-                                    <span style={{ fontSize: '10px', color: '#9CA3AF', fontFamily: 'monospace' }}>{el.kind}</span>
+                                    <span style={{ fontSize: '10px', color: '#9CA3AF', fontFamily: 'monospace' }}>{ontologyLabel(useModelStore.getState().model?.registries, el.kind)}</span>
                                     <span style={{ fontSize: '12px', color: '#374151', fontWeight: 500 }}>{el.name}</span>
                                 </button>
                             ))}

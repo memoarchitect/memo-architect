@@ -9,6 +9,8 @@ import type { CellFocus } from '../lib/use-trace-link-editing';
 import { relationshipColor } from '../constants';
 import { COLOR, FONT } from '../styles/tokens';
 import { isRemovable } from '../lib/relationship-removable';
+import { ontologyLabel } from '../lib/ontology-labels';
+import { useModelStore } from '../store/model-store';
 
 export function TraceLinkInspector({
     model, focus, editing, busy, editable, relationships, legalOptions, rankedOptions, traceTypes,
@@ -49,7 +51,7 @@ export function TraceLinkInspector({
                     <div style={{ marginTop: '9px', display: 'flex', flexDirection: 'column', gap: '5px' }}>
                         {focusedRelationships.map(rel => (
                             <div key={rel.id} className="flex items-center justify-between gap-2" style={{ padding: '4px 6px', borderRadius: '5px', background: COLOR.surfaceAlt }}>
-                                <span style={{ color: relationshipColor(rel.type), fontWeight: 500 }}>{rel.type}</span>
+                                <span style={{ color: relationshipColor(rel.type), fontWeight: 500 }}>{ontologyLabel(useModelStore.getState().model?.registries, rel.type)}</span>
                                 <span style={{ flex: 1, color: COLOR.faint, fontSize: '10px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                     {model.elements[rel.sourceId]?.name ?? rel.sourceId} {'→'} {model.elements[rel.targetId]?.name ?? rel.targetId}
                                 </span>
@@ -92,7 +94,7 @@ export function TraceLinkInspector({
                             </div>
                         ) : legalOptions.length === 0 ? (
                             <div style={{ fontSize: '11px', color: COLOR.faint }}>
-                                The ontology allows no relationship between {focus.row.node.kind} and {focus.column.node.kind}.
+                                The ontology allows no relationship between {ontologyLabel(useModelStore.getState().model?.registries, focus.row.node.kind)} and {ontologyLabel(useModelStore.getState().model?.registries, focus.column.node.kind)}.
                             </div>
                         ) : (
                             <>

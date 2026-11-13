@@ -4,6 +4,7 @@ import { LAYER_COLORS } from '../constants';
 import { CONTRACT_LIMITS, computeModelDiff, contractChanges, type ModelDiff, type MemoModelDTO, type MemoElement, type MemoRelationship } from '@memoarchitect/tools/browser';
 
 import { ContractChanges } from '../components/ContractChanges';
+import { ontologyLabel } from '../lib/ontology-labels';
 
 // ─── Diff ────────────────────────────────────────────────────────────────────
 // The comparison itself is MEMO Tools' (`computeModelDiff`): the Releases page asks the server for the
@@ -234,7 +235,7 @@ export function ModelDiff() {
                                         <div key={rel.id} className="flex items-center gap-2 px-3 py-1.5 text-xs rounded-lg" style={{ background: '#FFFBEB', border: '1px solid #FDE68A' }}>
                                             <span style={{ color: '#F39C12' }}>{'\u25CF'}</span>
                                             <span style={{ color: '#374151' }}>{model?.elements[rel.sourceId]?.name || rel.sourceId}</span>
-                                            <span style={{ color: '#2563EB' }}>{rel.type}</span>
+                                            <span style={{ color: '#2563EB' }}>{ontologyLabel(useModelStore.getState().model?.registries, rel.type)}</span>
                                             <span style={{ color: '#374151' }}>{model?.elements[rel.targetId]?.name || rel.targetId}</span>
                                             <span style={{ color: '#9CA3AF' }}>{changes.join(', ')}</span>
                                         </div>
@@ -243,7 +244,7 @@ export function ModelDiff() {
                                         <div key={rel.id} className="flex items-center gap-2 px-3 py-1.5 text-xs rounded-lg" style={{ background: '#F0FDF4', border: '1px solid #BBF7D0' }}>
                                             <span style={{ color: '#2ECC71' }}>+</span>
                                             <span style={{ color: '#374151' }}>{model?.elements[rel.sourceId]?.name || rel.sourceId}</span>
-                                            <span style={{ color: '#2563EB' }}>{rel.type}</span>
+                                            <span style={{ color: '#2563EB' }}>{ontologyLabel(useModelStore.getState().model?.registries, rel.type)}</span>
                                             <span style={{ color: '#374151' }}>{model?.elements[rel.targetId]?.name || rel.targetId}</span>
                                         </div>
                                     ))}
@@ -251,7 +252,7 @@ export function ModelDiff() {
                                         <div key={rel.id} className="flex items-center gap-2 px-3 py-1.5 text-xs rounded-lg" style={{ background: '#FEF2F2', border: '1px solid #FECACA' }}>
                                             <span style={{ color: '#E74C3C' }}>-</span>
                                             <span style={{ color: '#374151' }}>{baselineModel?.elements[rel.sourceId]?.name || rel.sourceId}</span>
-                                            <span style={{ color: '#2563EB' }}>{rel.type}</span>
+                                            <span style={{ color: '#2563EB' }}>{ontologyLabel(useModelStore.getState().model?.registries, rel.type)}</span>
                                             <span style={{ color: '#374151' }}>{baselineModel?.elements[rel.targetId]?.name || rel.targetId}</span>
                                         </div>
                                     ))}

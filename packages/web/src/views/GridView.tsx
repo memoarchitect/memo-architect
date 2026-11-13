@@ -16,6 +16,7 @@ import {
     buildGridTable, buildGridMatrix, sortSection, GRID_CELL_MAX,
     type GridSection,
 } from './templates/grid-view';
+import { ontologyLabel } from '../lib/ontology-labels';
 
 interface GridViewProps {
     diagram: DiagramDTO;
@@ -83,7 +84,7 @@ function TableSection({ section, search }: { section: GridSection; search: strin
         <div style={{ marginBottom: 28 }}>
             <div className="flex items-center gap-2 mb-1">
                 <span style={{ width: 8, height: 8, borderRadius: 2, background: color, display: 'inline-block' }} />
-                <span style={{ fontSize: FONT.sm, fontWeight: 700, color: '#1B3A4B' }}>{section.kind}</span>
+                <span style={{ fontSize: FONT.sm, fontWeight: 700, color: '#1B3A4B' }}>{ontologyLabel(useModelStore.getState().model?.registries, section.kind)}</span>
                 <span style={{ fontSize: FONT.xs, color: '#9CA3AF' }}>{rows.length}</span>
             </div>
             <table style={{ borderCollapse: 'collapse', width: '100%', background: '#FFFFFF', borderRadius: 8, overflow: 'hidden', border: '1px solid #E5E5E0' }}>

@@ -13,6 +13,7 @@ import { FONT, COLOR } from '../styles/tokens';
 import { elementUrl } from '../router';
 import { buildPackageTree, countIn, type PackageNode } from '../lib/package-tree';
 import type { MemoElement } from '@memoarchitect/tools/browser';
+import { ontologyLabel } from '../lib/ontology-labels';
 
 interface Props {
     family: string;
@@ -85,7 +86,7 @@ export function ElementCollectionPage({ family }: Props) {
                                 fontWeight: 500,
                             }}
                         >
-                            {kind} · {count}
+                            {ontologyLabel(useModelStore.getState().model?.registries, kind)} · {count}
                         </span>
                     );
                 })}
@@ -206,7 +207,7 @@ function ElementRow({ element, zebra, onClick }: { element: MemoElement; zebra: 
                 {element.name}
             </span>
             <span style={{ fontSize: FONT.xs, color: COLOR.secondary }}>
-                {element.kind}
+                {ontologyLabel(useModelStore.getState().model?.registries, element.kind)}
             </span>
             <span style={{
                 fontSize: '11px',

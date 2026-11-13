@@ -3,6 +3,7 @@ import { useModelStore, type ActiveView } from '../store/model-store';
 import { LAYER_COLORS, DIAGRAM_TYPE_META } from '../constants';
 import { FONT } from '../styles/tokens';
 import type { MemoElement, DiagramDTO } from '@memoarchitect/tools/browser';
+import { ontologyLabel } from '../lib/ontology-labels';
 
 interface PaletteItem {
     id: string;
@@ -97,7 +98,7 @@ export function CommandPalette() {
             result.push({
                 id: `el:${el.id}`,
                 label: el.name,
-                sublabel: `${el.kind} \u00b7 ${el.layer}`,
+                sublabel: `${ontologyLabel(useModelStore.getState().model?.registries, el.kind)} \u00b7 ${el.layer}`,
                 kind: 'element',
                 color: LAYER_COLORS[el.layer],
                 action: () => {

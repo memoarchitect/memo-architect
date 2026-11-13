@@ -18,6 +18,8 @@ import {
 } from '@memoarchitect/tools/browser';
 import { REL_COLORS } from '../constants';
 import { FONT } from '../styles/tokens';
+import { ontologyLabel } from '../lib/ontology-labels';
+import { useModelStore } from '../store/model-store';
 
 /** What the canvas needs back to persist the user's choice. */
 export interface RelationshipChoice {
@@ -115,7 +117,7 @@ export function RelationshipPicker({
                     Relationship Type
                 </div>
                 <div style={{ fontSize: '10px', color: '#9CA3AF', marginBottom: 4 }}>
-                    {sourceElement.kind} → {targetElement.kind}
+                    {ontologyLabel(useModelStore.getState().model?.registries, sourceElement.kind)} → {ontologyLabel(useModelStore.getState().model?.registries, targetElement.kind)}
                 </div>
                 <input
                     ref={inputRef}
@@ -183,7 +185,7 @@ export function RelationshipPicker({
                 {filtered.length === 0 && (
                     <div className="p-3 text-center" style={{ color: '#9CA3AF', fontSize: FONT.xs }}>
                         {options.length === 0
-                            ? `The ontology defines no relationship between a ${sourceElement.kind} and a ${targetElement.kind}.`
+                            ? `The ontology defines no relationship between a ${ontologyLabel(useModelStore.getState().model?.registries, sourceElement.kind)} and a ${ontologyLabel(useModelStore.getState().model?.registries, targetElement.kind)}.`
                             : 'No matching types'}
                     </div>
                 )}

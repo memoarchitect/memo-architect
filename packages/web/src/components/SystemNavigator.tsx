@@ -6,6 +6,8 @@ import { useEffect, useMemo, useState } from 'react';
 import type { MemoModelDTO } from '@memoarchitect/tools/browser';
 import { childrenOf, navigatorRoots, type NavigatorNode } from '../lib/system-navigator';
 import { COLOR, FONT } from '../styles/tokens';
+import { ontologyLabel } from '../lib/ontology-labels';
+import { useModelStore } from '../store/model-store';
 
 export function SystemNavigator({ model, workspace, onSelect }: {
     model: MemoModelDTO;
@@ -52,7 +54,7 @@ export function SystemNavigator({ model, workspace, onSelect }: {
             {rows.map(node => (
                 <div key={node.id} className="flex items-center gap-2 px-3 py-1 cursor-pointer" onClick={() => onSelect(node.id)}>
                     <span className="flex-1 truncate">{node.name}</span>
-                    <span style={{ color: COLOR.muted, fontSize: FONT.xs }}>{node.kind}</span>
+                    <span style={{ color: COLOR.muted, fontSize: FONT.xs }}>{ontologyLabel(useModelStore.getState().model?.registries, node.kind)}</span>
                     {node.hasChildren
                         ? <button aria-label={`Open ${node.name}`} onClick={e => { e.stopPropagation(); setPath([...path, node]); }} style={{ color: COLOR.accent }}>›</button>
                         : <span style={{ width: 8 }} />}

@@ -12,6 +12,7 @@ import { LAYER_COLORS, LAYER_LABELS, LAYER_ORDER } from '../constants';
 import { FONT, COLOR } from '../styles/tokens';
 import { familyUrl } from '../router';
 import { MemoBrandMark } from '../components/MemoBrandMark';
+import { ontologyLabel } from '../lib/ontology-labels';
 
 type FamilyInfo = { count: number; kinds: Set<string>; layer: string };
 
@@ -144,7 +145,7 @@ function FamilyCard({ family, count, kinds, color, onClick }: {
                 {count}
             </div>
             <div style={{ fontSize: '11px', color: COLOR.muted, lineHeight: '1.5' }}>
-                {Array.from(kinds).slice(0, 3).join(', ')}
+                {Array.from(kinds).slice(0, 3).map(kind => ontologyLabel(useModelStore.getState().model?.registries, kind)).join(', ')}
                 {kinds.size > 3 && ` +${kinds.size - 3} more`}
             </div>
         </div>

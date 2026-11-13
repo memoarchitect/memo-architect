@@ -3,6 +3,7 @@ import { useModelStore } from '../store/model-store';
 import { useScopedModel } from '../store/scoped-model';
 import { LAYER_COLORS } from '../constants';
 import { COLOR, FONT } from '../styles/tokens';
+import { ontologyLabel } from '../lib/ontology-labels';
 
 // ─── DashboardSidebar (Phase D1) ─────────────────────────────────────────────
 //
@@ -81,7 +82,7 @@ export function DashboardSidebar() {
                                     fontSize: '10px', color: COLOR.muted, marginTop: '2px',
                                     whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
                                 }}>
-                                    <span style={{ color: layerColor, fontWeight: 600 }}>{el.kind}</span>
+                                    <span style={{ color: layerColor, fontWeight: 600 }}>{ontologyLabel(useModelStore.getState().model?.registries, el.kind)}</span>
                                     {el.shortId && (
                                         <span style={{ marginLeft: '6px', fontFamily: 'monospace', opacity: 0.7 }}>
                                             {el.shortId}

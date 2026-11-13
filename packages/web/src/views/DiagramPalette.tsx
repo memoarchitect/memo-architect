@@ -12,6 +12,7 @@ import { usageConstruct } from '../authoring';
 import { LAYER_COLORS } from '../constants';
 import { FONT } from '../styles/tokens';
 import { Icon } from './DiagramToolbarControls';
+import { ontologyLabel } from '../lib/ontology-labels';
 
 /** Drag payload the canvas' onDrop handler expects. */
 export const MEMO_KIND_MIME = 'application/memo-kind';
@@ -174,7 +175,7 @@ export function DiagramPalette({
                             <button onClick={() => toggleKind(group.kind)} className="w-full flex items-center gap-1.5 px-2 py-1"
                                 style={{ background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left' }}>
                                 <span style={{ fontSize: 10, color }}>{isCollapsed ? '▶' : '▼'}</span>
-                                <span className="truncate" style={{ fontSize: 10, color, fontWeight: 700 }}>{group.kind}</span>
+                                <span className="truncate" style={{ fontSize: 10, color, fontWeight: 700 }}>{ontologyLabel(useModelStore.getState().model?.registries, group.kind)}</span>
                                 <span style={{ fontSize: 9, color: '#9CA3AF', marginLeft: 'auto' }}>{group.elements.length}</span>
                             </button>
                             {!isCollapsed && group.elements.map(element => {

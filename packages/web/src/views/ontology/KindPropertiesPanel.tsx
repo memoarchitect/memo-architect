@@ -1,5 +1,7 @@
 import type { OntologyKindInfo, OntologyLayerInfo, OntologyPackageInfo } from '../../types/ontology';
 import { LAYER_COLORS } from '../../constants';
+import { ontologyLabel } from '../../lib/ontology-labels';
+import { useModelStore } from '../../store/model-store';
 
 interface KindPropertiesPanelProps {
     kind: OntologyKindInfo;
@@ -119,7 +121,7 @@ export function KindPropertiesPanel({ kind, layers, onKindClick, onClose, allOnt
                                     <span style={{ color: rel.direction === 'outgoing' ? '#10B981' : '#8B5CF6' }}>
                                         {rel.direction === 'outgoing' ? '→' : '←'}
                                     </span>
-                                    <span className="font-medium" style={{ color: '#374151' }}>{rel.type}</span>
+                                    <span className="font-medium" style={{ color: '#374151' }}>{ontologyLabel(useModelStore.getState().model?.registries, rel.type)}</span>
                                     <button
                                         className="hover:underline"
                                         style={{ color: '#2563EB' }}
