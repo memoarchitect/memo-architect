@@ -109,7 +109,7 @@ export function DashboardList() {
                     )}
                 </div>
 
-                <h2 style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#7A9BAA', margin: '24px 0 8px' }}>
+                <h2 style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.08em', color: '#7A9BAA', margin: '24px 0 8px' }}>
                     Viewpoints
                 </h2>
                 <div style={{ background: '#FFFFFF', border: '1px solid #E5E5E0', borderRadius: 12, overflow: 'hidden' }}>
@@ -129,7 +129,7 @@ export function DashboardList() {
                     })}
                 </div>
 
-                <h2 style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#7A9BAA', margin: '24px 0 8px' }}>
+                <h2 style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.08em', color: '#7A9BAA', margin: '24px 0 8px' }}>
                     Other dashboards
                 </h2>
                 <div style={{ background: '#FFFFFF', border: '1px solid #E5E5E0', borderRadius: 12, overflow: 'hidden' }}>

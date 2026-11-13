@@ -173,7 +173,6 @@ function SeqFragmentNodeInner({ data }: NodeProps) {
                     fontWeight: 700,
                     padding: '3px 14px 3px 8px',
                     borderRadius: '3px 0 8px 0',
-                    textTransform: 'uppercase',
                     letterSpacing: '0.05em',
                 }}
             >

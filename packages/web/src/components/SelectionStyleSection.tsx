@@ -53,7 +53,7 @@ export function SelectionStyleSection() {
                     display: 'flex', alignItems: 'center', gap: 6, width: '100%',
                     background: 'none', border: 'none', padding: 0, cursor: 'pointer',
                     fontSize: '10px', fontWeight: 700, letterSpacing: '.07em',
-                    textTransform: 'uppercase', color: COLOR.muted,
+                    color: COLOR.muted,
                 }}
             >
                 <span style={{ fontSize: 9 }}>{open ? '▾' : '▸'}</span>

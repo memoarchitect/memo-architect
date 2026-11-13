@@ -46,7 +46,7 @@ export function AiWorkspace() {
                 <span
                     style={{
                         fontSize: '10px', fontWeight: 700, color: '#065F46',
-                        textTransform: 'uppercase', letterSpacing: '0.06em',
+                        letterSpacing: '0.06em',
                         display: 'flex', alignItems: 'center', gap: '4px', marginRight: '4px',
                     }}
                 >
@@ -76,7 +76,7 @@ export function AiWorkspace() {
                 <span
                     title="Enabled by --experimental. Generated content is unreviewed and carries no design-control provenance."
                     style={{
-                        fontSize: '10px', fontWeight: 700, textTransform: 'uppercase',
+                        fontSize: '10px', fontWeight: 700,
                         letterSpacing: '0.06em', color: '#92400E', background: '#FEF3C7',
                         border: '1px solid #FDE68A', borderRadius: '4px', padding: '2px 6px',
                     }}

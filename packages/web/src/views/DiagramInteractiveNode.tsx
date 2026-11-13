@@ -115,7 +115,7 @@ export const DiagramInteractiveNode = memo(function DiagramInteractiveNode(
                 <div style={{ minWidth: 0, flex: 1 }}>
                     <div style={{
                     fontSize: '9px', fontWeight: 700, color: borderColor,
-                    textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 2,
+                    letterSpacing: '0.06em', marginBottom: 2,
                     }}>
                         {d.kind}
                     </div>

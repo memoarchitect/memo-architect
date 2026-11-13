@@ -255,7 +255,7 @@ export function GapBar() {
                                     {analysisIssues.length > 0 && (
                                         <>
                                             {totalViolations > 0 && (
-                                                <div style={{ padding: '4px 16px', fontSize: '10px', fontWeight: 600, color: COLOR.faint, background: COLOR.surfaceAlt, borderTop: `1px solid ${COLOR.border}`, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                                                <div style={{ padding: '4px 16px', fontSize: '10px', fontWeight: 600, color: COLOR.faint, background: COLOR.surfaceAlt, borderTop: `1px solid ${COLOR.border}`, letterSpacing: '0.06em' }}>
                                                     DSM Analysis
                                                 </div>
                                             )}

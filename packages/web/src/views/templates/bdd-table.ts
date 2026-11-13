@@ -28,7 +28,6 @@ export interface BddTableRow {
 export function flattenBddRows(
     tree: CompositionTree,
     expanded: ReadonlySet<string>,
-    definitions?: ReadonlyMap<string, MemoElement>,
 ): BddTableRow[] {
     const rows: BddTableRow[] = [];
     const seen = new Set<string>();
@@ -40,7 +39,7 @@ export function flattenBddRows(
         const isOpen = expanded.has(id);
         rows.push({
             id, depth, element, childCount: children.length, expanded: isOpen,
-            name: displayNameOf(element, definitions),
+            name: displayNameOf(element),
         });
         if (isOpen) for (const child of children) visit(child, depth + 1);
     };

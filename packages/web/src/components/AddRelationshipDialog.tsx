@@ -23,7 +23,8 @@ import {
 } from '@memoarchitect/tools/browser';
 import { COLOR, FONT } from '../styles/tokens';
 import { elementIdTitle } from '../lib/trace-labels';
-import { humanizeKind } from '../lib/humanize-kind';
+import { ontologyLabel } from '../lib/ontology-labels';
+import { useModelStore } from '../store/model-store';
 
 type Outcome = void | { success: boolean; error?: string };
 
@@ -111,7 +112,7 @@ export function AddRelationshipDialog({
                 .filter(option => !targetAllowed || members.some(m => targetAllowed(option.definition, option.direction, m)));
             if (options.length > 0) result.push({ kind, count: members.length, options });
         }
-        return result.sort((a, b) => humanizeKind(a.kind).localeCompare(humanizeKind(b.kind)));
+        return result.sort((a, b) => a.kind.localeCompare(b.kind));
     }, [element, model.elements, registries, offered, targetAllowed]);
 
     // Open on the kind this element already has most links to; else the first.
@@ -212,7 +213,7 @@ export function AddRelationshipDialog({
                     <div style={{ minWidth: 0, flex: 1 }}>
                         <div style={{ fontSize: 18, fontWeight: 650, color: COLOR.primary, letterSpacing: '-0.01em' }}>{title ?? 'Relationships'}</div>
                         <div className="truncate" style={{ fontSize: FONT.sm, color: COLOR.muted, marginTop: 2 }}>
-                            {element.name} · {humanizeKind(element.kind)}
+                            {element.name} · {ontologyLabel(useModelStore.getState().model?.registries, element.kind)}
                         </div>
                     </div>
                     <button onClick={onCancel} aria-label="Close"
@@ -221,7 +222,7 @@ export function AddRelationshipDialog({
 
                 {kinds.length === 0 ? (
                     <div style={{ padding: '8px 24px 24px', fontSize: FONT.sm, color: COLOR.faint }}>
-                        The ontology defines no relationship that a {humanizeKind(element.kind).toLowerCase()} can take part in.
+                        The ontology defines no relationship that a {ontologyLabel(useModelStore.getState().model?.registries, element.kind)} can take part in.
                     </div>
                 ) : (
                     <>
@@ -235,7 +236,7 @@ export function AddRelationshipDialog({
                                     style={selectStyle}
                                 >
                                     {kinds.map(k => (
-                                        <option key={k.kind} value={k.kind}>{humanizeKind(k.kind)} ({k.count})</option>
+                                        <option key={k.kind} value={k.kind}>{ontologyLabel(useModelStore.getState().model?.registries, k.kind)} ({k.count})</option>
                                     ))}
                                 </select>
                             </label>
@@ -264,7 +265,7 @@ export function AddRelationshipDialog({
                                 value={query}
                                 onChange={e => setQuery(e.target.value)}
                                 onKeyDown={onKeyDown}
-                                placeholder={`Search ${kind ? humanizeKind(kind.kind).toLowerCase() : 'elements'} by id or name`}
+                                placeholder={`Search ${kind ? ontologyLabel(useModelStore.getState().model?.registries, kind.kind) : 'elements'} by id or name`}
                                 aria-label="Search elements"
                                 autoComplete="off"
                                 style={{ ...selectStyle, background: COLOR.surfaceAlt, border: '1px solid transparent' }}

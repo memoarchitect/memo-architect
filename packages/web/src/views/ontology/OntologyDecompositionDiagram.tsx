@@ -372,7 +372,7 @@ const ContextMenu = ({ state, onClose, packages, menuRef }: ContextMenuProps) =>
                 fontSize: '12px',
             }}
         >
-            <div style={{ padding: '6px 10px', color: '#9CA3AF', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.4px' }}>
+            <div style={{ padding: '6px 10px', color: '#9CA3AF', fontSize: '10px', letterSpacing: '0.4px' }}>
                 {state.packageName}
             </div>
             <button

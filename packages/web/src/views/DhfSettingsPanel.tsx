@@ -47,7 +47,6 @@ const LABEL_STYLE: React.CSSProperties = {
     fontSize: '11px',
     fontWeight: 600,
     color: '#6B7280',
-    textTransform: 'uppercase',
     letterSpacing: '0.04em',
     display: 'block',
     marginBottom: '4px',

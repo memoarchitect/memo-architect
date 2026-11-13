@@ -158,7 +158,7 @@ export function DiagramHomePage() {
                 >
                     <h2 style={{
                         fontSize: '11px', fontWeight: 700, color: COLOR.muted,
-                        textTransform: 'uppercase', letterSpacing: '0.06em',
+                        letterSpacing: '0.06em',
                         margin: '0 0 10px 0',
                     }}>
                         {group.label}
@@ -190,7 +190,7 @@ export function DiagramHomePage() {
 }
 
 const SECTION_LABEL = {
-    fontSize: '11px', fontWeight: 700, color: COLOR.muted, textTransform: 'uppercase' as const,
+    fontSize: '11px', fontWeight: 700, color: COLOR.muted,
     letterSpacing: '0.06em', margin: '0 0 12px 0',
 };
 

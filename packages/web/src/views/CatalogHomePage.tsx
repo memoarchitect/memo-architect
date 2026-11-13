@@ -83,7 +83,7 @@ export function CatalogHomePage() {
                     <div key={layer || '__none'} style={{ marginBottom: '28px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
                             <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: layerColor, flexShrink: 0 }} />
-                            <h2 style={{ fontSize: '13px', fontWeight: 700, color: COLOR.secondary, textTransform: 'uppercase', letterSpacing: '0.04em', margin: 0 }}>
+                            <h2 style={{ fontSize: '13px', fontWeight: 700, color: COLOR.secondary, letterSpacing: '0.04em', margin: 0 }}>
                                 {layerLabel(layer)}
                             </h2>
                         </div>

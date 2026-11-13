@@ -348,7 +348,7 @@ const FRAME_HEADER_MAX_W = 640;
 /** Rough text width for sizing (kept in step with the node's font sizes). */
 const textWidth = (s: string, px = 7.2) => s.length * px + 20;
 
-/** Width of the type line, «TYPE» in 9px uppercase with letter spacing, as the node draws it. */
+/** Width of the type line, «Type» in 9px with letter spacing, as the node draws it. */
 const typeLineWidth = (kind: string): number => (kind ? textWidth(`«${kind}»`, 6.6) : 0);
 
 /**

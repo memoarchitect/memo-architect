@@ -160,7 +160,7 @@ export function KindPropertiesPanel({ kind, layers, onKindClick, onClose, allOnt
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
     return (
         <div>
-            <h4 className="text-xs font-medium mb-1.5" style={{ color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+            <h4 className="text-xs font-medium mb-1.5" style={{ color: '#9CA3AF', letterSpacing: '0.05em' }}>
                 {title}
             </h4>
             {children}

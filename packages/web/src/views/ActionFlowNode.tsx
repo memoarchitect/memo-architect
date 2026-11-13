@@ -622,8 +622,7 @@ function ActionFlowLaneLabelNodeInner({ data, positionAbsoluteX, positionAbsolut
                     fontSize: FONT.xs,
                     fontWeight: 700,
                     color: d.color,
-                    letterSpacing: '0.04em',
-                    textTransform: 'uppercase',
+                    // The lane's title is an element's name, shown exactly as the model writes it.
                     whiteSpace: 'nowrap',
                     // A label at its home position sits in the lane's reserved
                     // header strip, so it must not mask the start/control edge

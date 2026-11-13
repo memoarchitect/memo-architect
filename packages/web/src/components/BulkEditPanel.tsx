@@ -148,7 +148,7 @@ export function BulkEditPanel() {
 
             {/* ── Selection summary ── */}
             <div className="px-4 py-3 flex-shrink-0" style={sectionStyle()}>
-                <div style={{ color: COLOR.muted, fontSize: '12px', fontWeight: 600, marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                <div style={{ color: COLOR.muted, fontSize: '12px', fontWeight: 600, marginBottom: '6px', letterSpacing: '0.5px' }}>
                     Selection
                 </div>
                 <div className="flex flex-wrap gap-1">
@@ -168,7 +168,7 @@ export function BulkEditPanel() {
 
             {/* ── Common attributes ── */}
             <div className="flex-1 overflow-y-auto px-4 py-3" style={sectionStyle()}>
-                <div style={{ color: COLOR.muted, fontSize: '12px', fontWeight: 600, marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                <div style={{ color: COLOR.muted, fontSize: '12px', fontWeight: 600, marginBottom: '8px', letterSpacing: '0.5px' }}>
                     Common Attributes
                     {commonKeys.length > 0 && <span style={{ color: COLOR.faint, fontWeight: 400, marginLeft: '4px' }}>({commonKeys.length})</span>}
                 </div>

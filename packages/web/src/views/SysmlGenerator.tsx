@@ -140,7 +140,7 @@ export function SysmlGenerator() {
                 {/* Examples */}
                 {!result && !loading && (
                     <div style={{ marginBottom: '16px' }}>
-                        <div style={{ fontSize: '11px', fontWeight: 600, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '8px' }}>
+                        <div style={{ fontSize: '11px', fontWeight: 600, color: '#9CA3AF', letterSpacing: '0.06em', marginBottom: '8px' }}>
                             Examples
                         </div>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
@@ -191,7 +191,7 @@ export function SysmlGenerator() {
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                         {/* Explanation */}
                         <div style={{ background: '#F0FDF9', border: '1px solid #A7F3D0', borderRadius: '8px', padding: '12px' }}>
-                            <div style={{ fontSize: '11px', fontWeight: 600, color: '#065F46', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                            <div style={{ fontSize: '11px', fontWeight: 600, color: '#065F46', marginBottom: '4px', letterSpacing: '0.06em' }}>
                                 Explanation
                             </div>
                             <p style={{ fontSize: '13px', color: '#1B3A4B', margin: 0, lineHeight: '1.6' }}>{result.explanation}</p>

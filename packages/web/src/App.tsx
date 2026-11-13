@@ -22,6 +22,7 @@ import { StaleSceneNotice } from './components/StaleSceneNotice';
 import { CatalogHomePage } from './views/CatalogHomePage';
 import { DiagramHomePage } from './views/DiagramHomePage';
 import { ElementCollectionPage } from './views/ElementCollectionPage';
+import { ontologyLabel } from './lib/ontology-labels';
 
 // ─── Lazy-loaded views (code splitting for large deps like ReactFlow/ELK) ──
 const DiagramEditor = lazy(() => import('./views/DiagramEditor').then(m => ({ default: m.DiagramEditor })));
@@ -263,7 +264,7 @@ function WelcomeCanvas() {
             {/* Quick Browse */}
             {quickElements.length > 0 && (
                 <div style={{ width: '100%', maxWidth: '680px' }}>
-                    <div style={{ fontSize: '11px', fontWeight: 600, color: '#7A9BAA', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '10px' }}>
+                    <div style={{ fontSize: '11px', fontWeight: 600, color: '#7A9BAA', letterSpacing: '0.08em', marginBottom: '10px' }}>
                         Quick Browse
                     </div>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '8px' }}>
@@ -287,8 +288,8 @@ function WelcomeCanvas() {
                                     e.currentTarget.style.transform = 'none';
                                 }}
                             >
-                                <div style={{ fontSize: '10px', color: '#7A9BAA', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '3px' }}>
-                                    {el.kind}
+                                <div style={{ fontSize: '10px', color: '#7A9BAA', fontWeight: 600, letterSpacing: '0.05em', marginBottom: '3px' }}>
+                                    {ontologyLabel(useModelStore.getState().model?.registries, el.kind)}
                                 </div>
                                 <div style={{ fontSize: '13px', color: '#1B3A4B', fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                                     {el.name}

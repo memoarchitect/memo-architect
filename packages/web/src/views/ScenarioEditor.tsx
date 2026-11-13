@@ -420,7 +420,7 @@ export function ScenarioEditor({ explorerOnly = false }: { explorerOnly?: boolea
                         return (
                             <div key={useCaseKey} className="mb-0.5">
                                 {firstInGroup && group.label && (
-                                    <div className="px-3 pt-2 pb-1 font-semibold uppercase" style={{ color: COLOR.muted, fontSize: FONT.xs, letterSpacing: '0.04em' }}>
+                                    <div className="px-3 pt-2 pb-1 font-semibold" style={{ color: COLOR.muted, fontSize: FONT.xs, letterSpacing: '0.04em' }}>
                                         {group.label}
                                     </div>
                                 )}
@@ -489,7 +489,7 @@ export function ScenarioEditor({ explorerOnly = false }: { explorerOnly?: boolea
                         {/* Steps */}
                         <div className="mb-4">
                             <div className="flex items-center gap-2 mb-2">
-                                <h3 className="text-xs font-semibold uppercase tracking-wider" style={{ color: '#6B7280' }}>Steps</h3>
+                                <h3 className="text-xs font-semibold tracking-wider" style={{ color: '#6B7280' }}>Steps</h3>
                                 {!editingSteps && (
                                     <button
                                         onClick={startEditing}
@@ -583,7 +583,7 @@ export function ScenarioEditor({ explorerOnly = false }: { explorerOnly?: boolea
                         {/* Linked Elements */}
                         <div className="mb-4">
                             <div className="flex items-center gap-2 mb-2">
-                                <h3 className="text-xs font-semibold uppercase tracking-wider" style={{ color: '#6B7280' }}>
+                                <h3 className="text-xs font-semibold tracking-wider" style={{ color: '#6B7280' }}>
                                     Linked Elements ({rels.length})
                                 </h3>
                                 <button

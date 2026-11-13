@@ -351,7 +351,6 @@ body .react-flow {
     font-size: 10px;
     font-weight: 700;
     letter-spacing: 0.06em;
-    text-transform: uppercase;
     color: #8CA0B1;
 }
 
@@ -424,7 +423,7 @@ body .react-flow {
 .memo-ibd-spacing { display: grid; gap: 4px; }
 .memo-ibd-spacing__steps { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
 .memo-ibd-strip, .memo-diagram-strip { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
-.memo-ibd-strip > .memo-diagram-tools__caption, .memo-diagram-strip > .memo-diagram-tools__caption { font-size: 10px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: #8CA0B1; margin-left: 6px; }
+.memo-ibd-strip > .memo-diagram-tools__caption, .memo-diagram-strip > .memo-diagram-tools__caption { font-size: 10px; font-weight: 700; letter-spacing: 0.06em; color: #8CA0B1; margin-left: 6px; }
 .memo-diagram-strip > .memo-diagram-tools__caption:first-child { margin-left: 0; }
 /* The top placement is the same toolbar laid out along a row: tooltips drop below, and the source slot with nothing in it leaves no caption. */
 .memo-diagram-tools--top [title]::after { left: 50%; top: calc(100% + 6px); transform: translateX(-50%); }

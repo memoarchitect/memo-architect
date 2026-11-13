@@ -162,7 +162,7 @@ function DomainGroupRow({
                     <path d="M4 6L8 10L12 6" stroke={group.color.text} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
                 <span
-                    style={{ fontSize: '10px', fontWeight: 700, color: group.color.text, textTransform: 'uppercase', letterSpacing: '0.06em', flex: 1 }}
+                    style={{ fontSize: '10px', fontWeight: 700, color: group.color.text, letterSpacing: '0.06em', flex: 1 }}
                 >
                     {group.label}
                 </span>
@@ -245,7 +245,7 @@ export function RelationshipsSection({ ontology, activeTypes, onActiveTypesChang
         <div className="mt-4">
             {/* Section header */}
             <div className="flex items-center gap-2 mb-3">
-                <span style={{ fontSize: '12px', fontWeight: 600, color: '#374151', letterSpacing: '0.04em', textTransform: 'uppercase' }}>
+                <span style={{ fontSize: '12px', fontWeight: 600, color: '#374151', letterSpacing: '0.04em' }}>
                     Relationships
                 </span>
                 <span style={{ fontSize: '11px', color: '#9CA3AF' }}>
@@ -303,7 +303,7 @@ export function RelationshipsSection({ ontology, activeTypes, onActiveTypesChang
                 if (uncovered.length === 0) return null;
                 return (
                     <div>
-                        <div style={{ fontSize: '10px', fontWeight: 700, color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: '5px' }}>
+                        <div style={{ fontSize: '10px', fontWeight: 700, color: '#6B7280', letterSpacing: '0.06em', marginBottom: '5px' }}>
                             Other
                         </div>
                         <div className="flex flex-wrap gap-1.5">

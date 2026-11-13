@@ -313,7 +313,7 @@ function DocCard({ doc, status, standardsGap = 0, onClick }: {
         >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
                 <span style={{ fontSize: '11px', fontWeight: 600, color: '#6B7280', fontFamily: 'monospace' }}>
-                    {doc.id.toUpperCase()}
+                    {doc.id}
                 </span>
                 <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
                     {standardsGap > 0 && (
@@ -381,7 +381,7 @@ function DrilldownView({ doc, status, model, validation, onBack }: {
                     {doc.title}
                 </h3>
                 <p style={{ color: '#6B7280', fontSize: '12px', marginTop: '4px' }}>
-                    {doc.id.toUpperCase()} | {doc.standards.join(', ')}
+                    {doc.id} | {doc.standards.join(', ')}
                 </p>
             </div>
 

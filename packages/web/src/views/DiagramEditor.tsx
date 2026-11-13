@@ -46,7 +46,7 @@ function serializeDiagramToSysML(diagram: DiagramDTO, elements: Record<string, M
 
     return [
         `package '${diagram.name}' {`,
-        `    // Diagram: ${diagram.diagramType.toUpperCase()} | Viewpoint: ${diagram.viewpointId}`,
+        `    // Diagram: ${diagram.diagramType} | Viewpoint: ${diagram.viewpointId}`,
         members || '    // No elements selected',
         `}`,
     ].join('\n');

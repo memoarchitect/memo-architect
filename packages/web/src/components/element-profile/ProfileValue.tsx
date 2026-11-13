@@ -63,8 +63,7 @@ export function ProfileSection({
                     fontWeight: page ? 700 : 'bold',
                     color: page ? COLOR.primary : '#6B7280',
                     letterSpacing: page ? 0 : '0.05em',
-                    textTransform: page ? 'none' : 'uppercase',
-                }}>
+                                    }}>
                     {title}
                 </h3>
                 {typeof count === 'number' && (

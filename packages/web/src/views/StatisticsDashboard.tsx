@@ -184,7 +184,7 @@ export function StatisticsDashboard() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {/* Layer distribution */}
                     <div className="p-4 rounded-lg" style={{ background: '#FFFFFF', border: '1px solid #E5E5E0' }}>
-                        <h3 className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: '#6B7280' }}>
+                        <h3 className="text-xs font-semibold tracking-wider mb-3" style={{ color: '#6B7280' }}>
                             Elements by Layer
                         </h3>
                         <div className="space-y-2">
@@ -209,7 +209,7 @@ export function StatisticsDashboard() {
 
                     {/* Coverage heatmap */}
                     <div className="p-4 rounded-lg" style={{ background: '#FFFFFF', border: '1px solid #E5E5E0' }}>
-                        <h3 className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: '#6B7280' }}>
+                        <h3 className="text-xs font-semibold tracking-wider mb-3" style={{ color: '#6B7280' }}>
                             Layer Coverage
                         </h3>
                         <div className="grid grid-cols-3 gap-2">
@@ -240,7 +240,7 @@ export function StatisticsDashboard() {
 
                     {/* Top kinds */}
                     <div className="p-4 rounded-lg" style={{ background: '#FFFFFF', border: '1px solid #E5E5E0' }}>
-                        <h3 className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: '#6B7280' }}>
+                        <h3 className="text-xs font-semibold tracking-wider mb-3" style={{ color: '#6B7280' }}>
                             Top Element Types
                         </h3>
                         <div className="space-y-1">
@@ -256,7 +256,7 @@ export function StatisticsDashboard() {
 
                     {/* Relationship types */}
                     <div className="p-4 rounded-lg" style={{ background: '#FFFFFF', border: '1px solid #E5E5E0' }}>
-                        <h3 className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: '#6B7280' }}>
+                        <h3 className="text-xs font-semibold tracking-wider mb-3" style={{ color: '#6B7280' }}>
                             Relationship Types
                         </h3>
                         <div className="space-y-1">
@@ -277,7 +277,7 @@ export function StatisticsDashboard() {
                 {/* Ontology usage */}
                 {completeness && (
                     <div className="mt-4 p-4 rounded-lg" style={{ background: '#FFFFFF', border: '1px solid #E5E5E0' }}>
-                        <h3 className="text-xs font-semibold uppercase tracking-wider mb-3" style={{ color: '#6B7280' }}>
+                        <h3 className="text-xs font-semibold tracking-wider mb-3" style={{ color: '#6B7280' }}>
                             Completeness by Layer
                         </h3>
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-2">

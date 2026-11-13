@@ -402,7 +402,7 @@ function CategoryRow({ label, color, detail, selected, onClick }: {
 function Section({ title, hint, children }: { title: string; hint: string; children: React.ReactNode }) {
     return (
         <div>
-            <div style={{ fontSize: '10px', fontWeight: 700, color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '2px' }}>
+            <div style={{ fontSize: '10px', fontWeight: 700, color: '#6B7280', letterSpacing: '0.05em', marginBottom: '2px' }}>
                 {title} <span style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0, color: '#9CA3AF' }}>— {hint}</span>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>{children}</div>

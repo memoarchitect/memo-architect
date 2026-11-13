@@ -46,7 +46,7 @@ export function ScopeBadge({ scope }: { scope: ResolvedScope }) {
     const c = SCOPE_BADGE[scope];
     return (
         <span title={SCOPE_HINT[scope]} style={{
-            fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em',
+            fontSize: '10px', fontWeight: 700, letterSpacing: '0.06em',
             padding: '2px 8px', borderRadius: '999px', background: c.bg, color: c.fg, whiteSpace: 'nowrap',
         }}>
             {SCOPE_LABEL[scope]}

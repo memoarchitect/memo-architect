@@ -13,10 +13,10 @@ import { useModelStore } from '../store/model-store';
 import { describeFavorite, favoriteMembers, type FavoriteEntry } from '../lib/favorites';
 import { elementIdTitle } from '../lib/trace-labels';
 import { viewpointDashboardId } from '../dashboard/dashboards';
-import { kindFolderLabel } from './ExplorerPanel';
+import { ontologyLabel } from '../lib/ontology-labels';
 import { FavoriteToggle } from './FavoriteToggle';
 
-const kindLabel = (kind: string) => kindFolderLabel(kind, 1);
+const kindLabelIn = (model: MemoModelDTO) => (kind: string) => ontologyLabel(model.registries, kind);
 
 const box = { background: 'rgba(255,255,255,0.75)', border: '1px solid #E2E8F0', borderRadius: 10, marginBottom: 16 } as const;
 const empty = { fontSize: 12, color: '#6B7280', margin: '0 0 16px' } as const;
@@ -84,7 +84,7 @@ function FavoriteLine({ model, entry }: { model: MemoModelDTO; entry: FavoriteEn
                 const { id, title } = elementIdTitle(element, element.id);
                 return (
                     <div key={element.id} style={{ paddingLeft: 20 }}>
-                        <Line id={id} title={title} what={kindLabel(element.kind)} onOpen={() => open.element(element.id)} />
+                        <Line id={id} title={title} what={kindLabelIn(model)(element.kind)} onOpen={() => open.element(element.id)} />
                     </div>
                 );
             })}
@@ -102,7 +102,7 @@ export function FavoritesWidget() {
     return (
         <div className="memo-widget" style={box}>
             {favorites.map((favorite: FavoriteDTO) => (
-                <FavoriteLine key={`${favorite.type}|${favorite.ref}|${favorite.packageName ?? ''}`} model={model} entry={describeFavorite(model, favorite, kindLabel)} />
+                <FavoriteLine key={`${favorite.type}|${favorite.ref}|${favorite.packageName ?? ''}`} model={model} entry={describeFavorite(model, favorite, kindLabelIn(model))} />
             ))}
         </div>
     );
@@ -117,7 +117,7 @@ export function RecentViewsWidget() {
     return (
         <div className="memo-widget" style={box}>
             {recentViews.map(ref => {
-                const entry = describeFavorite(model, { type: 'view', ref }, kindLabel);
+                const entry = describeFavorite(model, { type: 'view', ref }, kindLabelIn(model));
                 return <Line key={ref} id={entry.id} title={entry.title} what={entry.what} missing={entry.missing}
                     onOpen={entry.missing ? undefined : () => open.view(model, ref)} trailing={entry.missing ? undefined : <FavoriteToggle favorite={{ type: 'view', ref }} />} />;
             })}
@@ -134,7 +134,7 @@ export function RecentElementsWidget() {
     return (
         <div className="memo-widget" style={box}>
             {recentElements.map(ref => {
-                const entry = describeFavorite(model, { type: 'element', ref }, kindLabel);
+                const entry = describeFavorite(model, { type: 'element', ref }, kindLabelIn(model));
                 return <Line key={ref} id={entry.id} title={entry.title} what={entry.what} missing={entry.missing}
                     onOpen={entry.missing ? undefined : () => open.element(ref)} trailing={entry.missing ? undefined : <FavoriteToggle favorite={{ type: 'element', ref }} />} />;
             })}

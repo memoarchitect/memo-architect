@@ -30,6 +30,7 @@ import { AnnotationPanel } from '../components/UnifiedPropertiesPanel';
 import { ElementUsage } from '../components/element-profile/ElementUsage';
 import { fieldEditability } from '../components/element-profile/editability';
 import type { MemoElement, MemoRelationship } from '@memoarchitect/tools/browser';
+import { ontologyLabel } from '../lib/ontology-labels';
 
 const DENSITY = 'page' as const;
 
@@ -146,7 +147,7 @@ function ScenarioFlowchart({ element, layerColor, onSave }: {
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: 4 }}>
                 <div style={{
                     padding: '6px 20px', borderRadius: '999px', fontSize: FONT.xs, fontWeight: 700,
-                    background: layerColor, color: '#fff', letterSpacing: '0.06em', textTransform: 'uppercase',
+                    background: layerColor, color: '#fff', letterSpacing: '0.06em',
                 }}>
                     Start
                 </div>
@@ -179,7 +180,7 @@ function ScenarioFlowchart({ element, layerColor, onSave }: {
                 <div style={{
                     padding: '6px 20px', borderRadius: '999px', fontSize: FONT.xs, fontWeight: 700,
                     background: layerColor + '20', color: layerColor, letterSpacing: '0.06em',
-                    textTransform: 'uppercase', border: `1px solid ${layerColor}40`,
+                    border: `1px solid ${layerColor}40`,
                 }}>
                     End
                 </div>
@@ -291,7 +292,7 @@ export function ElementDetailView({ elementId: requestedElementId }: { elementId
                             className="px-2 py-0.5 rounded-md font-semibold"
                             style={{ background: layerColor + '18', color: layerColor, fontSize: FONT.xs }}
                         >
-                            {element.kind}
+                            {ontologyLabel(useModelStore.getState().model?.registries, element.kind)}
                         </span>
                         <span
                             className="px-2 py-0.5 rounded-md"
@@ -301,7 +302,7 @@ export function ElementDetailView({ elementId: requestedElementId }: { elementId
                         </span>
                         {groupLabel && (
                             <span style={{ color: COLOR.faint, fontSize: FONT.xs }}>
-                                {groupLabel.replace(/[_-]/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}
+                                {groupLabel}
                             </span>
                         )}
                         {elementRef(element) && (

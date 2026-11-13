@@ -15,11 +15,11 @@ import {
 } from '@memoarchitect/tools/browser';
 import { useModelStore, getDiagram, getRegistries } from '../../store/model-store';
 import type { PendingRelationship } from '../../store/model-store';
+import { ontologyLabel } from '../../lib/ontology-labels';
 import { COLOR, FONT } from '../../styles/tokens';
 import { AddRelationshipDialog, type ExistingLink } from '../AddRelationshipDialog';
 import { ProfileSection } from './ProfileValue';
 import { elementIdTitle } from '../../lib/trace-labels';
-import { humanizeKind } from '../../lib/humanize-kind';
 import { densityTokens, type Density } from './density';
 import { isRemovable } from '../../lib/relationship-removable';
 
@@ -236,7 +236,7 @@ function Category({ kind, items, model, registries, onNavigate }: {
     return (
         <div data-testid={`links-${kind}`} style={{ marginTop: 12 }}>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, marginBottom: 4 }}>
-                <span style={{ fontSize: FONT.xs, fontWeight: 600, color: COLOR.muted }}>{humanizeKind(kind)}</span>
+                <span style={{ fontSize: FONT.xs, fontWeight: 600, color: COLOR.muted }}>{ontologyLabel(useModelStore.getState().model?.registries, kind)}</span>
                 <span style={{ fontSize: FONT.xs, color: COLOR.faint }}>{items.length}</span>
             </div>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 12px' }}>

@@ -1147,7 +1147,7 @@ export async function computeDecompositionLayout(
             direction: direction(id),
             onToggleExpand: () => options.callbacks.onToggleExpand(id),
             onToggleDirection: () => options.callbacks.onToggleDirection(id),
-            showDirectionButton: true, label: displayNameOf(el, definitions),
+            showDirectionButton: true, label: displayNameOf(el),
         };
         nodes.push({
             id, type: 'decompositionNode',
@@ -1308,7 +1308,7 @@ export function computeContainmentLayout(
             onToggleExpand: () => options.callbacks.onToggleExpand(nodeId),
             onToggleDirection: () => {},
             showDirectionButton: false, depthBgColor,
-            isContainer: hasChildren, label: displayNameOf(el, definitions),
+            isContainer: hasChildren, label: displayNameOf(el),
         };
 
         allNodes.push({

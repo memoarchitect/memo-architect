@@ -160,7 +160,7 @@ function CoverageTile({ layer, label, count, color, onClick }: {
             }}
         >
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-                <span style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: hasContent ? color : '#9CA3AF' }}>
+                <span style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.06em', color: hasContent ? color : '#9CA3AF' }}>
                     {label}
                 </span>
                 <span style={{
@@ -253,7 +253,7 @@ function useDashboardData() {
 }
 
 const SECTION_HEADING: React.CSSProperties = {
-    fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#7A9BAA', margin: '0 0 12px 0',
+    fontSize: '11px', fontWeight: 700, letterSpacing: '0.08em', color: '#7A9BAA', margin: '0 0 12px 0',
 };
 
 // ─── Widgets ─────────────────────────────────────────────────────────────────

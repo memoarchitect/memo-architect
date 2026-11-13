@@ -35,7 +35,7 @@ export function DashboardSidebar() {
         <div className="flex flex-col flex-1 overflow-hidden">
             <div className="px-3 py-3" style={{ borderBottom: `1px solid ${COLOR.border}` }}>
                 <div style={{
-                    fontSize: '10px', fontWeight: 700, textTransform: 'uppercase',
+                    fontSize: '10px', fontWeight: 700,
                     letterSpacing: '0.08em', color: COLOR.muted, marginBottom: '2px',
                 }}>
                     {heading}

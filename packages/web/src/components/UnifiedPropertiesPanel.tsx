@@ -15,6 +15,7 @@ import { attributeEditability, isEditable } from './element-profile/editability'
 import { QuantityHint } from './element-profile/QuantityHint';
 import type { Density } from './element-profile/density';
 import { relationshipsOfType } from '@memoarchitect/tools/browser';
+import { ontologyLabel } from '../lib/ontology-labels';
 
 /** This panel is the compact rendering of the same profile as ElementDetailView. */
 const PANEL_DENSITY: Density = 'panel';
@@ -35,7 +36,7 @@ function Section({ title, count, defaultOpen = true, actions, children }: {
                 className="flex items-center gap-2 px-3 py-2 cursor-pointer transition-colors hover:bg-gray-50"
                 onClick={() => setOpen(o => !o)}
             >
-                <span className="font-bold flex-1 text-[10px] uppercase tracking-wider" style={{ color: '#6B7280' }}>{title}</span>
+                <span className="font-bold flex-1 text-[10px] tracking-wider" style={{ color: '#6B7280' }}>{title}</span>
                 {actions && <span onClick={e => e.stopPropagation()}>{actions}</span>}
                 {typeof count === 'number' && <span className="px-1.5 py-0.5 rounded-md font-medium text-[10px]" style={{ background: '#F3F4F6', color: '#6B7280' }}>{count}</span>}
                 <span style={{ color: '#D1D5DB', fontSize: 14 }}>{open ? '▾' : '▸'}</span>
@@ -672,7 +673,7 @@ export function AnnotationPanel({ subject }: { subject: MemoElement }) {
         const color = type === 'rationale' ? '#7C3AED' : type === 'note' ? '#2563EB' : '#2DD4A8';
         return <div key={annotation.id} style={{ marginLeft: reply ? 14 : 0, borderLeft: `2px solid ${reply ? '#D1D5DB' : color}`, padding: '5px 7px', marginBottom: 6 }}>
             <div className="flex items-center gap-1 text-xs">
-                <span style={{ color, fontSize: 9, fontWeight: 700, textTransform: 'uppercase' }}>{type}</span>
+                <span style={{ color, fontSize: 9, fontWeight: 700 }}>{type}</span>
                 <strong style={{ color: '#374151' }}>{annotation.attributes.author || 'Unknown'}</strong>
                 <span style={{ color: '#9CA3AF' }}>{annotation.attributes.createdAt || ''}</span>
             </div>
@@ -774,8 +775,8 @@ function RelationshipProperties() {
                 <div className="text-[15px] font-bold" style={{ color: '#111827' }}>Connection</div>
                 <div className="mt-2 text-xs font-medium" style={{ color: '#4B5563' }}>{source?.name ?? relationship.sourceId} → {target?.name ?? relationship.targetId}</div>
                 <div className="mt-3 flex gap-2">
-                    <span className="px-2 py-1 rounded-md text-[11px] font-bold uppercase tracking-wider" style={{ background: categoryColor + '15', color: categoryColor }}>{category} flow</span>
-                    <span className="px-2 py-1 rounded-md text-[11px] font-bold uppercase tracking-wider" style={{ background: '#F3F4F6', color: '#4B5563' }}>{relationship.type}</span>
+                    <span className="px-2 py-1 rounded-md text-[11px] font-bold tracking-wider" style={{ background: categoryColor + '15', color: categoryColor }}>{category} flow</span>
+                    <span className="px-2 py-1 rounded-md text-[11px] font-bold tracking-wider" style={{ background: '#F3F4F6', color: '#4B5563' }}>{ontologyLabel(useModelStore.getState().model?.registries, relationship.type)}</span>
                 </div>
             </div>
             <div className="flex-1 overflow-y-auto pt-2 pb-4 bg-gray-50/50">
@@ -832,7 +833,7 @@ export function UnifiedPropertiesPanel() {
     return (
         <div className="flex flex-col overflow-hidden flex-shrink-0 bg-gray-50/30" style={{ width: '320px', borderLeft: '1px solid #E5E7EB', boxShadow: '-4px 0 16px rgba(0,0,0,0.02)' }}>
             <div className="flex items-center justify-between px-4 py-3 bg-white border-b border-gray-200 flex-shrink-0 z-10 shadow-sm">
-                <span className="text-[11px] uppercase tracking-wider font-bold text-gray-800">Properties</span>
+                <span className="text-[11px] tracking-wider font-bold text-gray-800">Properties</span>
                 <button
                     onClick={togglePropertiesPanel}
                     className="flex items-center justify-center transition-colors"

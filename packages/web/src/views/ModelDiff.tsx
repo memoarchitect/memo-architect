@@ -163,7 +163,7 @@ export function ModelDiff() {
                         {/* Added elements */}
                         {(diffFilter === 'all' || diffFilter === 'added') && diff.added.length > 0 && (
                             <div className="mb-4">
-                                <h3 className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: '#2ECC71' }}>
+                                <h3 className="text-xs font-semibold tracking-wider mb-2" style={{ color: '#2ECC71' }}>
                                     Added ({diff.added.length})
                                 </h3>
                                 <div className="space-y-1">
@@ -177,7 +177,7 @@ export function ModelDiff() {
                         {/* Removed elements */}
                         {(diffFilter === 'all' || diffFilter === 'removed') && diff.removed.length > 0 && (
                             <div className="mb-4">
-                                <h3 className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: '#E74C3C' }}>
+                                <h3 className="text-xs font-semibold tracking-wider mb-2" style={{ color: '#E74C3C' }}>
                                     Removed ({diff.removed.length})
                                 </h3>
                                 <div className="space-y-1">
@@ -191,7 +191,7 @@ export function ModelDiff() {
                         {/* Changed elements */}
                         {(diffFilter === 'all' || diffFilter === 'changed') && diff.changed.length > 0 && (
                             <div className="mb-4">
-                                <h3 className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: '#F39C12' }}>
+                                <h3 className="text-xs font-semibold tracking-wider mb-2" style={{ color: '#F39C12' }}>
                                     Changed ({diff.changed.length})
                                 </h3>
                                 <div className="space-y-1">
@@ -226,7 +226,7 @@ export function ModelDiff() {
                         {/* Relationship changes */}
                         {(diff.addedRels.length > 0 || diff.removedRels.length > 0 || diff.changedRels.length > 0) && (
                             <div className="mb-4">
-                                <h3 className="text-xs font-semibold uppercase tracking-wider mb-2" style={{ color: '#6B7280' }}>
+                                <h3 className="text-xs font-semibold tracking-wider mb-2" style={{ color: '#6B7280' }}>
                                     Relationship Changes
                                 </h3>
                                 <div className="space-y-1">

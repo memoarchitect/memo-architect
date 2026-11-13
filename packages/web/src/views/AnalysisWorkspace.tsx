@@ -260,7 +260,7 @@ export function AnalysisWorkspace() {
                 </div>
                 <button onClick={() => addNotebook()} style={{ ...buttonStyle, width: '100%', marginBottom: 12 }}>+ New notebook</button>
                 <div style={{ borderTop: '1px solid #E3ECEF', margin: '4px 0 10px', paddingTop: 12 }}>
-                    <div style={{ color: '#71889A', fontSize: 10, fontWeight: 700, letterSpacing: '.07em', textTransform: 'uppercase', margin: '0 0 7px 10px' }}>Starter examples</div>
+                    <div style={{ color: '#71889A', fontSize: 10, fontWeight: 700, letterSpacing: '.07em', margin: '0 0 7px 10px' }}>Starter examples</div>
                     {STARTERS.map(starter => (
                         <button key={starter.template} onClick={() => addNotebook(starter.template, starter.title, false)} title={starter.description} style={{ display: 'block', width: '100%', textAlign: 'left', border: 'none', borderRadius: 6, padding: '8px 10px', cursor: 'pointer', background: 'transparent', color: '#244D63', fontSize: 12 }}>
                             <span style={{ color: '#2D8D70', marginRight: 7 }}>{starter.icon}</span>{starter.title}
@@ -279,7 +279,7 @@ export function AnalysisWorkspace() {
                 <div style={{ maxWidth: 960 }}>
                     <div style={{ display: 'flex', alignItems: 'start', justifyContent: 'space-between', gap: 20, marginBottom: 26 }}>
                         <div>
-                            <div style={{ color: '#2D8D70', fontSize: 12, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase' }}>Model analysis</div>
+                            <div style={{ color: '#2D8D70', fontSize: 12, fontWeight: 700, letterSpacing: '.08em' }}>Model analysis</div>
                             <h1 style={{ color: '#173B4E', fontSize: 28, margin: '6px 0 8px' }}>Analysis</h1>
                             <p style={{ color: '#587487', margin: 0, lineHeight: 1.55, maxWidth: 620 }}>Create live Jupyter notebooks that query the currently loaded MEMO model with Python. The SysML v2 model API template reads the model its selected compiler builds.</p>
                         </div>
@@ -291,11 +291,11 @@ export function AnalysisWorkspace() {
                             ['Elements', Object.keys(model?.elements ?? {}).length],
                             ['Relationships', model?.relationships?.length ?? 0],
                             ['Kernel', 'Python 3.12'],
-                        ].map(([label, value]) => <div key={String(label)} style={{ background: '#FFF', border: '1px solid #D9E6E9', borderRadius: 10, padding: '15px 17px' }}><div style={{ color: '#7892A1', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.06em' }}>{label}</div><div style={{ color: '#173B4E', fontSize: 20, fontWeight: 700, marginTop: 5 }}>{value}</div></div>)}
+                        ].map(([label, value]) => <div key={String(label)} style={{ background: '#FFF', border: '1px solid #D9E6E9', borderRadius: 10, padding: '15px 17px' }}><div style={{ color: '#7892A1', fontSize: 11, fontWeight: 700, letterSpacing: '.06em' }}>{label}</div><div style={{ color: '#173B4E', fontSize: 20, fontWeight: 700, marginTop: 5 }}>{value}</div></div>)}
                     </section>
 
                     <section style={{ marginBottom: 24 }}>
-                        <div style={{ color: '#587487', fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 9 }}>Starter notebooks</div>
+                        <div style={{ color: '#587487', fontSize: 12, fontWeight: 700, letterSpacing: '.06em', marginBottom: 9 }}>Starter notebooks</div>
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))', gap: 12 }}>
                             {STARTERS.map(starter => <button key={starter.template} onClick={() => addNotebook(starter.template, starter.title, false)} style={{ textAlign: 'left', background: '#FFF', border: '1px solid #D9E6E9', borderRadius: 10, padding: 16, cursor: 'pointer', color: '#173B4E' }}>
                                 <div style={{ fontSize: 20, color: '#2D8D70', marginBottom: 8 }}>{starter.icon}</div>

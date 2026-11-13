@@ -186,7 +186,6 @@ function KindCard({ kind, layerColor, domainBg, selected, onClick, onContextMenu
                         fontFamily: 'monospace',
                         color: layerColor,
                         opacity: 0.8,
-                        textTransform: 'uppercase',
                         letterSpacing: '0.02em',
                         lineHeight: 1,
                     }}
@@ -349,7 +348,6 @@ export function LayerGrid({ layers, selectedKind, onKindClick, activeLayerId, fl
                             fontWeight: 700,
                             color: palette.text,
                             letterSpacing: '0.08em',
-                            textTransform: 'uppercase',
                             minWidth: '32px',
                             textAlign: 'center',
                         }}

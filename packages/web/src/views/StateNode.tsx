@@ -127,7 +127,7 @@ function StateNodeInner({ data, selected }: NodeProps) {
                 <span style={{ fontSize: FONT.xs, fontWeight: 600, color: '#374151', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                     {d.label}
                 </span>
-                <span style={{ fontSize: '8px', fontWeight: 700, color: d.color, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                <span style={{ fontSize: '8px', fontWeight: 700, color: d.color, letterSpacing: '0.05em' }}>
                     {d.kind}
                 </span>
             </div>
@@ -167,7 +167,7 @@ function StateNodeInner({ data, selected }: NodeProps) {
                     <span style={{ fontSize: FONT.md, fontWeight: 700, color: d.isMachine ? '#334155' : d.color, whiteSpace: 'nowrap' }}>
                         {d.label}
                     </span>
-                    <span style={{ fontSize: '8px', fontWeight: 700, color: d.isMachine ? '#94A3B8' : `${d.color}AA`, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                    <span style={{ fontSize: '8px', fontWeight: 700, color: d.isMachine ? '#94A3B8' : `${d.color}AA`, letterSpacing: '0.06em' }}>
                         {d.kind}
                     </span>
                 </div>

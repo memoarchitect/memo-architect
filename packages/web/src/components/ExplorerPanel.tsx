@@ -485,7 +485,7 @@ function ElementContextMenu({ menu, onClose }: { menu: CtxMenuState; onClose: ()
                 }}
             >
                 <div className="px-3 py-1.5 font-bold truncate bg-slate-50" style={{ color: COLOR.primary, fontSize: FONT.xs, borderBottom: `1px solid ${COLOR.border}` }}>
-                    {title.toUpperCase()}
+                    {title}
                 </div>
                 {actions.map((a, i) => (
                     <div
@@ -1035,19 +1035,10 @@ function subGroupLabel(id: string): string {
         .join(' ');
 }
 
-export function kindFolderLabel(kind: string, count: number): string {
-    const labels: Record<string, string> = {
-        StateMachine: 'State Machine',
-        ModeState: 'Mode State',
-        BehaviorProperty: 'Behavioral Constraint',
-        AssumeProperty: 'Assumption',
-        GuaranteeProperty: 'Guarantee',
-    };
-    // Always singular. A type folder names the TYPE its rows are instances of
-    // ("Hazard"), and the count badge beside it already says how many there
-    // are — pluralising made the folder read as the collection instead, and
-    // the English rules needed to do it were wrong as often as they were right.
-    return labels[kind] ?? kind.replace(/([a-z0-9])([A-Z])/g, '$1 $2');
+export function kindFolderLabel(kind: string, kinds: readonly KindDefinitionDTO[]): string {
+    // The type's own label from the ontology, else its declared name. Always singular: the count badge
+    // beside the folder already says how many there are.
+    return kinds.find(definition => definition.name === kind)?.label ?? kind;
 }
 
 /** One layer inside a domain group (e.g. Safety Risk inside Assurance). */
@@ -1651,7 +1642,7 @@ export function computeExplorerGroupTree(
                 packageOf: node => node.element?.package ?? node.element?.attributes?.['elementPackage'],
                 kindOf: node => node.element?.kind ?? '',
                 kindRank: kind => kindOrder.get(kind) ?? Number.MAX_SAFE_INTEGER,
-                kindLabel: (kind, count) => kindFolderLabel(kind, count),
+                kindLabel: kind => kindFolderLabel(kind, registryKinds),
                 folder: (id, name, children) => ({ id, name, type: 'folder', children }),
                 // An imported item says the folder it came from; that hierarchy shows as folders inside its package.
                 folderPathOf: node => {
@@ -1678,7 +1669,7 @@ export function computeExplorerGroupTree(
                     .sort((a, b) => (kindOrder.get(a) ?? Number.MAX_SAFE_INTEGER) - (kindOrder.get(b) ?? Number.MAX_SAFE_INTEGER) || a.localeCompare(b));
                 return kinds.map(kind => {
                     const ofKind = members.filter(node => (node.element?.kind ?? '') === kind);
-                    return { id: `kt:${kind}`, name: kindFolderLabel(kind, ofKind.length), type: 'folder' as const, children: forest(ofKind, kind) };
+                    return { id: `kt:${kind}`, name: kindFolderLabel(kind, registryKinds), type: 'folder' as const, children: forest(ofKind, kind) };
                 });
             };
             // A use case or workflow is clinical or system by its type, and what sits in a workflow is at that
@@ -1710,7 +1701,7 @@ export function computeExplorerGroupTree(
                     children: byKind(typed.filter(node => typeOf(node) === type)),
                 })),
                 ...untypedKinds.map(kind => ({
-                    id: `uk:${kind}`, name: kindFolderLabel(kind, 0), type: 'folder' as const,
+                    id: `uk:${kind}`, name: kindFolderLabel(kind, registryKinds), type: 'folder' as const,
                     children: forest(untyped.filter(node => node.element?.kind === kind)),
                 })),
             ];
@@ -2302,7 +2293,7 @@ function ModelExplorerContent({ searchTerm }: { searchTerm: string }) {
                                                 className="font-medium flex-1 truncate"
                                                 style={{ color: isUndefinedGroup ? '#B45309' : COLOR.secondary, fontSize: FONT.explorer.kind }}
                                             >
-                                                {kindFolderLabel(kind, kindElementIds.length)}
+                                                {kindFolderLabel(kind, model?.registries?.kinds ?? [])}
                                                 {isUndefinedGroup && <span style={{ color: '#F59E0B', marginLeft: '4px' }}>·</span>}
                                             </span>
                                             {/* Context actions expand to the left on hover; the count stays aligned right. */}
@@ -3235,7 +3226,7 @@ function ViewExplorerContent({ searchTerm }: { searchTerm: string }) {
 
     const sectionHeading = (text: string, hint: string) => (
         <div
-            className="px-3 pt-2 pb-1 font-semibold uppercase"
+            className="px-3 pt-2 pb-1 font-semibold"
             style={{ color: COLOR.faint, fontSize: FONT.badge, letterSpacing: '0.04em' }}
             title={hint}
         >
@@ -3558,7 +3549,7 @@ function DhfExplorerContent() {
                         {documentsBySystem.length > 1 && (
                             <div style={{
                                 padding: '9px 10px 2px', fontSize: '10px', fontWeight: 700,
-                                letterSpacing: '.07em', textTransform: 'uppercase', color: COLOR.muted,
+                                letterSpacing: '.07em', color: COLOR.muted,
                             }}>
                                 {system.label}
                             </div>
@@ -3581,7 +3572,7 @@ function DhfExplorerContent() {
                                             display: 'inline-block', width: '7px', height: '7px',
                                             borderRadius: '50%', background: category.color, flexShrink: 0,
                                         }} />
-                                        <span className="flex-1 uppercase tracking-wide" style={{ fontSize: '10px' }}>{category.label}</span>
+                                        <span className="flex-1 tracking-wide" style={{ fontSize: '10px' }}>{category.label}</span>
                                         <span style={{ fontSize: '10px', color: category.color, fontWeight: 700 }}>{category.docs.length}</span>
                                         <ChevronIcon expanded={expanded} size={11} />
                                     </button>

@@ -462,7 +462,7 @@ function TypedLabel({ name, kind, nameColor, typeColor, frame = false, singleLin
             }}>
                 {name}
             </span>
-            <span style={{ display: 'block', maxWidth: '100%', minWidth: frame ? 0 : undefined, flex: frame ? '0 100 auto' : undefined, fontSize: '9px', lineHeight: 1.15, fontWeight: 650, letterSpacing: '0.055em', textTransform: 'uppercase', color: style?.textColor ?? typeColor, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            <span style={{ display: 'block', maxWidth: '100%', minWidth: frame ? 0 : undefined, flex: frame ? '0 100 auto' : undefined, fontSize: '9px', lineHeight: 1.15, fontWeight: 650, letterSpacing: '0.055em', color: style?.textColor ?? typeColor, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                 {frame ? `: ${kind}` : `«${kind}»`}
             </span>
         </span>

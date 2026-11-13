@@ -370,7 +370,7 @@ const sectionStyle: React.CSSProperties = {
 };
 
 const subLabelStyle: React.CSSProperties = {
-    fontSize: '11px', fontWeight: 700, textTransform: 'uppercase',
+    fontSize: '11px', fontWeight: 700,
     letterSpacing: '0.06em', color: '#9CA3AF', marginBottom: '8px',
 };
 

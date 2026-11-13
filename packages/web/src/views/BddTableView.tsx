@@ -80,7 +80,7 @@ export function BddTableView({
     const authorable = Boolean(model && registries && !readOnly && connected);
     const noun = childScope === 'flow' ? 'step' : 'element';
 
-    const rows = useMemo(() => flattenBddRows(tree, expanded, definitions), [tree, expanded, definitions]);
+    const rows = useMemo(() => flattenBddRows(tree, expanded), [tree, expanded]);
     const links = useMemo(() => (model && registries ? linksByRow(model, registries) : new Map<string, Record<TableLinkCategory, RowLink[]>>()), [model, registries]);
 
     // Legality is per kind, and a table has far fewer kinds than rows, redrawn on every keystroke in the add form.

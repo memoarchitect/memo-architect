@@ -430,7 +430,7 @@ function DocPropertiesBar({ doc, onUpdate }: {
             display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', flexShrink: 0,
         }}>
             <div>
-                <label style={{ fontSize: '10px', fontWeight: 700, color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: '4px' }}>
+                <label style={{ fontSize: '10px', fontWeight: 700, color: '#6B7280', letterSpacing: '0.05em', display: 'block', marginBottom: '4px' }}>
                     Authors <span style={{ color: '#9CA3AF', textTransform: 'none', fontWeight: 400 }}>(Name | Role, one per line)</span>
                 </label>
                 <textarea
@@ -446,7 +446,7 @@ function DocPropertiesBar({ doc, onUpdate }: {
                 />
             </div>
             <div>
-                <label style={{ fontSize: '10px', fontWeight: 700, color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: '4px' }}>
+                <label style={{ fontSize: '10px', fontWeight: 700, color: '#6B7280', letterSpacing: '0.05em', display: 'block', marginBottom: '4px' }}>
                     Approvers <span style={{ color: '#9CA3AF', textTransform: 'none', fontWeight: 400 }}>(Name | Role, one per line)</span>
                 </label>
                 <textarea

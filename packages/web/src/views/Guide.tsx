@@ -78,7 +78,7 @@ export function Guide() {
                     <h2 style={{ fontSize: 16, fontWeight: 700, margin: '0 0 6px' }}>{words(level.level)}</h2>
                     {level.stages.map(stage => (
                         <div key={stage.stage} style={{ marginBottom: 10 }}>
-                            <div style={{ fontSize: FONT.xs, color: COLOR.muted, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em' }}>{words(stage.stage)}</div>
+                            <div style={{ fontSize: FONT.xs, color: COLOR.muted, fontWeight: 600, letterSpacing: '0.04em' }}>{words(stage.stage)}</div>
                             {stage.steps.map(step => (
                                 <div key={step.id} data-testid="guide-step" data-state={step.state} style={{ border: `1px solid ${COLOR.borderLight}`, borderRadius: 8, padding: '8px 14px', margin: '6px 0', maxWidth: 900 }}>
                                     <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
