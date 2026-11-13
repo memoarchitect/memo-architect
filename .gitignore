@@ -87,3 +87,6 @@ _site/
 # Browser test output
 /test-results/
 /playwright-report/
+
+# Archived worktrees and other local bulk output
+artifacts/
