@@ -17,11 +17,11 @@ importers:
   .:
     dependencies:
       '@memoarchitect/ontology':
-        specifier: 0.20.3
-        version: 0.20.3
+        specifier: 0.21.0
+        version: 0.21.0
       '@memoarchitect/tools':
-        specifier: 0.20.3
-        version: 0.20.3
+        specifier: 0.21.0
+        version: 0.21.0
       class-variance-authority:
         specifier: ^0.7.1
         version: 0.7.1
@@ -496,12 +496,12 @@ packages:
   '@maxgraph/core@0.24.0':
     resolution: {integrity: sha512-OgzCL86pTEa/8MpxbIX44S+xk0qAfmlAu0yZhQ9RFaEB8E5M2rJlPHNWeFpsD/ybWb5J5oPmZYszIcvzG/Kg4g==}
 
-  '@memoarchitect/ontology@0.20.3':
-    resolution: {integrity: sha512-wBAEHwO/Gro5j7bx5tyopK5cbeJN/1ukiRtFT2Qe+2pV7jKSRF+kQXLU85Vsuuuri7xMGsZ1Md6Zj1KkdUwcwA==}
+  '@memoarchitect/ontology@0.21.0':
+    resolution: {integrity: sha512-I6Cw6y9HEhMLZoawFjTuHkIOB2QpjkxqKod+DKgcjpVpHgB5/HWaunwWjK9TZBSevCf3L5Bcoga1LtyEazctkQ==}
     engines: {node: '>=26.0.0'}
 
-  '@memoarchitect/tools@0.20.3':
-    resolution: {integrity: sha512-xMKQLQ+gCbH/3n3I42lHz6mEMKj6rRXdsPEdOT9kfhYJngXPIh1PM2zMSok7xI964mX9tk7Gwr7O86kouE9WHw==}
+  '@memoarchitect/tools@0.21.0':
+    resolution: {integrity: sha512-xtN3cbmrCQmemuOSc5ZuboLP/QTKZIP7LA5PQm9cJT2axEPF90gVQOLFLLsiZjBVA3vYVmbmtMRmKBAVz/ufHg==}
     engines: {node: '>=26.0.0'}
     hasBin: true
 
@@ -2299,7 +2299,8 @@ snapshots:
   '@gar/promise-retry@1.0.3':
     optional: true
 
-  '@isaacs/nonrecursive-glob-match@1.1.0': {}
+  '@isaacs/nonrecursive-glob-match@1.1.0':
+    optional: true
 
   '@jridgewell/gen-mapping@0.3.13':
     dependencies:
@@ -2322,17 +2323,16 @@ snapshots:
 
   '@maxgraph/core@0.24.0': {}
 
-  '@memoarchitect/ontology@0.20.3': {}
+  '@memoarchitect/ontology@0.21.0': {}
 
-  '@memoarchitect/tools@0.20.3':
+  '@memoarchitect/tools@0.21.0':
     dependencies:
-      '@memoarchitect/ontology': 0.20.3
+      '@memoarchitect/ontology': 0.21.0
       '@openmbee/opensysml': 0.10.0
       chalk: 5.6.2
       chokidar: 4.0.3
       commander: 12.1.0
       docx: 9.15.3
-      glob: 14.0.6
       open: 10.2.0
       ora: 8.2.0
       uuid: 11.1.1
@@ -2811,7 +2811,8 @@ snapshots:
       postcss: 8.5.33
       postcss-value-parser: 4.2.0
 
-  balanced-match@4.0.4: {}
+  balanced-match@4.0.4:
+    optional: true
 
   base64-arraybuffer@1.0.2:
     optional: true
@@ -2825,6 +2826,7 @@ snapshots:
   brace-expansion@5.0.13:
     dependencies:
       balanced-match: 4.0.4
+    optional: true
 
   browserslist@4.29.5:
     dependencies:
@@ -3065,6 +3067,7 @@ snapshots:
       minimatch: 11.0.8
       minipass: 7.1.3
       path-scurry: 3.0.0
+    optional: true
 
   graceful-fs@4.2.12: {}
 
@@ -3305,6 +3308,7 @@ snapshots:
     dependencies:
       '@isaacs/nonrecursive-glob-match': 1.1.0
       brace-expansion: 5.0.13
+    optional: true
 
   minipass-collect@2.0.1:
     dependencies:
@@ -3340,7 +3344,8 @@ snapshots:
       yallist: 4.0.0
     optional: true
 
-  minipass@7.1.3: {}
+  minipass@7.1.3:
+    optional: true
 
   minizlib@3.1.0:
     dependencies:
@@ -3403,6 +3408,7 @@ snapshots:
     dependencies:
       lru-cache: 11.5.3
       minipass: 7.1.3
+    optional: true
 
   pathe@2.0.3: {}
 
