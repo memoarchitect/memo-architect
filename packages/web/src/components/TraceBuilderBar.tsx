@@ -23,6 +23,8 @@ export interface TraceBuilderBarProps {
     activePresetId: string | null;
     /** Leave the quick trace and pick the rows and columns by hand, starting from the ones it chose. */
     onCustomize: () => void;
+    /** The rows and columns are being picked by hand, so their pickers are shown. Until then a quick trace is the choice. */
+    showAxes: boolean;
     system: string | undefined;
     onSystem: (system: string | undefined) => void;
     rowAxis: AxisSelection;
@@ -46,8 +48,11 @@ export interface TraceBuilderBarProps {
     actions: ReactNode;
 }
 
+/** The quick-trace choice that means "pick the rows and columns by hand". */
+const CUSTOM = '__custom__';
+
 export function TraceBuilderBar(props: TraceBuilderBarProps) {
-    const { presets, onPreset, canBuild, stale, built, building, onBuild, activePresetId, onCustomize } = props;
+    const { presets, onPreset, canBuild, stale, built, building, onBuild, activePresetId, onCustomize, showAxes } = props;
     const active = presets.find(entry => entry.id === activePresetId);
     const countOf = (preset: TracePreset) => props.presetCounts.get(preset.id);
     const usable = presets.filter(preset => { const count = countOf(preset); return count && count.rows > 0 && count.columns > 0; });
@@ -59,14 +64,15 @@ export function TraceBuilderBar(props: TraceBuilderBarProps) {
             <label style={{ display: 'grid', gap: '3px', fontSize: FONT.xs, fontWeight: 600, color: COLOR.muted }}>
                 Quick trace
                 <select
-                    aria-label="Quick trace" value={activePresetId ?? ''}
+                    aria-label="Quick trace" value={activePresetId ?? (showAxes ? CUSTOM : '')}
                     onChange={event => {
                         const preset = presets.find(entry => entry.id === event.target.value);
-                        if (preset) onPreset(preset); else onCustomize();
+                        if (preset) onPreset(preset); else if (event.target.value === CUSTOM) onCustomize();
                     }}
                     style={{ padding: '7px 8px', border: `1px solid ${COLOR.border}`, borderRadius: '6px', fontSize: FONT.xs, color: COLOR.primary, background: COLOR.surface, maxWidth: '230px' }}
                 >
-                    <option value="">{active ? 'Custom: pick rows and columns' : 'Choose a trace, or pick below…'}</option>
+                    <option value="" disabled>Choose a trace…</option>
+                    <option value={CUSTOM}>Custom: pick rows and columns</option>
                     {usable.map(preset => <option key={preset.id} value={preset.id}>{preset.label}</option>)}
                     {counting.length > 0 && (
                         <optgroup label="Counting…">
@@ -92,7 +98,7 @@ export function TraceBuilderBar(props: TraceBuilderBarProps) {
                         <TextAction onClick={onCustomize} title="Pick the rows and columns by hand, starting from this trace's">Customize</TextAction>
                     </span>
                 </div>
-            ) : (
+            ) : showAxes && (
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', flexBasis: '100%', order: 5 }}>
                     <TraceAxisField title="Rows" axis={props.rowAxis} onChange={props.onRowAxis} kindOptions={props.kindOptions} kindParents={props.kindParents} selection={props.rowSelection} />
                     <TraceAxisField title="Columns" axis={props.columnAxis} onChange={props.onColumnAxis} kindOptions={props.kindOptions} kindParents={props.kindParents} selection={props.columnSelection} />

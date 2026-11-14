@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { MemoModelDTO } from '@memoarchitect/tools/browser';
 import type { HierarchicalDsmResult } from '../../analysis/dsm-hierarchy';
 import {
-    EMPTY_AXIS, TRACE_MAX_CELLS, applyLineFilter, axisFromQuery, axisToQuery, builtMatrix, keepMatrix, loadDisplay,
+    DEFAULT_TRACE_VIEW, EMPTY_AXIS, TRACE_MAX_CELLS, applyLineFilter, axisFromQuery, axisToQuery, builtMatrix, keepMatrix, loadDisplay,
     matrixFromSelection, matrixKey, saveDisplay, selectAxis, traceLimit, traceLinks,
 } from '../trace-axis';
 import { visibleRange } from '../../components/HierarchicalMatrix';
@@ -46,6 +46,19 @@ describe('selectAxis', () => {
         expect(selectAxis(model, types('Requirement'))).toEqual(['r2', 'r1']);
     });
 
+    it('lists a usage once, not again as the definition that types it', () => {
+        const parents = new Map([['AcceptPedal', 'ComponentFunction']]);
+        const functions = {
+            elements: {
+                def: element('p::AcceptPedal', 'ComponentFunction', 'Accept pedal', { isDefinition: true }),
+                use: element('p::flow::acceptPedal', 'AcceptPedal', 'Accept pedal'),
+                lone: element('p::Unused', 'ComponentFunction', 'Unused', { isDefinition: true }),
+            },
+        } as unknown as MemoModelDTO;
+        // The definition with a usage on the axis is dropped; one that has none is all there is of it, and stays.
+        expect(selectAxis(functions, types('ComponentFunction'), parents)).toEqual(['p::flow::acceptPedal', 'p::Unused']);
+    });
+
     it('leaves an axis written as a query to the server', () => {
         expect(selectAxis(model, { kinds: ['Requirement'], query: 'kind: Requirement', advanced: true })).toEqual([]);
     });
@@ -68,14 +81,20 @@ describe('the remembered display choices', () => {
 
     it('round-trips and survives bad data', () => {
         const storage = store();
-        // nothing remembered: the table
-        expect(loadDisplay(storage)).toEqual({ view: 'list', rowFilter: 'all', columnFilter: 'all' });
-        saveDisplay({ view: 'matrix', rowFilter: 'empty', columnFilter: 'linked' }, storage);
-        expect(loadDisplay(storage)).toEqual({ view: 'matrix', rowFilter: 'empty', columnFilter: 'linked' });
+        expect(loadDisplay(storage)).toEqual({ rowFilter: 'all', columnFilter: 'all' });
+        saveDisplay({ rowFilter: 'empty', columnFilter: 'linked' }, storage);
+        expect(loadDisplay(storage)).toEqual({ rowFilter: 'empty', columnFilter: 'linked' });
         storage.setItem('memo-architect.traceability-display.v2', '{not json');
-        expect(loadDisplay(storage)).toEqual({ view: 'list', rowFilter: 'all', columnFilter: 'all' });
-        storage.setItem('memo-architect.traceability-display.v2', JSON.stringify({ view: 'x', rowFilter: 'bogus' }));
-        expect(loadDisplay(storage)).toEqual({ view: 'list', rowFilter: 'all', columnFilter: 'all' });
+        expect(loadDisplay(storage)).toEqual({ rowFilter: 'all', columnFilter: 'all' });
+        storage.setItem('memo-architect.traceability-display.v2', JSON.stringify({ rowFilter: 'bogus' }));
+        expect(loadDisplay(storage)).toEqual({ rowFilter: 'all', columnFilter: 'all' });
+    });
+
+    it('does not carry the grid to the next visit: every matrix opens as the table', () => {
+        const storage = store();
+        storage.setItem('memo-architect.traceability-display.v2', JSON.stringify({ view: 'matrix', rowFilter: 'linked' }));
+        expect(loadDisplay(storage)).toEqual({ rowFilter: 'linked', columnFilter: 'all' });
+        expect(DEFAULT_TRACE_VIEW).toBe('list');
     });
 });
 

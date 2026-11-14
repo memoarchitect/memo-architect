@@ -19,6 +19,7 @@ import { OnboardingTour } from './components/OnboardingTour';
 import { RestartRequiredBanner } from './components/RestartRequiredBanner';
 import { EditConflictNotice } from './components/EditConflictNotice';
 import { StaleSceneNotice } from './components/StaleSceneNotice';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { CatalogHomePage } from './views/CatalogHomePage';
 import { DiagramHomePage } from './views/DiagramHomePage';
 import { ElementCollectionPage } from './views/ElementCollectionPage';
@@ -317,7 +318,9 @@ export function App() {
     const selectedElementIds = useModelStore(s => s.selectedElementIds);
     const selectedElementId = useModelStore(s => s.selectedElementId);
     const selectedRelationshipId = useModelStore(s => s.selectedRelationshipId);
-    const { pathname } = useLocation();
+    const { pathname, search } = useLocation();
+    // A region that failed renders again once the user goes somewhere else: a new address or a new active view.
+    const resetKey = `${pathname}${search}|${JSON.stringify(activeView)}`;
     // Diagram routes still use the workbench's right-hand properties browser.
     // Only catalog pages are self-contained full-page routes.
     const isCatalogRoute = pathname.startsWith('/catalog');
@@ -488,10 +491,15 @@ export function App() {
             {/* Main 3-panel layout */}
             <div className="flex flex-1 overflow-hidden">
                 {/* Left: Explorer — hidden for modes with their own internal explorer */}
-                {showExplorer && <ExplorerPanel />}
+                {showExplorer && (
+                    <ErrorBoundary label="The Explorer" resetKey={resetKey}>
+                        <ExplorerPanel />
+                    </ErrorBoundary>
+                )}
 
                 {/* Center: route-aware canvas */}
                 <div className="flex-1 flex flex-col" style={{ minWidth: 0 }}>
+                    <ErrorBoundary label="This view" resetKey={resetKey}>
                     <Routes>
                         {/* Catalog routes — new deep-link pages */}
                         <Route path="/catalog" element={<CatalogHomePage />} />
@@ -515,6 +523,7 @@ export function App() {
                         {/* Default: existing state-driven canvas */}
                         <Route path="*" element={<UnifiedCanvas />} />
                     </Routes>
+                    </ErrorBoundary>
                 </div>
 
                 {/* Right: Properties Panel — hidden in element-detail, catalog, DHF, scenario, and ontology modes */}
@@ -533,9 +542,11 @@ export function App() {
                     && activeMode !== 'ontology'
                     // Nothing selected, nothing to show; an open diagram is the exception, as it has properties of its own.
                     && (selectedElementId || selectedRelationshipId || selectedElementIds.size > 0 || activeView.type === 'diagram') && (
-                    selectedElementIds.size >= 2
-                        ? <BulkEditPanel />
-                        : <UnifiedPropertiesPanel />
+                    <ErrorBoundary label="The properties panel" resetKey={`${resetKey}|${selectedElementId}|${selectedRelationshipId}`}>
+                        {selectedElementIds.size >= 2
+                            ? <BulkEditPanel />
+                            : <UnifiedPropertiesPanel />}
+                    </ErrorBoundary>
                 )}
 
                 {/* Right edge: the method beside the work, when opened from the toolbar */}

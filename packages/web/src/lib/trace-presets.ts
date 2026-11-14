@@ -52,6 +52,11 @@ export const typesOf = (...kinds: string[]): AxisSelection => ({ kinds, query: '
 const RISK = ['Risk'];
 /** Risk, as a hardware trace means it: the risks, and the failure modes of the hardware design FMEA. */
 const HARDWARE_RISK = ['Risk', 'FailureMode'];
+/**
+ * What a component function is allocated to: one component, of any of the ontology's component families. A system
+ * specializes LogicalComponent, so systems are listed too; a component function allocated to a whole system shows.
+ */
+const COMPONENT = ['LogicalComponent', 'PhysicalComponent', 'SoftwareComponent'];
 
 export const DEFAULT_TRACE_PRESETS = new TracePresetRegistry([
     { id: 'need-system', label: 'User need → System requirement', rows: typesOf('Need'), columns: requirementsOfType('system') },
@@ -62,4 +67,7 @@ export const DEFAULT_TRACE_PRESETS = new TracePresetRegistry([
     { id: 'software-need-risk', label: 'Software requirement → User need and Risk', rows: requirementsOfType('software'), columns: typesOf('Need', ...RISK) },
     { id: 'hardware-need-risk', label: 'Hardware requirement → User need and Risk', rows: requirementsOfType('hardware'), columns: typesOf('Need', ...HARDWARE_RISK) },
     { id: 'requirement-test', label: 'Requirement → Test case', rows: typesOf('Requirement'), columns: typesOf('VerificationCase') },
+    { id: 'system-function-system', label: 'System function → System', rows: typesOf('SystemFunction'), columns: typesOf('System') },
+    { id: 'component-function-component', label: 'Component function → Component', rows: typesOf('ComponentFunction'), columns: typesOf(...COMPONENT) },
+    { id: 'function-requirement', label: 'System and component function → Requirement', rows: typesOf('SystemFunction', 'ComponentFunction'), columns: typesOf('Requirement') },
 ]);

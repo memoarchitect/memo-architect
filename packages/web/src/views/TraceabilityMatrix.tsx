@@ -40,7 +40,7 @@ import { useTraceMatrix } from '../lib/use-trace-matrix';
 import { useSavedTraceMatrix } from '../lib/use-saved-trace-matrix';
 import { usePresetCounts } from '../lib/use-preset-counts';
 import { useTraceLinkEditing } from '../lib/use-trace-link-editing';
-import { loadDisplay, noMatchMessage, saveDisplay, traceLimit, type LineFilter, type TraceView } from '../lib/trace-axis';
+import { DEFAULT_TRACE_VIEW, axisToQuery, loadDisplay, noMatchMessage, saveDisplay, traceLimit, type LineFilter, type TraceView } from '../lib/trace-axis';
 import { relationshipColor } from '../constants';
 import { COLOR, FONT } from '../styles/tokens';
 
@@ -61,12 +61,12 @@ export function TraceabilityMatrix() {
 
     // The display choices, remembered across reloads.
     const display = useRef(loadDisplay());
-    const [view, setView] = useState<TraceView>(display.current.view);
+    const [view, setView] = useState<TraceView>(DEFAULT_TRACE_VIEW);
     const [rowFilter, setRowFilter] = useState<LineFilter>(display.current.rowFilter);
     const [columnFilter, setColumnFilter] = useState<LineFilter>(display.current.columnFilter);
     const [cellSize, setCellSize] = useState(30);
     const [editing, setEditing] = useState(false);
-    useEffect(() => { saveDisplay({ view, rowFilter, columnFilter }); }, [view, rowFilter, columnFilter]);
+    useEffect(() => { saveDisplay({ rowFilter, columnFilter }); }, [rowFilter, columnFilter]);
 
     // Which types are offered: the ontology's, from the same catalog the explorer's type filter uses.
     const catalog = useMemo(() => {
@@ -95,6 +95,8 @@ export function TraceabilityMatrix() {
     const [builderOpen, setBuilderOpen] = useState(false);
     /** The quick trace in use, until the rows and columns are picked by hand. */
     const [activePresetId, setActivePresetId] = useState<string | null>(null);
+    /** Rows and columns are picked by hand: chosen as Custom, or a quick trace was customized. */
+    const [customizing, setCustomizing] = useState(false);
     const [saveDialog, setSaveDialog] = useState(false);
     const buildWhenCounted = useRef(false);
 
@@ -114,7 +116,7 @@ export function TraceabilityMatrix() {
         report: matrix.report,
     });
     const openedId = saved.definition?.elementId;
-    useEffect(() => { if (openedId) { setBuilderOpen(false); setActivePresetId(null); } }, [openedId]);
+    useEffect(() => { if (openedId) { setBuilderOpen(false); setActivePresetId(null); setView(DEFAULT_TRACE_VIEW); } }, [openedId]);
 
     const editor = useTraceLinkEditing({ model, activeTypes: matrix.committed?.linkTypes ?? NO_IDS, editing });
 
@@ -132,6 +134,8 @@ export function TraceabilityMatrix() {
         matrix.clear();
         editor.inspect(null);
         setActivePresetId(null);
+        setCustomizing(false);
+        setView(DEFAULT_TRACE_VIEW);
         setBuilderOpen(true);
     }, [saved.startNew, draft.clear, matrix.clear, editor.inspect]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -142,6 +146,8 @@ export function TraceabilityMatrix() {
         setColumnFilter('all');
         matrix.clear();
         setActivePresetId(preset.id);
+        setCustomizing(false);
+        setView(DEFAULT_TRACE_VIEW);
         buildWhenCounted.current = true;
     }, [draft.replace, matrix.clear]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -193,7 +199,7 @@ export function TraceabilityMatrix() {
             ? 'Counting…'
             : rowSelection.ids.length === 0 || columnSelection.ids.length === 0
                 ? noMatch ?? (builderOpen
-                    ? 'Choose the element types for the rows and the columns, then Build matrix.'
+                    ? 'Choose a quick trace, or Custom to pick the rows and columns yourself.'
                     : 'Select a traceability matrix on the left, or click + New to create one.')
                 : null);
     const status = saved.status ?? editor.status;
@@ -239,7 +245,8 @@ export function TraceabilityMatrix() {
                         {builderOpen && (
                             <TraceBuilderBar
                                 presets={DEFAULT_TRACE_PRESETS.all()} presetCounts={presetCounts} onPreset={applyPreset}
-                                activePresetId={activePresetId} onCustomize={() => setActivePresetId(null)}
+                                activePresetId={activePresetId} onCustomize={() => { setActivePresetId(null); setCustomizing(true); }}
+                                showAxes={!activePresetId && (customizing || axisToQuery(draft.rowAxis) !== '' || axisToQuery(draft.columnAxis) !== '')}
                                 system={draft.system} onSystem={draft.setSystem}
                                 rowAxis={draft.rowAxis} columnAxis={draft.columnAxis}
                                 onRowAxis={draft.setRowAxis} onColumnAxis={draft.setColumnAxis}

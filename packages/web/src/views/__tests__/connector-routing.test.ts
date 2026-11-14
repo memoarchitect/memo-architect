@@ -118,7 +118,7 @@ describe('tidy connector routing', () => {
         expect(routes.size).toBe(200);
         // Measured ~370ms here, against 199_000ms before the pass was bounded.
         expect(performance.now() - started).toBeLessThan(8_000);
-    });
+    }, 15_000); // the budget above is the check; the test limit only has to exceed it
 
     it('grows no worse than quadratically as the board doubles', () => {
         const time = (n: number) => {
@@ -132,7 +132,7 @@ describe('tidy connector routing', () => {
         // Cubic growth would be ~8x for a doubling; allow generous headroom
         // above quadratic while still catching a return to cubic.
         expect(large / small).toBeLessThan(7);
-    });
+    }, 30_000); // the ratio is the check; routing both boards takes seconds, so the default limit is not
 });
 
 // Independent interior oracle: touching a wall is legal; cutting through a body is not.

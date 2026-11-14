@@ -44,6 +44,18 @@ describe('the default quick traces', () => {
         expect(requirementsOfType('software').advanced).toBe(true);
     });
 
+    it('trace functions to what they are allocated to and to requirements', () => {
+        const kinds = (id: string) => {
+            const preset = DEFAULT_TRACE_PRESETS.find(id)!;
+            return { rows: preset.rows.kinds, columns: preset.columns.kinds };
+        };
+        expect(kinds('system-function-system')).toEqual({ rows: ['SystemFunction'], columns: ['System'] });
+        expect(kinds('component-function-component')).toEqual({
+            rows: ['ComponentFunction'], columns: ['LogicalComponent', 'PhysicalComponent', 'SoftwareComponent'],
+        });
+        expect(kinds('function-requirement')).toEqual({ rows: ['SystemFunction', 'ComponentFunction'], columns: ['Requirement'] });
+    });
+
     it('can trace several kinds at once', () => {
         expect(DEFAULT_TRACE_PRESETS.find('hardware-need-risk')!.columns.kinds).toEqual(expect.arrayContaining(['Need', 'Risk', 'FailureMode']));
     });

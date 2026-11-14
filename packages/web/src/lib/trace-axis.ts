@@ -38,8 +38,13 @@ export function selectAxis(model: MemoModelDTO | null, axis: AxisSelection, pare
     for (const kind of axis.kinds) {
         for (const under of parents ? kindsUnder(kind, parents, universe) : [kind]) kinds.add(under);
     }
-    return Object.values(model.elements)
-        .filter(element => (axis.kinds.length === 0 || kinds.has(element.kind)) && (!text || element.name.toLowerCase().includes(text)))
+    const selected = Object.values(model.elements)
+        .filter(element => (axis.kinds.length === 0 || kinds.has(element.kind)) && (!text || element.name.toLowerCase().includes(text)));
+    // A definition whose usages are on the axis is the same thing listed again as its type. It is not traced (a
+    // usage is allocated or satisfies, its type is not), so keeping it adds a row that always reads untraced.
+    const usedTypes = new Set(selected.filter(element => !element.isDefinition).map(element => element.kind));
+    return selected
+        .filter(element => !element.isDefinition || !usedTypes.has(element.shortName ?? element.id.slice(element.id.lastIndexOf(':') + 1)))
         .sort((a, b) => a.kind.localeCompare(b.kind) || a.name.localeCompare(b.name))
         .map(element => element.id);
 }
@@ -149,13 +154,18 @@ export function applyLineFilter(ids: readonly string[], linked: ReadonlyMap<stri
 
 export type TraceView = 'matrix' | 'list';
 
+/**
+ * The filters kept across reloads. The view is not one of them: the table (a row and the items it links to) is
+ * the way into every matrix, and the grid is a choice made for the matrix on screen, not carried to the next.
+ */
 export interface TraceDisplay {
-    view: TraceView;
     rowFilter: LineFilter;
     columnFilter: LineFilter;
 }
 
-// v2: v1 saved the screen's own default (the matrix) on every visit, so it read as a choice the person never made.
+/** The view every matrix opens in. */
+export const DEFAULT_TRACE_VIEW: TraceView = 'list';
+
 const STORAGE_KEY = 'memo-architect.traceability-display.v2';
 
 const lineFilter = (value: unknown): LineFilter => (value === 'linked' || value === 'empty' ? value : 'all');
@@ -163,10 +173,9 @@ const lineFilter = (value: unknown): LineFilter => (value === 'linked' || value 
 export function loadDisplay(storage: Pick<Storage, 'getItem'> | undefined = safeStorage()): TraceDisplay {
     try {
         const value = JSON.parse(storage?.getItem(STORAGE_KEY) ?? '{}') as Partial<TraceDisplay>;
-        // The table (a row and the items it links to) is the way in; the matrix is a choice.
-        return { view: value.view === 'matrix' ? 'matrix' : 'list', rowFilter: lineFilter(value.rowFilter), columnFilter: lineFilter(value.columnFilter) };
+        return { rowFilter: lineFilter(value.rowFilter), columnFilter: lineFilter(value.columnFilter) };
     } catch {
-        return { view: 'list', rowFilter: 'all', columnFilter: 'all' };
+        return { rowFilter: 'all', columnFilter: 'all' };
     }
 }
 
