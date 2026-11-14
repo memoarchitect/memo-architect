@@ -102,6 +102,9 @@ export function viewToPath(view: ActiveView): string | null {
             const query = params.toString();
             return query ? `/interfaces?${query}` : '/interfaces';
         }
+        // A row and an optional authored view can be bookmarked together.
+        case 'pathway':
+            return `/method/${encodeURIComponent(view.layer)}${view.diagramId ? `?view=${encodeURIComponent(view.diagramId)}` : ''}`;
         // The tab rides in the path, so each settings page can be linked to.
         case 'settings':
             return view.section ? `/settings/${encodeURIComponent(view.section)}` : '/settings';
@@ -166,6 +169,11 @@ export function pathToView(pathname: string, search = ''): ActiveView | null {
     }
 
     const segments = path.split('/').filter(Boolean);
+
+    if (segments[0] === 'method' && segments.length === 2) {
+        const diagramId = new URLSearchParams(search).get('view') ?? undefined;
+        return { type: 'pathway', layer: decodeURIComponent(segments[1]), ...(diagramId ? { diagramId } : {}) };
+    }
 
     // /documents/:docId — but /documents and /documents/legacy are static and matched above.
     if (segments[0] === 'documents' && segments.length === 2) {
@@ -257,6 +265,6 @@ export function addressableViewTypes(): string[] {
         ...Object.keys(STATIC_VIEW_PATHS),
         'welcome',
         'ontology-detail', 'dhf-document', 'tabular', 'custom-dashboard', 'feature',
-        'element-detail', 'diagram',
+        'element-detail', 'diagram', 'pathway',
     ];
 }

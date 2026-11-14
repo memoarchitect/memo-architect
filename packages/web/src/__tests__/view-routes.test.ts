@@ -77,6 +77,16 @@ describe('viewToPath / pathToView round trip', () => {
         expect(viewToPath({ type: 'welcome' })).toBe('/');
     });
 
+    it('round-trips a method row and an optional authored view', () => {
+        for (const diagramId of [undefined, 'model::view / 1']) {
+            const view: ActiveView = { type: 'pathway', layer: 'layer / logical', ...(diagramId ? { diagramId } : {}) };
+            const url = new URL(viewToPath(view)!, 'https://example.test');
+            expect(url.pathname).toBe('/method/layer%20%2F%20logical');
+            expect(pathToView(url.pathname, url.search)).toEqual(view);
+        }
+        expect(pathToView('/method')).toEqual({ type: 'guide' });
+    });
+
     it('round-trips a settings tab', () => {
         expect(viewToPath({ type: 'settings' })).toBe('/settings');
         expect(viewToPath({ type: 'settings', section: 'rules' })).toBe('/settings/rules');

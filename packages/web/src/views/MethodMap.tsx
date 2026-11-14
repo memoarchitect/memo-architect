@@ -16,9 +16,9 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useModelStore } from '../store/model-store';
-import { useGuideEvaluation, useOpenStep } from '../lib/use-guide';
+import { useGuideEvaluation } from '../lib/use-guide';
 import { stepsForRole, words, type GuideStepStatus } from '../lib/guide-view';
-import { approvalsOf, axesOf, continuePoint, scopePath, scopeTree, suppliedParts, type LayerRow, type ScopeNode, layerRows } from '../lib/pathways';
+import { approvalsOf, axesOf, continuePoint, layerOfStep, scopePath, scopeTree, suppliedParts, type LayerRow, type ScopeNode, layerRows } from '../lib/pathways';
 import { roleLabel } from '../lib/role-viewpoints';
 import { isFeatureEnabled } from '../config/feature-flags';
 import { COLOR, FONT } from '../styles/tokens';
@@ -43,7 +43,6 @@ export function MethodMap() {
     const setActiveMode = useModelStore(s => s.setActiveMode);
     const navigate = useNavigate();
     const problem = useGuideEvaluation();
-    const openStep = useOpenStep();
     const [mine, setMine] = useState(false);
     const axes = axesOf(guide);
     const [tab, setTab] = useState<string | null>(null);
@@ -65,10 +64,16 @@ export function MethodMap() {
         .filter(row => !mine || row.steps.length > 0);
     const next = continuePoint(guide, lastStep, shownSteps);
 
+    const openRow = (layer: LayerRow['layer'], step?: GuideStepStatus) => {
+        if (step) setLastStep(step.id);
+        setActiveMode('diagram');
+        setActiveView({ type: 'pathway', layer: layer.name });
+        navigate(`/method/${encodeURIComponent(layer.name)}`);
+    };
     const open = (step: GuideStepStatus | undefined) => {
         if (!step) return;
-        setLastStep(step.id);
-        openStep(step);
+        const layer = guide ? layerOfStep(guide, step.id) : undefined;
+        if (layer) openRow(layer, step);
     };
     const go = (view: 'import' | 'releases') => {
         setActiveMode('diagram');
@@ -145,7 +150,7 @@ export function MethodMap() {
                         : rowsOf(current).map((row, index) => (
                             <LayerRowView key={row.layer.id} row={row} number={current === axes[0] ? index : undefined} pathways={pathways}
                                 continuing={!!next && row.steps.includes(next.step)}
-                                onOpen={() => open(next && row.steps.includes(next.step) ? next.step : row.steps.find(s => s.state !== 'done') ?? row.steps[0])}
+                                onOpen={() => openRow(row.layer, next && row.steps.includes(next.step) ? next.step : row.steps.find(s => s.state !== 'done') ?? row.steps[0])}
                                 onImport={row.layer.importable && isFeatureEnabled('import') ? () => go('import') : undefined} />
                         ))}
                     {current !== HISTORY && guide && rowsOf(current).length === 0 && (
@@ -225,7 +230,7 @@ function LayerRowView({ row, number, pathways, continuing, onOpen, onImport }: {
                 </div>
             )}
             {onImport && <button data-testid="row-import" onClick={onImport} style={lightButton}>Import…</button>}
-            <button data-testid="row-open" disabled={steps.length === 0} onClick={onOpen}
+            <button data-testid="row-open" onClick={onOpen}
                 style={continuing && pathways ? darkButton : started ? lightButton : startButton}>
                 {continuing && pathways ? 'Continue' : started ? 'Open' : 'Start here'}
             </button>

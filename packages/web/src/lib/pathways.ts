@@ -10,10 +10,11 @@
 // so are the parts designed elsewhere: those typed by a definition from a dependency package.
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { relationshipsOfType, type MemoModelDTO } from '@memoarchitect/tools/browser';
+import { indexKinds, kindConformsTo, relationshipsOfType, type DiagramDTO, type MemoModelDTO } from '@memoarchitect/tools/browser';
 import type { GuideResult, GuideStepStatus } from './guide-view';
 import { regulatedDevices, type DeviceRow } from './devices-view';
-import { workspaceOptions } from './workspace-scope';
+import { idsInWorkspace, workspaceOptions } from './workspace-scope';
+import { DIAGRAM_TYPE_META } from '../constants';
 
 export type GuideLayer = GuideResult['layers'][number];
 
@@ -47,6 +48,40 @@ export function stepsOfLayer(guide: GuideResult, layer: GuideLayer): GuideStepSt
 export function layerOfStep(guide: GuideResult, stepId: string): GuideLayer | undefined {
     const step = guide.steps.find(candidate => candidate.id === stepId);
     return step?.stage ? guide.layers.find(layer => layer.stages.includes(step.stage!)) : undefined;
+}
+
+/** Resume within this row, or choose its first unfinished step, then its first step. */
+export function currentStep(steps: readonly GuideStepStatus[], lastStep: string | null): GuideStepStatus | undefined {
+    return steps.find(step => step.id === lastStep) ?? steps.find(step => step.state !== 'done') ?? steps[0];
+}
+
+export interface LayerView {
+    diagram: DiagramDTO;
+    /** The row viewpoint this view conforms to. */
+    viewpoint: GuideLayer['viewpoints'][number];
+}
+
+/** Authored views grouped in the order the row offers its viewpoints. */
+export function layerViews(model: MemoModelDTO, layer: GuideLayer): LayerView[] {
+    return layer.viewpoints.flatMap(viewpoint => {
+        const ids = new Set((model.viewpoints ?? []).filter(candidate => candidate.name === viewpoint.name).map(candidate => candidate.id));
+        return (model.diagrams ?? [])
+            .filter(diagram => [diagram.viewpointId, ...(diagram.viewpointIds ?? [])].some(id => ids.has(id)))
+            .map(diagram => ({ diagram, viewpoint }));
+    });
+}
+
+/** Use the existing notation catalog, including its ordering for shared view kinds. */
+export function diagramTypeFor(viewKind: string | undefined): string {
+    return Object.entries(DIAGRAM_TYPE_META).find(([, meta]) => meta.viewKind === viewKind)?.[0] ?? 'bdd';
+}
+
+/** Elements admitted by any requested kind, including specializations, in the chosen workspace. */
+export function elementsOfKinds(model: MemoModelDTO, kinds: readonly string[], workspace: string | null) {
+    const registry = indexKinds(model.registries?.kinds ?? []);
+    const ids = idsInWorkspace(model.workspaceMembership, workspace);
+    return Object.values(model.elements).filter(element => (!ids || ids.has(element.id))
+        && kinds.some(kind => kindConformsTo(element.kind, kind, registry)));
 }
 
 export interface ContinuePoint {

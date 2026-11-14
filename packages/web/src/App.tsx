@@ -40,6 +40,7 @@ const Dashboard = lazy(() => import('./views/Dashboard').then(m => ({ default: m
 const CustomDashboard = lazy(() => import('./views/Dashboard').then(m => ({ default: m.CustomDashboard })));
 const DashboardList = lazy(() => import('./views/DashboardList').then(m => ({ default: m.DashboardList })));
 const ReviewDashboard = lazy(() => import('./views/ReviewDashboard').then(m => ({ default: m.ReviewDashboard })));
+const GuidedLayerPage = lazy(() => import('./views/GuidedLayer').then(m => ({ default: m.GuidedLayer })));
 const MethodMapPage = lazy(() => import('./views/MethodMap').then(m => ({ default: m.MethodMap })));
 const TabularView = lazy(() => import('./views/TabularView').then(m => ({ default: m.TabularView })));
 const ImportView = lazy(() => import('./views/ImportView').then(m => ({ default: m.ImportView })));
@@ -123,6 +124,8 @@ function UnifiedCanvas() {
                 return isFeatureEnabled('custom-dashboards') ? <CustomDashboard dashboardId={activeView.dashboardId} scope={activeView.scope} /> : <Dashboard />;
             case 'review-dashboard':
                 return isFeatureEnabled('model-tools') ? <ReviewDashboard /> : <Dashboard />;
+            case 'pathway':
+                return isFeatureEnabled('guide') ? <GuidedLayerPage layer={activeView.layer} /> : <Dashboard />;
             case 'guide':
                 return isFeatureEnabled('guide') ? <MethodMapPage /> : <Dashboard />;
             case 'import':
@@ -345,7 +348,7 @@ export function App() {
     // Pages that are whole pages of their own, with no tree to browse beside them: the explorer a
     // previous page left open (Viewpoints, say) would sit next to Settings and mean nothing there.
     const standalonePages: ReadonlySet<string> = new Set([
-        'settings', 'change', 'releases', 'guide', 'suspect-links', 'variability', 'model-diff',
+        'settings', 'change', 'releases', 'guide', 'pathway', 'suspect-links', 'variability', 'model-diff',
         'statistics', 'review-dashboard', 'import',
     ]);
 

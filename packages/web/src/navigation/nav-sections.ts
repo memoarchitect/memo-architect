@@ -34,6 +34,7 @@ export const SECTION_OF_VIEW: Record<ActiveView['type'], NavSectionId> = {
     dashboards: 'guide',
     'custom-dashboard': 'guide',
     guide: 'guide',
+    pathway: 'guide',
     welcome: 'guide',
     'element-detail': 'model',
     variability: 'advanced',

@@ -163,6 +163,7 @@ export type ActiveView =
     | { type: 'dashboards' }          // custom dashboards: list
     | { type: 'custom-dashboard'; dashboardId: string; scope?: DashboardScope } // one markdown dashboard
     | { type: 'review-dashboard' }    // N1: first-review "money shot" view (#132)
+    | { type: 'pathway'; layer: string; diagramId?: string }
     | { type: 'guide' }               // the method map (Pathways): the method's rows, and where to start
     | { type: 'import' }
     | { type: 'analysis' }
@@ -788,13 +789,13 @@ export const useModelStore = create<ModelState>((set, get) => ({
     pathways: true,
     setPathways: (pathways) => {
         set({ pathways });
-        sendUserPreferencesSave(preferencesOf(get()));
+        saveChoices(get());
     },
     lastStep: null,
     setLastStep: (lastStep) => {
         if (get().lastStep === lastStep) return;
         set({ lastStep });
-        sendUserPreferencesSave(preferencesOf(get()));
+        saveChoices(get());
     },
     features: [],
     favorites: [],

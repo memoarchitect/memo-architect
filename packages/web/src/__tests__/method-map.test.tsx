@@ -33,7 +33,7 @@ const guide = (): GuideResult => ({
     workspace: 'Arm', scope: 'system', methodologies: ['m'], roleViews: [],
     layers: [
         layer('Context', 'architecture', ['context'], { purpose: 'Who is around it.' }),
-        layer('Logical', 'architecture', ['logical'], { purpose: 'How it works.', viewpoints: [{ name: 'vpLog', label: 'Logical architecture', viewKind: 'general' }] }),
+        layer('Logical', 'architecture', ['logical'], { purpose: 'How it works.', viewpoints: [{ id: 'm::vpLog', name: 'vpLog', label: 'Logical architecture', viewKind: 'general' }] }),
         layer('Risk', 'assurance', ['risk'], { purpose: 'What can go wrong.', standardReference: 'ISO 14971', linkDescription: 'controls in Logical', importable: true }),
     ],
     steps: [
@@ -121,7 +121,7 @@ beforeEach(() => {
     answer = guide();
     useModelStore.setState({
         model: model() as never,
-        guide: null, role: null, workspace: 'c::Arm', connected: true, pathways: true, lastStep: null,
+        guide: null, preferencesLoaded: true, role: null, workspace: 'c::Arm', connected: true, pathways: true, lastStep: null,
     });
 });
 afterEach(() => { act(() => root?.unmount()); container?.remove(); root = null; container = null; });
@@ -151,10 +151,29 @@ describe('the method map page', () => {
         expect(view.querySelector('[data-testid="continue-card"]')!.textContent).toContain('Done when: every connection goes port to port.');
         click(view, 'continue');
         expect(useModelStore.getState().lastStep).toBe('m::connect');
+        expect(useModelStore.getState().activeView).toEqual({ type: 'pathway', layer: 'Logical' });
         expect(saved.at(-1)).toMatchObject({ lastStep: 'm::connect', workspace: 'c::Arm' });
         act(() => useModelStore.getState().setPathways(false));
         expect(view.querySelector('[data-testid="continue-card"]')).toBeNull();
         expect(saved.at(-1)).toMatchObject({ pathways: false });
+    });
+
+    it('opens a row even when the method declares no steps in it', async () => {
+        answer.layers.push(layer('Empty / row', 'architecture', ['empty']));
+        const view = render();
+        await settle();
+        const row = view.querySelector('[data-row="Empty / row"]') as HTMLElement;
+        click(row, 'row-open');
+        expect(useModelStore.getState().activeView).toEqual({ type: 'pathway', layer: 'Empty / row' });
+    });
+
+    it('opens Start here in the row and remembers its first step', async () => {
+        const view = render();
+        await settle();
+        click(view, 'map-tab-assurance');
+        click(view, 'row-open');
+        expect(useModelStore.getState().activeView).toEqual({ type: 'pathway', layer: 'Risk' });
+        expect(useModelStore.getState().lastStep).toBe('m::hazards');
     });
 
     it('shows my work only: the rows with a step for my role', async () => {
