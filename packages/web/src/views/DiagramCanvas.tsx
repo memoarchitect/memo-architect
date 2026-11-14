@@ -1,3 +1,4 @@
+import { componentFunctionWorkspace, createComponentFunction } from '../lib/functional-authoring';
 import { affectedMovementRoutes } from '../diagram/ibd-movement-routing';
 import { answerOf, heldAnswer, holdAnswer, type AnswerOptions } from '../diagram/layout-answers';
 import { planOffThread } from '../diagram/route-off-thread';
@@ -6,7 +7,7 @@ import { nearestFreePosition } from '../diagram/nearest-free-position';
 import { spaceParts, spacePorts, type SpacingPart, type SpacingSide } from '../diagram/ibd-spacing';
 import { placementRouteConflicts } from '../diagram/ibd-placement-score';
 import { draggedPortSlot, legalPortSlot, measuredPortBounds, measurePortEnvelopes, type PortConstraintRect } from '../diagram/ibd-port-constraints';
-import { rendererModel } from '../diagram/renderer-model';
+import { DiagramDisplayScope, mergeScopedMembers, useDiagramDisplayModel } from '../diagram/display-scope';
 import { shortenAutomaticPortRoutes, improvesPlacement } from '../diagram/ibd-port-placement';
 import { elbowRoute, attachedRoute, cubicRoutePath, arcRoutePath, polylinePath } from '../diagram/ibd-routing';
 import { captureMovementGeometry, movementGeometryChanges, restoreMovementGeometry, type MovementGeometry } from '../diagram/movement-history';
@@ -989,7 +990,7 @@ function DiagramCanvasInner() {
     const embed = useDiagramEmbed();
     const readOnly = embed?.readOnly === true;
     const updateNodeInternals = useUpdateNodeInternals();
-    const model = useModelStore(s => rendererModel(s.model));
+    const model = useDiagramDisplayModel(true);
     const storeCreateRelationship = useModelStore(s => s.createRelationship);
     const createRelationship = readOnly ? (noWrite as unknown as typeof storeCreateRelationship) : storeCreateRelationship;
     const registries = useMemo(() => getRegistries(model), [model]);
@@ -1015,7 +1016,12 @@ function DiagramCanvasInner() {
     const storeUpdateDiagramElementIds = useModelStore(s => s.updateDiagramElementIds);
     const setNodeLayout = readOnly ? (noWrite as unknown as typeof storeSetNodeLayout) : storeSetNodeLayout;
     const mergeDiagramLayouts = readOnly ? (noWrite as unknown as typeof storeMergeDiagramLayouts) : storeMergeDiagramLayouts;
-    const updateDiagramElementIds = readOnly ? (noWrite as unknown as typeof storeUpdateDiagramElementIds) : storeUpdateDiagramElementIds;
+    const displayWorkspace = useContext(DiagramDisplayScope);
+    const updateDiagramElementIds = useCallback((diagramId: string, ids: string[]) => {
+        if (readOnly) return;
+        const canonical = useModelStore.getState().model;
+        storeUpdateDiagramElementIds(diagramId, canonical ? mergeScopedMembers(canonical, displayWorkspace, diagramId, ids) : ids);
+    }, [readOnly, storeUpdateDiagramElementIds, displayWorkspace]);
     const { fitView, screenToFlowPosition, getViewport, setViewport, getNodes } = useReactFlow();
 
     const [nodes, setNodes] = useNodesState<FlowNode>([]);
@@ -5467,6 +5473,7 @@ function DiagramCanvasInner() {
                     y={nodeCtx.y}
                     nodeId={nodeCtx.nodeId}
                     nodeKind={nodeCtx.nodeKind}
+                    onCreateComponentFunction={!readOnly && model && componentFunctionWorkspace(model, nodeCtx.nodeId, useModelStore.getState().workspace) ? () => { void createComponentFunction(nodeCtx.nodeId); } : undefined}
                     onClose={() => setNodeCtx(null)}
                     onEditName={() => {
                         // Trigger inline edit via node data update

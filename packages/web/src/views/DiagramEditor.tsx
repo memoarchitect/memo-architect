@@ -1,3 +1,4 @@
+import { useDiagramDisplayModel } from '../diagram/display-scope';
 // ─── DiagramEditor ────────────────────────────────────────────────────────────
 //
 // Three-mode editor for user diagrams:
@@ -55,7 +56,7 @@ function serializeDiagramToSysML(diagram: DiagramDTO, elements: Record<string, M
 // ─── Element membership panel (checkboxes per layer) ────────────────────────
 
 function ElementMembershipPanel({ diagram }: { diagram: DiagramDTO }) {
-    const model = useModelStore(s => s.model);
+    const model = useDiagramDisplayModel();
     const updateDiagramElementIds = useModelStore(s => s.updateDiagramElementIds);
     const [search, setSearch] = useState('');
 

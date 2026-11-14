@@ -1,8 +1,11 @@
+import { LayerElementBrowser } from './LayerElementBrowser';
+import { functionalDisplayIds, functionalScope, functionalStructure } from '@memoarchitect/tools/browser';
+import { createNativeFunction } from '../lib/functional-authoring';
 import { lazy, Suspense, useEffect, useMemo, useState, type CSSProperties } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useModelStore } from '../store/model-store';
 import { useGuideEvaluation } from '../lib/use-guide';
-import { axesOf, currentStep, diagramTypeFor, elementsOfKinds, layerViews, scopePath, scopeTree, stepsOfLayer, type GuideLayer } from '../lib/pathways';
+import { axesOf, currentStep, diagramTypeFor, elementsOfKinds, kindsOfLayer, layerViews, scopePath, scopeTree, stepsOfLayer, type GuideLayer } from '../lib/pathways';
 import { words, type GuideStepStatus } from '../lib/guide-view';
 import { idsInWorkspace, workspaceOptions } from '../lib/workspace-scope';
 import { isFeatureEnabled } from '../config/feature-flags';
@@ -12,6 +15,7 @@ import { COLOR, FONT } from '../styles/tokens';
 import { viewToPath } from '../view-routes';
 import { elementUrl } from '../router';
 import { PaletteKindsContext } from './DiagramPalette';
+import { DiagramDisplayScope } from '../diagram/display-scope';
 
 const DiagramEditor = lazy(() => import('./DiagramEditor').then(module => ({ default: module.DiagramEditor })));
 const button: CSSProperties = { border: `1px solid ${COLOR.border}`, borderRadius: 6, background: '#fff', color: COLOR.primary, padding: '7px 10px', cursor: 'pointer', font: 'inherit', fontSize: FONT.sm };
@@ -41,6 +45,7 @@ export function GuidedLayer({ layer }: { layer: string }) {
     const problem = useGuideEvaluation();
     const [railOpen, setRailOpen] = useState(true);
     const [viewpointsOpen, setViewpointsOpen] = useState(true);
+    const [browserTab, setBrowserTab] = useState<'elements' | 'views'>('elements');
     const [creating, setCreating] = useState(false);
     const [notice, setNotice] = useState<string | null>(null);
     const [linkFrom, setLinkFrom] = useState<string | null>(null);
@@ -49,7 +54,7 @@ export function GuidedLayer({ layer }: { layer: string }) {
     const step = currentStep(steps, lastStep);
     const chosen = model?.workspaceMembership?.workspaces.find(candidate => candidate.root === workspace);
     const scope = model && chosen ? scopePath(scopeTree(model), chosen.root).map(node => node.name).join(' › ') : workspace ? 'Loading selected system…' : 'Whole model';
-    const inScope = useMemo(() => idsInWorkspace(model?.workspaceMembership, workspace), [model, workspace]);
+    const inScope = useMemo(() => { const ids = idsInWorkspace(model?.workspaceMembership, workspace); return model && workspace && ids ? functionalDisplayIds(model, workspace, ids) : ids; }, [model, workspace]);
     const views = useMemo(() => model && row ? layerViews(model, row).filter(({ diagram }) => !inScope
         || diagram.elementIds?.some(id => inScope.has(id) || id === workspace)) : [], [model, row, inScope, workspace]);
     const uniqueViews = useMemo(() => [...new Map(views.map(view => [view.diagram.id, view])).values()], [views]);
@@ -58,7 +63,11 @@ export function GuidedLayer({ layer }: { layer: string }) {
     const openView = uniqueViews.find(view => view.diagram.id === requested)
         ?? uniqueViews.find(view => view.viewpoint.name === step?.guideViewpoint)
         ?? uniqueViews.find(view => preferredKind && view.diagram.viewKind === preferredKind) ?? uniqueViews[0];
-    const paletteKinds = [...new Set(steps.flatMap(item => [...item.inputKinds, ...item.outputKinds]))];
+    const paletteKinds = guide && row ? kindsOfLayer(guide, row) : [];
+    const layerElements = model ? elementsOfKinds(model, paletteKinds, workspace) : [];
+    const functionScope = model && workspace ? functionalScope(model, workspace) : undefined;
+    const functionRoot = model && workspace ? functionalStructure(model, workspace).root : undefined;
+    const admitsSystemFunctions = paletteKinds.includes('SystemFunction') || paletteKinds.includes('MemoFunction');
     const kindLabel = (kind: string) => model?.registries?.kinds.find(definition => definition.name === kind)?.label ?? words(kind);
     const canWrite = connected && !pinned;
     const goToRow = (name: string, diagramId?: string) => {
@@ -115,10 +124,10 @@ export function GuidedLayer({ layer }: { layer: string }) {
             </select></label>
             <span data-testid="layer-scope" style={{ fontSize: FONT.xs, color: COLOR.muted }}>{scope}</span><span style={{ flex: 1 }} />
             {pathways && <button type="button" style={button} aria-expanded={railOpen} onClick={() => setRailOpen(value => !value)}>{railOpen ? 'Hide guidance' : 'Show guidance'}</button>}
-            <button type="button" style={button} aria-expanded={viewpointsOpen} onClick={() => setViewpointsOpen(value => !value)}>{viewpointsOpen ? 'Hide viewpoints' : 'Show viewpoints'}</button>
+            <button type="button" style={button} aria-expanded={viewpointsOpen} onClick={() => setViewpointsOpen(value => !value)}>{viewpointsOpen ? 'Hide layer browser' : 'Show layer browser'}</button>
         </header>
         {problem && <p role="alert" style={{ margin: 12, color: '#B42318' }}>{problem}</p>}{notice && <p role="status" style={{ margin: 12 }}>{notice}</p>}
-        {!guide || !model ? <p style={{ padding: 20 }}>Reading the method…</p> : !row ? <p style={{ padding: 20 }}>This layer is not part of the selected method. Choose another layer above.</p> : <div style={{ flex: 1, display: 'flex', overflow: 'hidden', minHeight: 0 }}>
+        {!guide || !model || (workspace && !chosen) ? <p style={{ padding: 20 }}>Reading the method…</p> : !row ? <p style={{ padding: 20 }}>This layer is not part of the selected method. Choose another layer above.</p> : <div style={{ flex: 1, display: 'flex', overflow: 'hidden', minHeight: 0 }}>
             {pathways && railOpen && <aside aria-label="Layer guidance" data-testid="guide-rail" style={{ ...panel, width: 270, borderRight: `1px solid ${COLOR.border}` }}>
                 <h1 style={{ fontSize: 20, margin: '0 0 8px' }}>{row.label}</h1><p style={{ fontSize: FONT.sm, color: COLOR.muted }}>{row.purpose}</p>
                 {starting && <section aria-label="Start here" style={{ padding: 12, background: '#eef8f5', borderRadius: 8, marginBottom: 16 }}>
@@ -144,17 +153,19 @@ export function GuidedLayer({ layer }: { layer: string }) {
                         {row.viewpoints.find(viewpoint => viewpoint.name === item.guideViewpoint) && <div style={{ marginTop: 8 }}>{newViewButton(row.viewpoints.find(viewpoint => viewpoint.name === item.guideViewpoint)!)}</div>}
                     </article>)}</div><h2 style={{ fontSize: 18 }}>Links with other teams</h2>{steps.some(item => item.links.length > 0) ? steps.filter(item => item.links.length > 0).map(linksFor) : <p style={{ fontSize: FONT.sm }}>This layer declares no cross-team link checks.</p>}
                 </section>}
+                {admitsSystemFunctions && chosen && <section aria-label="Parent function" style={{ padding: '8px 12px', background: '#eef8f5', fontSize: FONT.sm }}>Parent function: {functionRoot ? elementButton(functionRoot.id) : <button style={button} disabled={!canWrite} onClick={() => void createNativeFunction(chosen.root)}>Set up parent function</button>}</section>}
                 <div role="tablist" aria-label="Views in this layer" style={{ display: 'flex', flexWrap: 'wrap', gap: 4, padding: '8px 12px', borderBottom: `1px solid ${COLOR.border}`, background: '#fff' }}>{uniqueViews.map(({ diagram }) => <button type="button" key={diagram.id} role="tab" aria-selected={diagram.id === openView?.diagram.id} style={{ ...button, background: diagram.id === openView?.diagram.id ? '#e8f8f3' : '#fff' }} onClick={() => goToRow(layer, diagram.id)}>{diagram.name}</button>)}</div>
-                {openView ? <section aria-label={openView.diagram.name} style={{ display: 'flex', flex: 1, minHeight: 450, flexDirection: 'column' }}>{selectedDiagramId === openView.diagram.id && <Suspense fallback={<p style={{ padding: 18 }}>Opening view…</p>}><PaletteKindsContext.Provider value={paletteKinds}><DiagramEditor key={openView.diagram.id} diagramId={openView.diagram.id} /></PaletteKindsContext.Provider></Suspense>}</section> : <section style={{ padding: 24 }}>
+                {openView ? <section aria-label={openView.diagram.name} style={{ display: 'flex', flex: 1, minHeight: 450, flexDirection: 'column' }}>{selectedDiagramId === openView.diagram.id && <Suspense fallback={<p style={{ padding: 18 }}>Opening view…</p>}><PaletteKindsContext.Provider value={paletteKinds}><DiagramDisplayScope.Provider value={workspace}><DiagramEditor key={`${openView.diagram.id}:${workspace ?? 'whole'}`} diagramId={openView.diagram.id} /></DiagramDisplayScope.Provider></PaletteKindsContext.Provider></Suspense>}</section> : <section style={{ padding: 24 }}>
                     <h2 style={{ fontSize: 20 }}>Work in {row.label.toLowerCase()}</h2><p style={{ fontSize: FONT.sm }}>{row.purpose}</p><p style={{ fontSize: FONT.sm }}>There are no authored views for this layer in {chosen?.name ?? 'the whole model'} yet.</p>
                     {!chosen && <p style={{ fontSize: FONT.sm }}>Choose a system above to create its first view.</p>}
                     <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>{row.viewpoints.map(viewpoint => <div key={viewpoint.id}>{newViewButton(viewpoint)}</div>)}</div>
                     <h3 style={{ fontSize: FONT.md }}>Existing work</h3><div style={{ display: 'grid', maxHeight: 260, overflow: 'auto' }}>{elementsOfKinds(model, paletteKinds, workspace).map(element => elementButton(element.id))}</div>
                 </section>}
             </div>
-            {viewpointsOpen && <aside aria-label="Viewpoints in this layer" style={{ ...panel, width: 230, borderLeft: `1px solid ${COLOR.border}` }}><h2 style={{ fontSize: FONT.md, margin: '0 0 14px' }}>Viewpoints in this layer</h2>{row.viewpoints.filter(viewpoint => viewpoint.viewKind || views.some(view => view.viewpoint.id === viewpoint.id)).map(viewpoint => <section key={viewpoint.id} style={{ padding: '12px 8px', borderRadius: 6, background: viewpoint.name === step?.guideViewpoint ? '#eef8f5' : 'transparent', borderBottom: `1px solid ${COLOR.border}` }}>
+            {viewpointsOpen && <aside aria-label="Viewpoints in this layer" style={{ ...panel, width: 230, borderLeft: `1px solid ${COLOR.border}` }}><div role="tablist" aria-label="Layer browser"><button role="tab" aria-selected={browserTab === 'elements'} style={button} onClick={() => setBrowserTab('elements')}>Elements ({layerElements.length})</button><button role="tab" aria-selected={browserTab === 'views'} style={button} onClick={() => setBrowserTab('views')}>Viewpoints</button></div>
+                {browserTab === 'elements' ? <LayerElementBrowser model={model} elements={layerElements} workspace={workspace} scopeLabel={chosen?.name ?? 'Whole model'} layerLabel={row.label} rootId={admitsSystemFunctions ? functionRoot?.id : undefined} shared={functionScope?.shared} context={functionScope?.context} canWrite={canWrite} kindLabel={kindLabel} onElement={openElement} /> : <><h2 style={{ fontSize: FONT.md, margin: '14px 0' }}>Viewpoints in this layer</h2>{row.viewpoints.filter(viewpoint => viewpoint.viewKind || views.some(view => view.viewpoint.id === viewpoint.id)).map(viewpoint => <section key={viewpoint.id} style={{ padding: '12px 8px', borderRadius: 6, background: viewpoint.name === step?.guideViewpoint ? '#eef8f5' : 'transparent', borderBottom: `1px solid ${COLOR.border}` }}>
                 <h3 style={{ fontSize: FONT.sm, margin: 0 }}>{viewpoint.label}</h3><p style={{ fontSize: FONT.xs, color: COLOR.muted, margin: '4px 0' }}>{viewpoint.viewKind ? `${words(viewpoint.viewKind)} view` : 'Existing authored views'}</p>{views.filter(view => view.viewpoint.id === viewpoint.id).map(({ diagram }) => <button type="button" key={diagram.id} style={{ ...link, display: 'block', fontWeight: diagram.id === openView?.diagram.id ? 700 : 400 }} onClick={() => goToRow(layer, diagram.id)}>{diagram.name}</button>)}<div style={{ marginTop: 8 }}>{newViewButton(viewpoint)}</div>
-            </section>)}</aside>}
+            </section>)}</>}</aside>}
         </div>}
         {linkFrom && model?.elements[linkFrom] && model.registries && <AddRelationshipDialog element={model.elements[linkFrom]} model={model} registries={model.registries} diagramId={openView?.diagram.id} onCancel={() => setLinkFrom(null)} onConfirm={request => createRelationship({ ...request, selectedElementId: linkFrom, diagramId: openView?.diagram.id })} />}
     </main>;

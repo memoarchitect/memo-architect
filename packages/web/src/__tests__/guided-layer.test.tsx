@@ -6,22 +6,24 @@ import { MemoryRouter, useLocation } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { MemoModelDTO } from '@memoarchitect/tools/browser';
 import { useModelStore } from '../store/model-store';
+import { useDiagramDisplayModel } from '../diagram/display-scope';
 import { GuidedLayer } from '../views/GuidedLayer';
+import { sendElementCreate } from '../store/ws-client';
 import { PathwaysEntry } from '../components/PathwaysEntry';
 import type { GuideResult, GuideStepStatus } from '../lib/guide-view';
 
 let answer: GuideResult;
-vi.mock('../store/ws-client', () => ({ requestGuide: async () => { useModelStore.getState().setGuide(answer); return answer; }, sendUserPreferencesSave: vi.fn() }));
-vi.mock('../views/DiagramEditor', () => ({ DiagramEditor: ({ diagramId }: { diagramId: string }) => createElement('div', { 'data-testid': 'editor' }, `${diagramId}:${useModelStore.getState().selectedDiagramId}`) }));
+vi.mock('../store/ws-client', () => ({ requestGuide: async () => { useModelStore.getState().setGuide(answer); return answer; }, sendUserPreferencesSave: vi.fn(), sendElementCreate: vi.fn(async () => ({ success: true, elementId: 'canonicalComponentFunction' })) }));
+vi.mock('../views/DiagramEditor', () => ({ DiagramEditor: ({ diagramId }: { diagramId: string }) => createElement('div', { 'data-testid': 'editor' }, `${diagramId}:${useModelStore.getState().selectedDiagramId}:${Object.keys(useDiagramDisplayModel()?.elements ?? {}).join(',')}`) }));
 vi.mock('../components/AddRelationshipDialog', () => ({ AddRelationshipDialog: ({ element }: { element: { name: string } }) => createElement('div', { 'data-testid': 'relationship-dialog' }, element.name) }));
 vi.mock('../components/AppDialogs', () => ({ askText: async () => 'A new function' }));
 const step = (id: string, over: Partial<GuideStepStatus> = {}): GuideStepStatus => ({ id, name: id, label: `Work ${id}`, stage: 'work', level: 'system', inputKinds: [], outputKinds: ['Function'], doneWhen: [], linkedWhen: [], objective: `Objective ${id}`, exitCriteria: `Criteria ${id}`, predecessors: [], methodology: 'm', state: 'open', outputs: [], rules: [], links: [], reasons: [], waiting: [], ...over });
 const viewpoints = [{ id: 'catalog::vpWork', name: 'vpWork', label: 'Work architecture', viewKind: 'general' }, { id: 'library::vpExisting', name: 'vpExisting', label: 'Existing work', viewKind: 'general' }];
 const baseGuide = (): GuideResult => ({ scope: 'system', workspace: 'Host', methodologies: ['m'], roleViews: [], layers: [
-    { id: 'm::layerWork', name: 'layerWork', label: 'Functional', axis: 'architecture', stages: ['work'], viewpoints, importable: false, methodology: 'm' },
+    { id: 'm::layerWork', name: 'layerWork', label: 'Functional', axis: 'architecture', stages: ['work'], elementKinds: ['Function', 'Chain'], viewpoints, importable: false, methodology: 'm' },
     { id: 'm::layerRisk', name: 'layerRisk', label: 'Safety and risk', axis: 'assurance', stages: ['risk'], viewpoints: [viewpoints[0]], importable: true, methodology: 'm' },
 ], steps: [step('one', { inputKinds: ['Scenario'], guideViewpoint: 'vpWork' }), step('two', { outputKinds: ['Chain'] }), step('three'), step('risk', { stage: 'risk', inputKinds: ['Scenario'] })] });
-const element = (id: string, kind: string, name = id) => ({ id, kind, name, construct: 'action', package: 'project', file: 'model/project.sysml', layer: 'work', attributes: {} });
+const element = (id: string, kind: string, name = id) => ({ id, kind, name, construct: 'action' as const, package: 'project', file: 'model/project.sysml', layer: 'work', attributes: {} });
 const model = (): MemoModelDTO => ({ elements: { host: element('host', 'System', 'Host'), other: element('other', 'System', 'Other'), fn: element('fn', 'Function', 'Compute signal'), scenario: element('scenario', 'Scenario', 'Measure a sample'), foreign: element('foreign', 'Function', 'Elsewhere') }, relationships: [], errors: [], revision: 1,
     registries: { kinds: [{ name: 'Function', label: 'System function' }, { name: 'Scenario', label: 'Scenario' }, { name: 'Chain', label: 'Functional flow' }], relationships: [] },
     viewpoints: [{ id: 'existing', name: 'vpExisting', label: 'Work', visibleKinds: [], visibleRelationships: [], visibleLayers: [] }],
@@ -39,13 +41,65 @@ const choose = async (label: string, value: string) => { const select = containe
 beforeEach(() => { answer = baseGuide(); window.__MEMO_FLAGS__ = { experimental: true }; useModelStore.setState({ model: model(), guide: answer, workspace: 'host', connected: true, preferencesLoaded: true, pathways: true, lastStep: null, pinned: null, activeView: { type: 'pathway', layer: 'layerWork' }, selectedDiagramId: null }); });
 afterEach(() => { act(() => root?.unmount()); container?.remove(); vi.restoreAllMocks(); });
 describe('the guided layer workspace', () => {
+    it('shows the existing breakdown beneath a parent performance reference without duplicating its original', async () => {
+        const next = model();
+        next.registries!.kinds.push({ name: 'MemoFunction' } as never, { name: 'SystemFunction', superType: 'MemoFunction' } as never);
+        answer.layers[0].elementKinds = ['MemoFunction'];
+        next.elements.fn.kind = 'SystemFunction';
+        next.elements.root = element('root', 'SystemFunction', 'Host responsibility');
+        next.elements.alias = element('alias', 'SystemFunction', 'Compute signal');
+        next.elements.nested = element('nested', 'SystemFunction', 'Nested responsibility');
+        for (const id of ['root', 'alias', 'nested']) next.workspaceMembership!.membership[id] = ['host'];
+        next.relationships.push(...[
+            { id: 'rRoot', type: 'functionalRoot', sourceId: 'host', targetId: 'root' },
+            { id: 'rAlias', type: 'composes', sourceId: 'root', targetId: 'alias' },
+            { id: 'rSubset', type: 'subsets', sourceId: 'alias', targetId: 'fn' },
+            { id: 'rChild', type: 'composes', sourceId: 'fn', targetId: 'nested' },
+        ] as never[]);
+        useModelStore.setState({ model: next }); await render();
+        const tree = container.querySelector('[aria-label="Functional breakdown"]')!;
+        expect(tree.textContent).toContain('Nested responsibility');
+        expect([...tree.querySelectorAll('button')].filter(button => button.textContent === 'Compute signal')).toHaveLength(1);
+        expect(container.querySelector('[aria-label="Elements in this layer"]')!.textContent!.match(/Compute signal/g)).toHaveLength(1);
+    });
+
+    it('offers native allocated function creation on component right-click', async () => {
+        const next = model();
+        next.registries!.kinds.push({ name: 'LogicalComponent', label: 'Logical component' } as never);
+        next.elements.controller = element('controller', 'LogicalComponent', 'Controller');
+        next.workspaceMembership!.membership.controller = ['host'];
+        answer.layers[0].elementKinds!.push('LogicalComponent');
+        next.relationships.push({ id: 'alloc', type: 'allocatedTo', sourceId: 'fn', targetId: 'controller' } as never);
+        useModelStore.setState({ model: next });
+        await render();
+        act(() => buttons('Controller')[0].dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, clientX: 30, clientY: 30 })));
+        await settle(); await click('Create component function…');
+        expect(sendElementCreate).toHaveBeenCalledWith(expect.objectContaining({ id: '', construct: 'action', functionContext: { workspace: 'host', componentId: 'controller' } }));
+        expect(useModelStore.getState().activeView).toMatchObject({ type: 'pathway', layer: 'layerWork' });
+    });
+
+    it('groups scoped element types independently of step output and narrows the editor model', async () => {
+        const next = model(); next.elements.component = element('component', 'ComponentFunction', 'Calculate sample');
+        next.registries!.kinds.push({ name: 'ComponentFunction', label: 'Component function', superType: 'Function' } as never);
+        next.workspaceMembership!.membership.component = ['host'];
+        next.diagrams![0].elementIds = ['fn', 'foreign', 'component'];
+        useModelStore.setState({ model: next });
+        await render();
+        const browser = container.querySelector('[aria-label="Elements in this layer"]')!;
+        expect(browser.textContent).toContain('Component function (1)');
+        expect(browser.textContent).toContain('Calculate sample');
+        expect(browser.textContent).not.toContain('Elsewhere');
+        expect(container.querySelector('[data-testid="editor"]')?.textContent).not.toContain('foreign');
+        expect(useModelStore.getState().model!.diagrams![0].elementIds).toContain('foreign');
+    });
+
     it('opens an existing scoped view in the editor and switches tabs without leaving the layer', async () => {
         await render();
-        expect(container.querySelector('[data-testid="editor"]')?.textContent).toBe('first:first');
+        expect(container.querySelector('[data-testid="editor"]')?.textContent).toBe('first:first:host,fn,scenario');
         expect(container.textContent).not.toContain('Other system view');
         expect(container.textContent).not.toContain('being built');
         await click('Existing exchanges');
-        expect(container.querySelector('[data-testid="editor"]')?.textContent).toBe('second:second');
+        expect(container.querySelector('[data-testid="editor"]')?.textContent).toBe('second:second:host,fn,scenario');
         expect(useModelStore.getState().activeView).toEqual({ type: 'pathway', layer: 'layerWork', diagramId: 'second' });
         expect(container.querySelector('[data-testid="location"]')?.textContent).toBe('/method/layerWork?view=second');
     });
@@ -66,16 +120,16 @@ describe('the guided layer workspace', () => {
         const create = vi.fn(async (_options: unknown) => { const current = useModelStore.getState().model!; useModelStore.setState({ model: { ...current, viewpoints: [...current.viewpoints!, { id: 'catalog', name: 'vpWork', label: 'Work', visibleKinds: [], visibleRelationships: [], visibleLayers: [] }], diagrams: [...current.diagrams!, { id: 'created', name: 'New view', viewpointId: 'catalog', diagramType: 'bdd', elementIds: ['host'], auto: false }] } }); return 'created'; });
         const previous = useModelStore.getState().createDiagram; useModelStore.setState({ createDiagram: create });
         try { await render(); await click('New work architecture view');
-            expect(create).toHaveBeenCalledWith(expect.objectContaining({ viewpointId: 'catalog::vpWork', elementIds: ['host'], elementKinds: ['Scenario', 'Function', 'Chain'], properties: { autoPopulate: 'false' }, activate: false }));
+            expect(create).toHaveBeenCalledWith(expect.objectContaining({ viewpointId: 'catalog::vpWork', elementIds: ['host'], elementKinds: ['Function', 'Chain'], properties: { autoPopulate: 'false' }, activate: false }));
             expect(create.mock.calls[0][0]).not.toHaveProperty('id');
             expect(useModelStore.getState().activeView).toEqual({ type: 'pathway', layer: 'layerWork', diagramId: 'created' });
-            expect(container.querySelector('[data-testid="editor"]')?.textContent).toBe('created:created');
+            expect(container.querySelector('[data-testid="editor"]')?.textContent).toBe('created:created:host,fn,scenario');
         } finally { useModelStore.setState({ createDiagram: previous }); }
     });
     it('shows a creation diagnostic without replacing the open editor', async () => {
         const previous = useModelStore.getState().createDiagram;
         useModelStore.setState({ createDiagram: async options => { options.onError?.('The compiler rejected the declaration.'); return undefined; } });
-        try { await render(); await click('New work architecture view'); expect(container.textContent).toContain('The compiler rejected the declaration.'); expect(container.querySelector('[data-testid="editor"]')?.textContent).toBe('first:first'); }
+        try { await render(); await click('New work architecture view'); expect(container.textContent).toContain('The compiler rejected the declaration.'); expect(container.querySelector('[data-testid="editor"]')?.textContent).toBe('first:first:host,fn,scenario'); }
         finally { useModelStore.setState({ createDiagram: previous }); }
     });
     it('offers a clear route from the dashboard into Pathways', async () => {
@@ -103,9 +157,9 @@ describe('the guided layer workspace', () => {
         expect(container.querySelector('[data-testid="editor"]')).not.toBeNull();
     });
     it('minimizes guidance and viewpoints without changing the active editor', async () => {
-        await render(); await click('Hide guidance'); await click('Hide viewpoints');
+        await render(); await click('Hide guidance'); await click('Hide layer browser');
         expect(container.querySelector('[data-testid="guide-rail"]')).toBeNull();
         expect(container.querySelector('[aria-label="Viewpoints in this layer"]')).toBeNull();
-        expect(container.querySelector('[data-testid="editor"]')?.textContent).toBe('first:first');
+        expect(container.querySelector('[data-testid="editor"]')?.textContent).toBe('first:first:host,fn,scenario');
     });
 });

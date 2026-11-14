@@ -1,3 +1,4 @@
+import { useDiagramDisplayModel } from '../diagram/display-scope';
 // ─── Diagram Shapes + Elements Navigator ─────────────────────────────────────
 // Two sections. "Shapes" is the authoring palette: the kinds this view admits,
 // dragged onto the canvas to create an element (the canvas' onDrop reads the
@@ -36,7 +37,7 @@ interface DiagramPaletteProps {
 export function DiagramPalette({
     collapsed, onToggleCollapse, elementIds = [], eligibleKinds,
 }: DiagramPaletteProps) {
-    const model = useModelStore(s => s.model);
+    const model = useDiagramDisplayModel();
     const fallbackKinds = useContext(PaletteKindsContext);
     const selectedElementId = useModelStore(s => s.selectedElementId);
     const inspectElement = useModelStore(s => s.inspectElement);

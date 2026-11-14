@@ -10,7 +10,7 @@
 // so are the parts designed elsewhere: those typed by a definition from a dependency package.
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { indexKinds, kindConformsTo, relationshipsOfType, type DiagramDTO, type MemoModelDTO } from '@memoarchitect/tools/browser';
+import { functionalDisplayIds, indexKinds, kindConformsTo, relationshipsOfType, type DiagramDTO, type MemoModelDTO } from '@memoarchitect/tools/browser';
 import type { GuideResult, GuideStepStatus } from './guide-view';
 import { regulatedDevices, type DeviceRow } from './devices-view';
 import { idsInWorkspace, workspaceOptions } from './workspace-scope';
@@ -76,10 +76,16 @@ export function diagramTypeFor(viewKind: string | undefined): string {
     return Object.entries(DIAGRAM_TYPE_META).find(([, meta]) => meta.viewKind === viewKind)?.[0] ?? 'bdd';
 }
 
+/** Row taxonomy is method data; older custom methods fall back to their produced kinds. */
+export function kindsOfLayer(guide: GuideResult, layer: GuideLayer): string[] {
+    return layer.elementKinds?.length ? layer.elementKinds : [...new Set(stepsOfLayer(guide, layer).flatMap(step => step.outputKinds))];
+}
+
 /** Elements admitted by any requested kind, including specializations, in the chosen workspace. */
 export function elementsOfKinds(model: MemoModelDTO, kinds: readonly string[], workspace: string | null) {
     const registry = indexKinds(model.registries?.kinds ?? []);
-    const ids = idsInWorkspace(model.workspaceMembership, workspace);
+    const workspaceIds = idsInWorkspace(model.workspaceMembership, workspace);
+    const ids = workspace && workspaceIds ? functionalDisplayIds(model, workspace, workspaceIds) : workspaceIds;
     return Object.values(model.elements).filter(element => (!ids || ids.has(element.id))
         && kinds.some(kind => kindConformsTo(element.kind, kind, registry)));
 }

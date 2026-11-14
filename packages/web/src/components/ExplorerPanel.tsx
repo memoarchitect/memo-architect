@@ -1,3 +1,4 @@
+import { componentFunctionWorkspace, createComponentFunction } from '../lib/functional-authoring';
 import { Fragment, createContext, lazy, Suspense, useContext, useState, useMemo, useCallback, useEffect, useRef, type PointerEvent as ReactPointerEvent } from 'react';
 import { alertDialog, askConfirm, askText } from './AppDialogs';
 import { groupParentPath, siblingGroups, waitForPackage } from '../lib/element-package';
@@ -263,6 +264,7 @@ function ElementContextMenu({ menu, onClose }: { menu: CtxMenuState; onClose: ()
         const isUndefinedKind = !(model.registries?.kinds ?? []).some(kind => kind.name === el.kind);
         actions = [
             { label: 'View details', action: () => selectElement(el.id) },
+            ...(useModelStore.getState().connected && !useModelStore.getState().pinned && componentFunctionWorkspace(model, el.id, useModelStore.getState().workspace) ? [{ label: 'Create component function…', action: () => { void createComponentFunction(el.id); } }] : []),
             {
                 label: 'Move to package…',
                 action: async () => {

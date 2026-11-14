@@ -1,4 +1,4 @@
-import { rendererModel } from '../../renderer-model';
+import { useDiagramDisplayModel } from '../../display-scope';
 // ─── MaxGraphCanvas ───────────────────────────────────────────────────────────
 //
 // Alternate diagram surface on maxGraph (@maxgraph/core), the maintained
@@ -155,7 +155,7 @@ function applySavedLayout(scene: NotationScene, saved?: DiagramLayout): Notation
 }
 
 export function MaxGraphCanvas() {
-    const model = useModelStore(s => rendererModel(s.model));
+    const model = useDiagramDisplayModel(true);
     const selectedDiagramId = useModelStore(s => s.selectedDiagramId);
     const selectedViewpointId = useModelStore(s => s.selectedViewpointId);
     const selectedElementId = useModelStore(s => s.selectedElementId);
