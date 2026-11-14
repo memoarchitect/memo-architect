@@ -16,12 +16,30 @@ export async function awaitSavedElement(id: string, optimistic = useModelStore.g
         if (failure) throw new Error(`The element was not saved: ${failure}`);
         const elements = useModelStore.getState().model?.elements ?? {};
         const qualified = Object.keys(elements).find(key => key.endsWith(`::${id}`));
-        if (qualified) return qualified;
+        if (qualified) {
+            replaceOptimistic(id, qualified);
+            return qualified;
+        }
         const current = elements[id];
         if (current && current !== optimistic) return id;
         await new Promise(resolve => setTimeout(resolve, 100));
     }
     throw new Error('The new element was saved, but the rebuilt model did not arrive.');
+}
+
+/**
+ * The saved element replaces the optimistic copy. Left in place, the copy is listed twice and stays selected, and
+ * an edit made to it goes to an element the server does not have: it is dropped, or written as invalid source.
+ */
+function replaceOptimistic(id: string, qualified: string): void {
+    useModelStore.setState(state => {
+        if (!state.model?.elements[id]) return {};
+        const { [id]: _optimistic, ...elements } = state.model.elements;
+        return {
+            model: { ...state.model, elements },
+            ...(state.selectedElementId === id ? { selectedElementId: qualified } : {}),
+        };
+    });
 }
 
 /** Wait for the server to publish a model after a write, so the next write is checked against the source it made. */

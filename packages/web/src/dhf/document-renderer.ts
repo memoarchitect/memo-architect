@@ -136,10 +136,12 @@ function renderInterfacesTable(body: string, model: MemoModelDTO | null): string
     };
     const carried = (f: (typeof found)[number]) => [...new Set(f.carries.map(c => c.item ?? 'a flow with no named item'))].join(', ');
     const attributes = (f: (typeof found)[number]) => Object.entries(f.attributes).map(([k, v]) => `${k} = ${v}`).join(', ');
-    const rows = found.map(f => `<tr><td>${escapeHtml(f.name)}</td><td>${escapeHtml(f.kind ?? '—')}</td>`
+    // A plain connection has no interface kind; it says what it is rather than leaving the column blank.
+    const rows = found.map(f => `<tr><td>${escapeHtml(f.name)}</td><td>${escapeHtml(f.kind ?? (f.relation === 'connect' ? 'Connection' : '—'))}</td>`
         + `<td>${portOn(f, a)}</td><td>${portOn(f, b)}</td><td>${escapeHtml(carried(f) || '—')}</td><td>${escapeHtml(attributes(f) || '—')}</td></tr>`).join('');
-    return `<table><thead><tr><th>Interface</th><th>Kind</th><th>Port on ${label(a)}</th><th>Port on ${label(b)}</th><th>Carries</th><th>Attributes</th></tr></thead>`
-        + `<tbody>${rows}</tbody></table>`;
+    // Port names are long single words, so on a narrow pane the table scrolls on its own instead of the whole page.
+    return `<div class="memo-table-scroll"><table class="memo-interfaces"><thead><tr><th>Interface</th><th>Kind</th><th>Port on ${label(a)}</th><th>Port on ${label(b)}</th><th>Carries</th><th>Attributes</th></tr></thead>`
+        + `<tbody>${rows}</tbody></table></div>`;
 }
 
 function generateToc(md: string): string {

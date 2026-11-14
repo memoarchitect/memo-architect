@@ -41,6 +41,15 @@ describe('interfaces page', () => {
         expect(filterParts(typed, { kinds: [], contains: '' }, parents)).toEqual([]);
     });
 
+    it('matches the name, not the package path in the id', () => {
+        const [lidar, nav] = selectableParts(model);
+        const nested = [
+            { ...lidar, id: 'workstation_nodes::autocam', name: 'autocam', shortName: 'autocam' },
+            { ...nav, id: 'hardware::extWorkstation', name: 'External workstation', shortName: 'extWorkstation' },
+        ];
+        expect(filterParts(nested, { kinds: [], contains: 'workstation' }, new Map()).map(p => p.id)).toEqual(['hardware::extWorkstation']);
+    });
+
     it('offers parts in a layer with ports or interfaces, not definitions, ports or risks', () => {
         expect(selectableParts(model).map(p => p.id)).toEqual(['p::lidar', 'p::nav']);
     });

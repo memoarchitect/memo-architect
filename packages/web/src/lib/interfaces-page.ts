@@ -31,8 +31,10 @@ export function filterParts(parts: readonly MemoElement[], filter: { kinds: read
     if (filter.kinds.length === 0 && !text) return [];
     const universe = [...new Set(parts.map(part => part.kind))];
     const wanted = new Set(filter.kinds.flatMap(kind => kindsUnder(kind, parents, universe)));
+    // The name as shown or as declared, not the qualified id: every part in a package named `workstation` would match.
     return parts.filter(part =>
-        (wanted.size === 0 || wanted.has(part.kind)) && (!text || part.name.toLowerCase().includes(text) || part.id.toLowerCase().includes(text)));
+        (wanted.size === 0 || wanted.has(part.kind))
+        && (!text || part.name.toLowerCase().includes(text) || (part.shortName ?? '').toLowerCase().includes(text)));
 }
 
 /** The title a saved interface page gets by default. */

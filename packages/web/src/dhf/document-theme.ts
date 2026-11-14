@@ -32,6 +32,8 @@ export function documentThemeCss(settings: DhfSettings): string {
 .memo-doc table{border-collapse:collapse;width:100%;margin:12px 0;font-size:${px(12)}}
 .memo-doc th,.memo-doc td{border:1px solid #e5e7eb;padding:6px 10px;text-align:left;vertical-align:top}
 .memo-doc th{background:#f3f4f6;font-weight:600}
+.memo-doc .memo-table-scroll{overflow-x:auto;margin:12px 0}
+.memo-doc .memo-table-scroll table{margin:0}
 .memo-doc code{background:#f3f4f6;padding:1px 5px;border-radius:3px;font-family:monospace;font-size:${px(12)}}
 .memo-doc pre{background:#1e293b;color:#e2e8f0;padding:14px;border-radius:6px;overflow-x:auto}
 .memo-doc pre code{background:none;color:inherit;padding:0}

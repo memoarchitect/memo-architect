@@ -16,6 +16,7 @@ import { QuantityHint } from './element-profile/QuantityHint';
 import type { Density } from './element-profile/density';
 import { relationshipsOfType } from '@memoarchitect/tools/browser';
 import { ontologyLabel } from '../lib/ontology-labels';
+import { enumChoices } from '../lib/enum-attribute';
 
 /** This panel is the compact rendering of the same profile as ElementDetailView. */
 const PANEL_DENSITY: Density = 'panel';
@@ -253,6 +254,7 @@ function ElementProperties() {
     const updateElementField = useModelStore(s => s.updateElementField);
     const updateElementAttribute = useModelStore(s => s.updateElementAttribute);
     const applyEdit = useModelStore(s => s.applyEdit);
+    const elementSave = useModelStore(s => s.elementSave);
     const deleteModelElement = useModelStore(s => s.deleteModelElement);
 
     const [attrEditMode, setAttrEditMode] = useState(false);
@@ -477,16 +479,32 @@ function ElementProperties() {
                     </Section>
                 )}
 
+                {elementSave?.elementId === selectedElementId && (
+                    <div role={elementSave.state === 'error' ? 'alert' : 'status'} style={{
+                        margin: '0 0 8px', padding: '6px 10px', borderRadius: 6, fontSize: 12,
+                        color: elementSave.state === 'error' ? '#B91C1C' : '#4B5563',
+                        background: elementSave.state === 'error' ? '#FEE2E2' : '#F3F4F6',
+                    }}>{elementSave.message}</div>
+                )}
                 {attrs.length > 0 && (
                     <Section title="Attributes" count={attrs.length} defaultOpen={false}>
                         <div className="space-y-1.5">
                             {attrs.map(([key, value]) => {
                                 const editability = attributeEditability(key);
+                                const choices = isEditable(editability) ? enumChoices(String(value ?? ''), model.enumerations) : null;
                                 return (
                                     <div key={key} className="flex text-xs items-start gap-1.5">
                                         <span className="min-w-[100px] pt-0.5" style={{ color: '#6B7280' }}>{key}</span>
                                         <div style={{ flex: 1, minWidth: 0 }}>
-                                            {isEditable(editability) ? (
+                                            {choices ? (
+                                                <select
+                                                    aria-label={key} value={String(value)}
+                                                    onChange={event => handleAttrSave(key, event.target.value)}
+                                                    style={{ width: '100%', minWidth: 0, fontSize: 12, padding: '2px 4px', border: '1px solid #E5E7EB', borderRadius: 4, background: '#FFFFFF', color: '#111827' }}
+                                                >
+                                                    {choices.map(choice => <option key={choice} value={choice}>{choice.slice(choice.indexOf('::') + 2)}</option>)}
+                                                </select>
+                                            ) : isEditable(editability) ? (
                                                 <EditableValue
                                                     value={String(value ?? '')}
                                                     onSave={newVal => handleAttrSave(key, newVal)}

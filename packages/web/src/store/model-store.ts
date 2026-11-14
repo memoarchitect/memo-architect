@@ -488,6 +488,11 @@ export interface ModelState {
     persistElementAttributes: (elementId: string, attributes: Record<string, string>) => void;
     cancelEdit: (elementId: string) => void;
     applyEdit: (elementId: string) => void;
+    /**
+     * The edit being written, or why it was refused. A write recompiles the model first, so on a large model it is
+     * most of a minute: without this the panel says nothing while it runs, and nothing at all when it fails.
+     */
+    elementSave: { elementId: string; state: 'saving' | 'error'; message: string } | null;
 
     // ─── User-created viewpoints (#8, #9) ─────────────────────────────
     userViewpoints: ViewpointDTO[];
@@ -890,6 +895,7 @@ export const useModelStore = create<ModelState>((set, get) => ({
     analysisIssues: [],
     editingElementId: null,
     pendingEdits: new Map(),
+    elementSave: null,
 
     // Relationship authoring
     pendingRelationships: [],
@@ -1581,15 +1587,22 @@ export const useModelStore = create<ModelState>((set, get) => ({
         set({ model: optimisticModel });
 
         // 2. Sync to server
-        const result = elementId.startsWith('new_')
-            ? await sendElementCreate(updated)
-            : await sendElementUpdate(updated);
-        
+        set({ elementSave: { elementId, state: 'saving', message: 'Saving: the model is rebuilt first, which can take a minute on a large model…' } });
+        let result: { success: boolean; error?: string };
+        try {
+            result = elementId.startsWith('new_')
+                ? await sendElementCreate(updated)
+                : await sendElementUpdate(updated);
+        } catch (error) {
+            result = { success: false, error: error instanceof Error ? error.message : String(error) };
+        }
+
         if (!result.success) {
-            // Revert on failure
-            set({ model });
+            // Revert on failure, and say why: a refused edit that only disappears reads as "nothing happened".
+            set({ model, elementSave: { elementId, state: 'error', message: `Not saved. ${result.error ?? 'The server refused the edit.'}` } });
             return;
         }
+        set(state => (state.elementSave?.elementId === elementId ? { elementSave: null } : {}));
 
         // 3. Clear pending edits on success
         const newEdits = new Map(get().pendingEdits);

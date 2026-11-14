@@ -576,7 +576,8 @@ export function UiScreensWorkspace() {
             return undefined;
         }
         setDrawMode(false);
-        setStatus('Saving region…');
+        // The model is rebuilt before the region shows; on a large model that is most of a minute, so say so.
+        setStatus('Saving region: the model is rebuilt first, which can take a minute on a large model…');
         try {
             // Read the model as it is NOW, not as this render saw it: accepting several regions in a row
             // would otherwise hand each one the same id, and the later ones would be reported saved on the
@@ -746,6 +747,13 @@ export function UiScreensWorkspace() {
         for (const proposal of proposals.filter(candidate => candidate.status === 'pending')) await acceptProposal(proposal.id);
     };
 
+    /** Every pending proposal at once; one already accepted is a region in the model and stays. */
+    const rejectAllProposals = () => {
+        const pending = proposals.filter(candidate => candidate.status === 'pending').length;
+        setProposals(current => current.map(proposal => (proposal.status === 'pending' ? { ...proposal, status: 'rejected' } : proposal)));
+        setStatus(`Rejected ${pending} proposal${pending === 1 ? '' : 's'}.`);
+    };
+
     const rejectProposal = (proposalId: string) => {
         const rejected = new Set<string>([proposalId]);
         let changed = true;
@@ -884,8 +892,12 @@ export function UiScreensWorkspace() {
                                 badge={proposals.filter(proposal => proposal.status === 'pending').length || undefined}
                                 onClick={() => void detectRegions()} title="Propose nested regions from detected image boundaries" />
                             {proposals.some(proposal => proposal.status === 'pending') && (
-                                <IconButton icon={<span aria-hidden>✓</span>} label="Accept all" onClick={() => void acceptAllProposals()}
-                                    title="Accept every pending detected region" />
+                                <>
+                                    <IconButton icon={<span aria-hidden>✓</span>} label="Accept all" onClick={() => void acceptAllProposals()}
+                                        title="Accept every pending detected region" />
+                                    <IconButton icon={<span aria-hidden>×</span>} label="Reject all" onClick={rejectAllProposals}
+                                        title="Reject every pending detected region" />
+                                </>
                             )}
                             {status && (statusFailed
                                 ? <span role="alert" style={{ marginLeft: 'auto', fontSize: FONT.xs, fontWeight: 600, color: '#B91C1C', background: '#FEE2E2', padding: '3px 8px', borderRadius: 5, maxWidth: 460 }}>{status}</span>

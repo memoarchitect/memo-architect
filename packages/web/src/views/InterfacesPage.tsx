@@ -170,7 +170,7 @@ export function InterfacesPage() {
                 onNew={() => setActiveView({ type: 'interfaces' })}
             />
             <div style={{ flex: 1, minWidth: 0, overflowY: 'auto', padding: '24px 32px' }}>
-                <div style={{ maxWidth: 980, margin: '0 auto', display: 'grid', gap: '16px' }}>
+                <div style={{ maxWidth: 980, margin: '0 auto', display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: '16px' }}>
                     <div>
                         <h1 style={{ margin: 0, fontSize: FONT.lg, color: COLOR.primary }}>Interfaces</h1>
                         <p style={{ margin: '4px 0 0', fontSize: FONT.sm, color: COLOR.muted }}>
@@ -207,7 +207,7 @@ export function InterfacesPage() {
                     )}
 
                     {ready && verdict?.ok && (
-                        <div style={{ background: COLOR.surface, border: `1px solid ${COLOR.border}`, borderRadius: '10px', padding: '14px 16px', display: 'grid', gap: '10px' }}>
+                        <div style={{ background: COLOR.surface, border: `1px solid ${COLOR.border}`, borderRadius: '10px', padding: '14px 16px', display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: '10px' }}>
                             <style>{css}</style>
                             <MemoMarkdownView className="memo-doc" html={html} model={model} />
                             <form
