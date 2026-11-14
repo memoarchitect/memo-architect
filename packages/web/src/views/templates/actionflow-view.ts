@@ -9,7 +9,7 @@
 
 import type { NotationLayoutNode as Node, NotationLayoutEdge as Edge } from '../../diagram/notation-scene';
 import type { ActivityNodeType, MemoElement, MemoModelDTO, MemoRelationship, OntologyRegistriesDTO } from '@memoarchitect/tools/browser';
-import { activityNodeType, isControlNode } from '@memoarchitect/tools/browser';
+import { activityNodeType, carriedItem, isControlNode } from '@memoarchitect/tools/browser';
 import { LAYER_COLORS } from '../../constants';
 import { EDGE, FONT } from '../../styles/tokens';
 import { elk, type LayoutResult } from '../layout';
@@ -585,6 +585,10 @@ export interface ActionFlowViewOptions {
     direction?: 'horizontal' | 'vertical';
     /** Visible connection categories. Omit to render all flow categories. */
     visibleFlowKinds?: ReadonlySet<ActionFlowKind>;
+    /** Label each flow with the item it carries (its label, as `Sampled EGM`). Off unless asked. */
+    showFlowItems?: boolean;
+    /** Draw the flows and successions. Hidden, the steps keep the places the connectors gave them. */
+    showConnectors?: boolean;
     layoutProviderId?: string;
     /** Whether an action opens steps the view does not draw (those of the definition it is typed by). */
     canDrillIn?: (actionId: string) => boolean;
@@ -1422,7 +1426,15 @@ export async function computeActionFlowViewLayout(
         }
     };
     const edges: Edge[] = [];
-    for (const rel of visibleFlows) {
+    const elementOf = (id: string) => model.elements[id];
+    const itemLabel = (rel: MemoRelationship): string | undefined => {
+        const item = carriedItem(rel, elementOf);
+        if (!item) return undefined;
+        return Object.values(model.elements)
+            .find(e => e.isDefinition && (e.shortName ?? e.id.slice(e.id.lastIndexOf(':') + 1)) === item)?.name ?? item;
+    };
+    const drawConnectors = options?.showConnectors !== false;
+    for (const rel of drawConnectors ? visibleFlows : []) {
         const flowKind = classifyFlow(rel);
         const flowColor = FLOW_COLORS[flowKind];
         // Dashed for a flow declared as information of some kind; undeclared stays solid.
@@ -1433,7 +1445,7 @@ export async function computeActionFlowViewLayout(
             target: rel.targetId,
             ...(rel.sourceEnd ? { sourceHandle: `out:${rel.sourceEnd}` } : {}),
             ...(rel.targetEnd ? { targetHandle: `in:${rel.targetEnd}` } : {}),
-            label: undefined,
+            label: options?.showFlowItems ? itemLabel(rel) : undefined,
             type: 'interconnectionEdge',
             animated: false,
             style: {
@@ -1462,7 +1474,7 @@ export async function computeActionFlowViewLayout(
             },
         });
     }
-    for (const rel of visibleSuccs) {
+    for (const rel of drawConnectors ? visibleSuccs : []) {
         edges.push({
             id: rel.id,
             source: rel.sourceId,

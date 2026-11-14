@@ -59,7 +59,7 @@ function makeContext(overrides: Partial<DiagramToolbarContext> = {}): DiagramToo
         saveIbdDisplay: noop, interconnectionPath: ['p1', 'p2'], setFocusedInterconnectionId: noop,
         addAnnotation: noop, flowAnimationEnabled: true, setEdges: noop,
         interconnectionLegendOpen: true, setInterconnectionLegendOpen: noop,
-        showIbdPortText: true, showIbdConnectionText: true,
+        showIbdPortText: true, showIbdConnectionText: true, showActionFlowItems: false,
 
         setCollapsedStateNodes: noop, compositeStateIds: ['s1'], statePath: ['s1', 's2'], setFocusedStateId: noop,
 

@@ -1315,6 +1315,9 @@ function DiagramCanvasInner() {
     const flowAnimationEnabled = currentLayout?.canvas?.flowAnimation ?? declaredBool('flowAnimation') === true;
     const showIbdPortText = declaredBool('showPortText') !== false;
     const showIbdConnectionText = declaredBool('showConnectionText') !== false;
+    // An action flow names each flow's item only when asked: the same view setting, a different default,
+    // because these diagrams have drawn their flows unlabelled.
+    const showActionFlowItems = declaredBool('showConnectionText') === true;
     // Walls the view declares for its boundary ports. A constraint fed INTO
     // layout, not an override applied after it: the template sizes the box and
     // orders the wall around it, so a bottom-wall connector is placed
@@ -3311,6 +3314,8 @@ function DiagramCanvasInner() {
                     onDrillInAction: drillIntoAction,
                     focusActionId: focusedActionId ?? undefined,
                     visibleFlowKinds: visibleActionFlowKinds,
+                    showFlowItems: showActionFlowItems,
+                    showConnectors: interconnectionConnectionDisplay !== 'none',
                     direction: actionFlowDirection,
                     onNavigateToView: navigateToView,
                     canDrillIn: (actionId: string) => !!model && !!actionDrillSource(model, actionId),
@@ -3362,7 +3367,7 @@ function DiagramCanvasInner() {
         viewKind, isGeneralTemplate, generalMode, diagramProfile, swimlanesOn, relayoutNonce,
         selectedDiagram?.relationshipTypes, selectedDiagram?.diagramType, selectedDiagram?.name, useCaseDisplayLevel, useCaseEdgeStyle, hiddenUseCaseActorIds,
         layoutProviderId,
-        expandedNodes, collapsedInterconnectionNodes, focusedInterconnectionId, interconnectionPortDisplay, interconnectionConnectionDisplay, showIbdPortText, showIbdConnectionText, edgeLabelVisibility, activeRenderer, portWalls, activeLegend, expandedActionNodes, focusedActionId, visibleActionFlowKinds, actionFlowDirection, actionFlowLaneGrouping, actionFlowLaneStyle, actionFlowDisplayLevel, actionFlowNesting, nodeDirections,
+        expandedNodes, collapsedInterconnectionNodes, focusedInterconnectionId, interconnectionPortDisplay, interconnectionConnectionDisplay, showIbdPortText, showIbdConnectionText, showActionFlowItems, edgeLabelVisibility, activeRenderer, portWalls, activeLegend, expandedActionNodes, focusedActionId, visibleActionFlowKinds, actionFlowDirection, actionFlowLaneGrouping, actionFlowLaneStyle, actionFlowDisplayLevel, actionFlowNesting, nodeDirections,
         collapsedStateNodes, focusedStateId, toggleStateCollapse, drillIntoState, drillIntoAction,
         toggleExpand, toggleInterconnectionCollapse, toggleActionExpand, toggleDirection, selectedDiagramId,
         drillIntoInterconnection,
@@ -4452,7 +4457,7 @@ function DiagramCanvasInner() {
         saveIbdDisplay, interconnectionPath, setFocusedInterconnectionId: focusInterconnection,
         addAnnotation, flowAnimationEnabled, setEdges,
         interconnectionLegendOpen, setInterconnectionLegendOpen,
-        showIbdPortText, showIbdConnectionText,
+        showIbdPortText, showIbdConnectionText, showActionFlowItems,
         setCollapsedStateNodes, compositeStateIds, statePath, setFocusedStateId,
         useCaseDisplayLevel, setUseCaseDisplayLevel, useCaseDepth,
         useCaseEdgeStyle, setUseCaseEdgeStyle, autoArrangeUseCase,

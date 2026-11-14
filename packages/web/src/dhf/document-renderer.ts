@@ -134,7 +134,19 @@ function renderInterfacesTable(body: string, model: MemoModelDTO | null): string
         const end = f.from.ownerId === owner ? f.from : f.to;
         return `${label(end.portId)}${end.viaPortId ? ` via ${label(end.viaPortId)}` : ''}`;
     };
-    const carried = (f: (typeof found)[number]) => [...new Set(f.carries.map(c => c.item ?? 'a flow with no named item'))].join(', ');
+    // An item is shown by its label (`Sampled EGM`, not `SampledEgm`); a hop of a signal path allocated to the
+    // interface says which path it belongs to, so "what flows on this topic" is answered by the row.
+    const itemLabel = (item: string) => Object.values(model.elements)
+        .find(e => e.isDefinition && (e.shortName ?? e.id.slice(e.id.lastIndexOf(':') + 1)) === item)?.name ?? item;
+    const pathOf = (flowId: string) => {
+        const owner = flowId.slice(0, flowId.lastIndexOf('::'));
+        return model.elements[owner]?.name;
+    };
+    const carried = (f: (typeof found)[number]) => [...new Set(f.carries.map(c => {
+        const what = c.item ? itemLabel(c.item) : 'a flow with no named item';
+        const path = c.allocated ? pathOf(c.flowId) : undefined;
+        return path ? `${what} (${path})` : what;
+    }))].join(', ');
     const attributes = (f: (typeof found)[number]) => Object.entries(f.attributes).map(([k, v]) => `${k} = ${v}`).join(', ');
     // A plain connection has no interface kind; it says what it is rather than leaving the column blank.
     const rows = found.map(f => `<tr><td>${escapeHtml(f.name)}</td><td>${escapeHtml(f.kind ?? (f.relation === 'connect' ? 'Connection' : '—'))}</td>`

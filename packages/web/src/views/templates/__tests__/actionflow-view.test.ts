@@ -693,3 +693,26 @@ describe('groups inside groups', () => {
     });
 });
 
+
+describe('computeActionFlowViewLayout: flow items and connectors', () => {
+    const producer = el('produce', { parameters: [{ name: 'samples', direction: 'out', type: 'P::SampledEgm' }] } as Partial<MemoElement>);
+    const consumer = el('consume', { parameters: [{ name: 'samples', direction: 'in', type: 'P::SampledEgm' }] } as Partial<MemoElement>);
+    const item = el('P::SampledEgm', { name: 'Sampled EGM', construct: 'item', kind: 'ItemDefinition', isDefinition: true } as Partial<MemoElement>);
+    const flow = {
+        id: 'hop', type: 'flow', sourceId: 'produce', sourceEnd: 'samples', targetId: 'consume', targetEnd: 'samples', file: 'test.sysml',
+    } as unknown as MemoRelationship;
+    const flows = () => model([producer, consumer, item], [flow]);
+
+    it('labels a flow with the item it carries only when asked, by the item\'s label', async () => {
+        expect((await computeActionFlowViewLayout(flows())).edges.find(e => e.id === 'hop')?.label).toBeUndefined();
+        expect((await computeActionFlowViewLayout(flows(), { showFlowItems: true })).edges.find(e => e.id === 'hop')?.label).toBe('Sampled EGM');
+    });
+
+    it('hides the connectors without moving the steps', async () => {
+        const shown = await computeActionFlowViewLayout(flows());
+        const hidden = await computeActionFlowViewLayout(flows(), { showConnectors: false });
+        expect(hidden.edges.find(e => e.id === 'hop')).toBeUndefined();
+        const at = (nodes: typeof shown.nodes, id: string) => nodes.find(n => n.id === id)?.position;
+        expect(at(hidden.nodes, 'consume')).toEqual(at(shown.nodes, 'consume'));
+    });
+});

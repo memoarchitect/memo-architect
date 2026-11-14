@@ -147,6 +147,8 @@ export interface DiagramToolbarContext {
     setInterconnectionLegendOpen: Dispatch<SetStateAction<boolean>>;
     showIbdPortText: boolean;
     showIbdConnectionText: boolean;
+    /** An action flow labels each flow with its item (the view's `showConnectionText`, off by default there). */
+    showActionFlowItems: boolean;
 
     // ── State transition ─────────────────────────────────────────────────────
     setCollapsedStateNodes: Dispatch<SetStateAction<Set<string>>>;
@@ -541,6 +543,23 @@ export class ActionFlowToolbar extends BaseDiagramToolbar {
 
                 {/* Connection filter */}
                 {ctx.supportsToolbarOperation('flowFilters') && <ActionFlowFilterMenu ctx={ctx} />}
+                {ctx.selectedDiagramId && (
+                    <>
+                        <IconToggle icon={<Icon.code />} active={ctx.showActionFlowItems}
+                            label={ctx.actionFlowToolbarPlacement === 'left' ? undefined : 'Items'}
+                            onClick={() => { void saveViewDisplay(ctx.selectedDiagramId!, { showConnectionText: !ctx.showActionFlowItems }).catch(() => undefined); }}
+                            title={ctx.showActionFlowItems ? 'Hide the item each flow carries' : 'Show the item each flow carries'} />
+                        <IconToggle icon={ctx.interconnectionConnectionDisplay === 'none' ? <Icon.minus /> : <Icon.arrowRight />}
+                            active={ctx.interconnectionConnectionDisplay !== 'none'}
+                            label={ctx.actionFlowToolbarPlacement === 'left' ? undefined : 'Connectors'}
+                            onClick={() => ctx.setInterconnectionConnectionDisplay(current => {
+                                const next = current === 'none' ? 'all' : 'none';
+                                ctx.saveIbdDisplay({ connectionDisplay: next });
+                                return next;
+                            })}
+                            title={ctx.interconnectionConnectionDisplay === 'none' ? 'Show the flows and successions' : 'Hide the flows and successions'} />
+                    </>
+                )}
                 {/* Drill-down: the ↳ button on a composite action, or double-click */}
                 <DrillBreadcrumb
                     path={ctx.actionPath}
