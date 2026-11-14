@@ -2,6 +2,7 @@ import { fileURLToPath } from 'node:url';
 import { defineConfig, searchForWorkspaceRoot } from 'vite';
 import { createRequire } from 'node:module';
 import { dirname } from 'node:path';
+import { realpathSync } from 'node:fs';
 const require = createRequire(import.meta.url);
 import react from '@vitejs/plugin-react';
 
@@ -22,7 +23,14 @@ export default defineConfig({
         port: 3000,
         // pnpm can hoist the worker above Architect's own workspace boundary.
         // Permit that dependency explicitly so ELK workers load in worktrees.
-        fs: { allow: [searchForWorkspaceRoot(fileURLToPath(new URL('.', import.meta.url))), dirname(require.resolve('elkjs/package.json'))] },
+        // The ontology's `?raw` templates need the same when it is linked to a checkout.
+        fs: {
+            allow: [
+                searchForWorkspaceRoot(fileURLToPath(new URL('.', import.meta.url))),
+                dirname(require.resolve('elkjs/package.json')),
+                realpathSync(fileURLToPath(new URL('../../node_modules/@memoarchitect/ontology', import.meta.url))),
+            ],
+        },
         watch: {
             // Model source is NOT application source (design section 13.2).
             //

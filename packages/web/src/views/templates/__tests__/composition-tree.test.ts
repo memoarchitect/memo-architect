@@ -349,12 +349,12 @@ describe('definitionLevelComposition', () => {
 });
 
 describe('declaredSubject', () => {
-    const els = [def('CatheterInterfaceUnit', 'CIU'), el('other')];
+    const els = [def('PumpControlUnit', 'PCU'), el('other')];
 
     it('takes the specifically exposed element, not the wildcard scope', () => {
         const subject = declaredSubject(
-            { expose: 'pkg_ciu::CatheterInterfaceUnit, pkg_ims::*' }, record(els));
-        expect(subject?.id).toBe('CatheterInterfaceUnit');
+            { expose: 'pkg_pcu::PumpControlUnit, pkg_pump::*' }, record(els));
+        expect(subject?.id).toBe('PumpControlUnit');
     });
 
     it('ignores a wildcard-only expose', () => {

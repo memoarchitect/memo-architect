@@ -182,7 +182,7 @@ export function computeContextViewLayout(
             sides.set(element.id, 'top');
         }
     }
-    // `EpPhysicianActor` is a person and `Actor` is not the only spelling
+    // `ClinicianActor` is a person and `Actor` is not the only spelling
     // of one, so the column rank asks what the role IS rather than matching two
     // exact kind names.
     const rank = (element: MemoElement) =>

@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 
+import { createRequire } from 'node:module';
 import { Command } from 'commander';
 import { architectBuildCommand } from '../commands/build.js';
 import { ConfigSettingError, configGetCommand, configSetCommand, configUnsetCommand } from '../commands/config.js';
@@ -13,6 +14,10 @@ import { EXPERIMENTAL_FLAG_DESCRIPTION, resolveFeatureGrants } from '../feature-
 import {
     applyToolchainCliOptions, defaultRegistry, pinnedTarget, ProjectNamesUserSettingError, registerProjectCommands, toolchainOptionName, ToolchainNotConfiguredError, UnknownProviderError,
 } from '@memoarchitect/tools';
+import { nodeSecurityWarning } from '@memoarchitect/tools';
+
+// The version is the package's own, which scripts/sync-version.mjs stamps from VERSION.
+const { version } = createRequire(import.meta.url)('../../package.json') as { version: string };
 
 const program = new Command();
 
@@ -44,7 +49,7 @@ function printExamples(): void {
 program
     .name('memo-architect')
     .description('MEMO Architect — interactive and distributable model workbench')
-    .version('0.6.6')
+    .version(version)
     .option('--example <name>', 'Open a bundled example project (e.g. gpca, standard-sysml-diagrams). A local checkout is opened in place; an installed package is opened read-only in a disposable copy')
     .option('--list', 'List the bundled examples and how to run each')
     .option('--read-only', 'Always open the example in a disposable copy, even from a local checkout')
@@ -198,6 +203,10 @@ program
 
 // A project whose settings name no compiler is told what to set, not shown a
 // stack: Architect chooses none for it. Anything else is still a crash.
+// A Node missing a security release still runs; the warning says what to update.
+const nodeWarning = nodeSecurityWarning();
+if (nodeWarning) console.warn(`⚠️  ${nodeWarning}`);
+
 program.parseAsync().catch((error: unknown) => {
     if (error instanceof ToolchainNotConfiguredError || error instanceof UnknownProviderError || error instanceof ProjectNamesUserSettingError || error instanceof ConfigSettingError) {
         console.error(`\n❌ ${error.message}\n`);

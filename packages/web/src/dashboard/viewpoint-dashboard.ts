@@ -19,6 +19,14 @@ type Element = MemoModelDTO['elements'][string];
 
 export const VIEWPOINT_DASHBOARD_PREFIX = 'viewpoint-';
 
+/**
+ * The dashboard for a package of views: `dashboards/<package name>.md`, written by the project. Unlike a
+ * viewpoint's, it is not generated; the package shows a dashboard row only when the file exists.
+ */
+export function packageDashboardId(qualifiedPackageName: string): string {
+    return qualifiedPackageName.split('::').pop() ?? qualifiedPackageName;
+}
+
 /** The dashboard id for a viewpoint: stable across renames of its label. */
 export function viewpointDashboardId(viewpointId: string): string {
     const slug = viewpointId.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 100);

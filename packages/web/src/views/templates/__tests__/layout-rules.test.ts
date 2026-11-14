@@ -136,15 +136,15 @@ describe('context compass', () => {
   it('does not require exact kind == User', () => {
     expectEqual(isHumanKind('User'), true);
     expectEqual(isHumanKind('Actor'), true);
-    expectEqual(isHumanKind('MapperActor'), true);
-    expectEqual(isHumanKind('EpPhysicianActor'), true);
+    expectEqual(isHumanKind('OperatorActor'), true);
+    expectEqual(isHumanKind('ClinicianActor'), true);
     expectEqual(isHumanKind('MemoPart'), false);
   });
 
   it('does not treat device *Actor kinds as humans', () => {
-    expectEqual(isHumanKind('HospitalEpRecordingSystemActor'), false);
-    expectEqual(isHumanKind('CompatibleMappingAblationCatheterActor'), false);
-    expectEqual(isHumanKind('ReturnElectrodesActor'), false);
+    expectEqual(isHumanKind('HospitalRecordingSystemActor'), false);
+    expectEqual(isHumanKind('InfusionCatheterActor'), false);
+    expectEqual(isHumanKind('MonitoringElectrodesActor'), false);
     expectEqual(isHumanKind('NonHumanActor'), false);
     expectEqual(isHumanKind('OperationalParticipant'), false);
   });

@@ -1,4 +1,3 @@
-import { explorerDisplayName } from '../lib/display-name';
 import { Fragment, createContext, lazy, Suspense, useContext, useState, useMemo, useCallback, useEffect, useRef, type PointerEvent as ReactPointerEvent } from 'react';
 import { alertDialog, askConfirm, askText } from './AppDialogs';
 import { groupParentPath, siblingGroups, waitForPackage } from '../lib/element-package';
@@ -34,7 +33,7 @@ import { NewDocumentWizard, type NewDocSpec } from '../dhf/NewDocumentWizard';
 import { isFeatureEnabled } from '../config/feature-flags';
 import { diagramUrl, elementUrl } from '../router';
 import { buildOwnershipTest } from '../views/templates/composition-tree';
-import { viewpointDashboardId } from '../dashboard/viewpoint-dashboard';
+import { packageDashboardId, viewpointDashboardId } from '../dashboard/viewpoint-dashboard';
 import { viewpointsVisibleToRole } from '../lib/role-viewpoints';
 import { featureViewpoints } from '../lib/feature-viewpoints';
 import { ExplorerSystemFilter, UNASSIGNED_SYSTEM } from './ExplorerSystemFilter';
@@ -1291,13 +1290,6 @@ export function computeExplorerGroupTree(
     // so nothing in the tree depends on them being rows.
     const isRelationship = (el: MemoElement): boolean => el.construct === 'connection';
 
-    // ─── Definitions this project declares, indexed by every name they answer to
-    const projectDefs = new Map<string, MemoElement>();
-    for (const el of elements) {
-        if (!el.isDefinition) continue;
-        for (const key of [el.name, el.id, el.shortId]) if (key) projectDefs.set(key, el);
-    }
-
     /**
      * The type a folder names is the one the element DECLARES.
      *
@@ -1355,17 +1347,12 @@ export function computeExplorerGroupTree(
         const isDef = !!el.isDefinition;
         const resolvedKind = resolveOntologyKind(el.kind);
 
-        // A usage with no id or name of its own inherits both from the
-        // definition it is typed by, so the row reads as the thing rather than
-        // as an anonymous instance of it.
-        const typeName = typeNameOf(el);
-        const typeDef = projectDefs.get(typeName)
-            ?? (typeName.includes('::') ? projectDefs.get(typeName.split('::').pop()!) : undefined);
         // The id a row shows is decided when the model is compiled; nothing here chooses one.
         const displayId = el.displayId ?? el.id;
-        const displayName = explorerDisplayName(el, typeDef);
+        // Its label when it states one, else its declared name: memo-tools has already put that in `name`.
+        const displayName = el.name;
         // Search matches what the row shows as well as the identifier behind it.
-        if (lower && !displayName.toLowerCase().includes(lower) && !el.name.toLowerCase().includes(lower) && !resolvedKind.toLowerCase().includes(lower)) continue;
+        if (lower && !displayName.toLowerCase().includes(lower) && !(el.shortName ?? '').toLowerCase().includes(lower) && !resolvedKind.toLowerCase().includes(lower)) continue;
 
         validElements.set(el.id, {
             ...el,
@@ -1496,7 +1483,9 @@ export function computeExplorerGroupTree(
             let qualified = el.id;
             while (qualified.includes('::')) {
                 qualified = qualified.substring(0, qualified.lastIndexOf('::'));
-                const candidate = lookup.get(qualified) ?? nodes.get(qualified);
+                // A qualified prefix is an id. Matching it against display names put the content of a
+                // package named like the project under the element whose label is the project's name.
+                const candidate = nodes.get(qualified);
                 if (candidate && candidate !== node && !isAncestor(node, candidate)) { parent = candidate; break; }
             }
         }
@@ -3018,6 +3007,7 @@ function ViewExplorerContent({ searchTerm }: { searchTerm: string }) {
                     </button>
                     {isExpanded && (
                         <>
+                            {node.id !== '__unpackaged' && renderPackageDashboardRow(node.id, vpId)}
                             <div style={{ marginLeft: '8px' }}>{renderDiagramList(node.diagrams, vpId)}</div>
                             {node.children.map(child => renderPackage(child, depth + 1))}
                         </>
@@ -3049,18 +3039,26 @@ function ViewExplorerContent({ searchTerm }: { searchTerm: string }) {
      * viewpoint is for and what its views mean. It always exists — generated
      * until someone writes it — so the row is never a dead link.
      */
-    const renderViewpointDashboardRow = (vp: ViewpointDTO) => {
-        const id = viewpointDashboardId(vp.id);
+    const renderViewpointDashboardRow = (vp: ViewpointDTO) => renderDashboardRow(viewpointDashboardId(vp.id), vp.id, 'viewpoint-dashboard-row');
+
+    /** A package's dashboard, first in the package, when the project has written `dashboards/<package name>.md`. */
+    const renderPackageDashboardRow = (packageName: string, vpId: string) => {
+        const id = packageDashboardId(packageName);
+        if (!dashboards.some(d => d.id === id)) return null;
+        return <div style={{ marginLeft: '8px' }}>{renderDashboardRow(id, vpId, 'package-dashboard-row')}</div>;
+    };
+
+    const renderDashboardRow = (id: string, viewpointId: string, testId: string) => {
         const file = dashboards.find(d => d.id === id);
         const isActive = activeView.type === 'custom-dashboard' && activeView.dashboardId === id;
         return (
             <button
                 type="button"
-                data-testid="viewpoint-dashboard-row"
+                data-testid={testId}
                 // Navigate, as the view rows do: /viewpoints is owned by its own
                 // route, so a store change alone leaves that page on screen.
                 onClick={() => {
-                    selectViewpoint(vp.id);
+                    selectViewpoint(viewpointId === '__model' || viewpointId.startsWith(FEATURE_VP_PREFIX) ? null : viewpointId);
                     setActiveView({ type: 'custom-dashboard', dashboardId: id });
                     navigate(`/dashboards/${encodeURIComponent(id)}`);
                 }}

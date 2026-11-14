@@ -10,44 +10,44 @@ describe('system context view template', () => {
         // `InfusionPumpSystemActor` is equipment. Deciding the
         // glyph from the kind string drew it as a stick figure; deciding it
         // from the compass side draws it as the box it is.
-        const system = element('ims', 'OperationalEntity', 'IMS', { contextRole: 'systemOfInterest' });
-        const physician = element('doc', 'EpPhysicianActor', 'EP Physician');
-        const recorder = element('rec', 'HospitalEpRecordingSystemActor', 'EP Recording System');
+        const system = element('pump', 'OperationalEntity', 'Pump', { contextRole: 'systemOfInterest' });
+        const physician = element('doc', 'ClinicianActor', 'Clinician');
+        const recorder = element('rec', 'HospitalRecordingSystemActor', 'Recording System');
         const layout = computeContextViewLayout(model({ system, physician, recorder }, [
-            { id: 'r1', type: 'connect', sourceId: 'doc', targetId: 'ims' },
-            { id: 'r2', type: 'flow', sourceId: 'ims', targetId: 'rec' },
-        ]), 'IMS Context');
+            { id: 'r1', type: 'connect', sourceId: 'doc', targetId: 'pump' },
+            { id: 'r2', type: 'flow', sourceId: 'pump', targetId: 'rec' },
+        ]), 'Pump Context');
 
         expect(layout.nodes.find(n => n.id === 'doc')?.data).toMatchObject({ category: 'person' });
         expect(layout.nodes.find(n => n.id === 'rec')?.data).toMatchObject({ category: 'system' });
     });
 
     it('puts a person on the left whichever way the exchange points', () => {
-        // Placement by data direction sent a physician to the right as soon as
+        // Placement by data direction sent a clinician to the right as soon as
         // the system told them more than they told it. What something IS beats
         // which way its arrows point.
-        const system = element('ims', 'OperationalEntity', 'IMS', { contextRole: 'systemOfInterest' });
-        const physician = element('doc', 'EpPhysicianActor', 'EP Physician');
+        const system = element('pump', 'OperationalEntity', 'Pump', { contextRole: 'systemOfInterest' });
+        const physician = element('doc', 'ClinicianActor', 'Clinician');
         const layout = computeContextViewLayout(model({ system, physician }, [
-            { id: 'r1', type: 'flow', sourceId: 'ims', targetId: 'doc' },
-        ]), 'IMS Context');
+            { id: 'r1', type: 'flow', sourceId: 'pump', targetId: 'doc' },
+        ]), 'Pump Context');
 
         const doc = layout.nodes.find(n => n.id === 'doc')!;
-        const ims = layout.nodes.find(n => n.id === 'ims')!;
-        expect(doc.position.x).toBeLessThan(ims.position.x);
+        const pump = layout.nodes.find(n => n.id === 'pump')!;
+        expect(doc.position.x).toBeLessThan(pump.position.x);
         expect(doc.data).toMatchObject({ category: 'person' });
     });
 
     it('draws each spoke as one straight segment', () => {
         // A star routed orthogonally detours every spoke around the hub it is
         // pointing at. There is nothing between an entity and the system.
-        const system = element('ims', 'OperationalEntity', 'IMS', { contextRole: 'systemOfInterest' });
+        const system = element('pump', 'OperationalEntity', 'Pump', { contextRole: 'systemOfInterest' });
         const a = element('a', 'User', 'Operator');
         const b = element('b', 'OperationalEntity', 'Hospital Network');
         const layout = computeContextViewLayout(model({ system, a, b }, [
-            { id: 'r1', type: 'connect', sourceId: 'a', targetId: 'ims' },
-            { id: 'r2', type: 'flow', sourceId: 'ims', targetId: 'b' },
-        ]), 'IMS Context');
+            { id: 'r1', type: 'connect', sourceId: 'a', targetId: 'pump' },
+            { id: 'r2', type: 'flow', sourceId: 'pump', targetId: 'b' },
+        ]), 'Pump Context');
 
         expect(layout.edges).toHaveLength(2);
         for (const edge of layout.edges) {
@@ -57,28 +57,28 @@ describe('system context view template', () => {
     });
 
     it('bends each spoke along the axes when asked, leaving it straight by default', () => {
-        const system = element('ims', 'OperationalEntity', 'IMS', { contextRole: 'systemOfInterest' });
+        const system = element('pump', 'OperationalEntity', 'Pump', { contextRole: 'systemOfInterest' });
         const a = element('a', 'User', 'Operator');
-        const relationships = [{ id: 'r1', type: 'connect', sourceId: 'a', targetId: 'ims' }];
-        const bent = computeContextViewLayout(model({ system, a }, relationships), 'IMS Context', { edgeStyle: 'elbow' });
+        const relationships = [{ id: 'r1', type: 'connect', sourceId: 'a', targetId: 'pump' }];
+        const bent = computeContextViewLayout(model({ system, a }, relationships), 'Pump Context', { edgeStyle: 'elbow' });
         const edge = bent.edges[0];
         expect(edge.data?.routing).toBe('elbow');
         const points = edge.data?.points as { x: number; y: number }[];
         expect(points).toHaveLength(4);
         // Every segment runs along one axis.
         for (let i = 1; i < points.length; i++) expect(points[i].x === points[i - 1].x || points[i].y === points[i - 1].y).toBe(true);
-        expect(computeContextViewLayout(model({ system, a }, relationships), 'IMS Context').edges[0].data?.points).toHaveLength(2);
+        expect(computeContextViewLayout(model({ system, a }, relationships), 'Pump Context').edges[0].data?.points).toHaveLength(2);
     });
 
     it('never doubles back when it bends a spoke: each segment turns a right angle or goes straight on', () => {
-        const system = element('ims', 'OperationalEntity', 'IMS', { contextRole: 'systemOfInterest' });
-        const people = ['p1', 'p2', 'p3', 'p4'].map(id => element(id, 'EpPhysicianActor', id));
+        const system = element('pump', 'OperationalEntity', 'Pump', { contextRole: 'systemOfInterest' });
+        const people = ['p1', 'p2', 'p3', 'p4'].map(id => element(id, 'ClinicianActor', id));
         const equipment = ['e1', 'e2', 'e3', 'e4', 'e5'].map(id => element(id, 'OperationalEntity', id));
         const elements = Object.fromEntries([system, ...people, ...equipment].map(e => [e.id, e]));
-        const relationships = [...people.map((p, i) => ({ id: `a${i}`, type: 'connect', sourceId: p.id, targetId: 'ims' })),
-            ...equipment.map((e, i) => ({ id: `b${i}`, type: 'flow', sourceId: 'ims', targetId: e.id }))];
+        const relationships = [...people.map((p, i) => ({ id: `a${i}`, type: 'connect', sourceId: p.id, targetId: 'pump' })),
+            ...equipment.map((e, i) => ({ id: `b${i}`, type: 'flow', sourceId: 'pump', targetId: e.id }))];
         for (const edgeStyle of ['elbow', 'rounded'] as const) {
-            const layout = computeContextViewLayout(model(elements, relationships), 'IMS Context', { edgeStyle });
+            const layout = computeContextViewLayout(model(elements, relationships), 'Pump Context', { edgeStyle });
             for (const edge of layout.edges) {
                 const points = edge.data?.points as { x: number; y: number }[];
                 for (let i = 2; i < points.length; i++) {

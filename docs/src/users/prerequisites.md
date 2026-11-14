@@ -11,6 +11,14 @@
 `@memoarchitect/architect` installs compatible versions of MEMO Tools and the
 MEMO Ontology. Separate Tools and Ontology checkouts are not required.
 
+Keep Node.js on the latest security release of its line. `memo` and
+`memo-architect` print a warning, and still run, when Node is older than the
+patched release of the newest Node.js security announcement they know of; the
+warning names the version to install and the announcement. After updating
+Node, restart any running `memo-architect dev`, because it keeps serving with
+the Node it started on. A corporate notice asking you to patch Node is about
+the runtime, not a MEMO error.
+
 Architect does not require SysIDE or `sysand`. Those tools are optional
 backends used through MEMO Tools when a project explicitly selects external
 SysML validation or package creation.

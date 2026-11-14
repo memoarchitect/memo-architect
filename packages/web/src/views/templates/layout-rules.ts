@@ -301,7 +301,7 @@ export const portInTitleBand = (portY: number, titleBand = TITLE_BAND): boolean 
 /**
  * A human role, not every SysML name ending in `Actor`.
  *
- * `InfusionPumpSystemActor` is a device; `MapperActor` is a
+ * `InfusionPumpSystemActor` is a device; `OperatorActor` is a
  * person. The DTO kind string cannot see what a type specializes, so the device
  * vocabulary is excluded by name — which is a heuristic, and is why the glyph
  * is decided by compass side instead (see `contextCategory`).

@@ -12,7 +12,7 @@ methodologies, namespace facade, and examples as one model.
 3. Install and enable the SysIDE extension.
 
 ```bash
-git clone --recurse-submodules git@gitlab.com:somesh_sandbox/memo-meta.git
+git clone --recurse-submodules <memo-meta repository URL>
 cd memo-meta
 code .
 ```

@@ -280,6 +280,19 @@ describe('computeExplorerGroupTree', () => {
         expect(layersOf(groups[0])).toEqual(['requirements', 'safety-risk', 'cybersecurity']);
     });
 
+    it('does not file a package under an element whose label is the package name', () => {
+        // A project named `mymodel` labels its system "mymodel"; a package of the same name must keep
+        // its own content in its own layer, not hand it to that system.
+        const system = { ...el('project::ProductSystem', 'InterfaceItem', 'logical'), name: 'mymodel', isDefinition: true } as MemoElement;
+        const machine = el('mymodel::modes', 'StateMachine', 'functional');
+        const groups = computeExplorerGroupTree([system, machine], '', registryFromOntology(ONTOLOGY), [ONTOLOGY]);
+        const rows = groups.flatMap(group => group.subGroups.flatMap(sub => [...sub.kinds.values()].flat()));
+        const descendants = (node: { id: string; children?: unknown[] }): string[] =>
+            [node.id, ...((node.children ?? []) as { id: string; children?: unknown[] }[]).flatMap(descendants)];
+        const holder = rows.find(node => descendants(node).includes('mymodel::modes'));
+        expect(holder?.id).not.toBe('project::ProductSystem');
+    });
+
     it('puts every construct of one layer in that layer, not in six branches', () => {
         // A reader opening the operational analysis wants what is in it — the
         // actions, the parts that perform them, the use cases. The construct
