@@ -14,7 +14,7 @@
 // A relationship is kept when both of its ends are.
 // ─────────────────────────────────────────────────────────────────────────────
 
-import type { MemoModelDTO, ValidationResult, WorkspaceMembershipDTO } from '@memoarchitect/tools/browser';
+import { functionalDisplayIds, type MemoModelDTO, type ValidationResult, type WorkspaceMembershipDTO } from '@memoarchitect/tools/browser';
 
 export interface WorkspaceOption {
     root: string;
@@ -68,6 +68,7 @@ export function idsInWorkspace(membership: WorkspaceMembershipDTO | undefined, w
 }
 
 const cache = new WeakMap<MemoModelDTO, Map<string, MemoModelDTO>>();
+const sourceOf = new WeakMap<MemoModelDTO, MemoModelDTO>();
 
 /**
  * The model as a workspace shows it. The same object when no workspace is chosen, or the chosen
@@ -75,8 +76,10 @@ const cache = new WeakMap<MemoModelDTO, Map<string, MemoModelDTO>>();
  * never go empty because of a stale preference.
  */
 export function scopeModel(model: MemoModelDTO, workspace: string | null): MemoModelDTO {
-    const ids = idsInWorkspace(model.workspaceMembership, workspace);
-    if (!ids || !workspace) return model;
+    model = sourceOf.get(model) ?? model;
+    const rawIds = idsInWorkspace(model.workspaceMembership, workspace);
+    if (!rawIds || !workspace) return model;
+    const ids = functionalDisplayIds(model, workspace, rawIds);
     let byWorkspace = cache.get(model);
     if (!byWorkspace) cache.set(model, byWorkspace = new Map());
     const cached = byWorkspace.get(workspace);
@@ -87,6 +90,7 @@ export function scopeModel(model: MemoModelDTO, workspace: string | null): MemoM
         elements,
         relationships: model.relationships.filter(relationship => ids.has(relationship.sourceId) && ids.has(relationship.targetId)),
     };
+    sourceOf.set(scoped, model);
     byWorkspace.set(workspace, scoped);
     return scoped;
 }

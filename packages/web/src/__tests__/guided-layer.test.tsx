@@ -66,12 +66,14 @@ describe('the guided layer workspace', () => {
     it('offers native allocated function creation on component right-click', async () => {
         const next = model();
         next.registries!.kinds.push({ name: 'LogicalComponent', label: 'Logical component' } as never);
-        next.elements.controller = element('controller', 'LogicalComponent', 'Controller');
+        next.registries!.kinds.push({ name: 'MemoFunction' } as never, { name: 'Function', label: 'System function', superType: 'MemoFunction' } as never);
+        next.elements.controller = { ...element('controller', 'LogicalComponent', 'Controller'), owner: 'host' };
         next.workspaceMembership!.membership.controller = ['host'];
-        answer.layers[0].elementKinds!.push('LogicalComponent');
+        answer.layers[0].elementKinds = ['LogicalComponent'];
         next.relationships.push({ id: 'alloc', type: 'allocatedTo', sourceId: 'fn', targetId: 'controller' } as never);
         useModelStore.setState({ model: next });
         await render();
+        expect(buttons('Controller')[0].parentElement!.textContent).toContain('Compute signal');
         act(() => buttons('Controller')[0].dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, clientX: 30, clientY: 30 })));
         await settle(); await click('Create component function…');
         expect(sendElementCreate).toHaveBeenCalledWith(expect.objectContaining({ id: '', construct: 'action', functionContext: { workspace: 'host', componentId: 'controller' } }));

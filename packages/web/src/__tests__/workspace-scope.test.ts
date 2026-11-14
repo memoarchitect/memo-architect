@@ -32,6 +32,22 @@ const model = {
 } as MemoModelDTO;
 
 describe('which part of the model a workspace shows', () => {
+    it('uses the same functional allocation boundary in the global explorer display as the guided layer', () => {
+        const source = { ...model,
+            registries: { kinds: [{ name: 'MemoFunction' }, { name: 'SystemFunction', superType: 'MemoFunction' }], relationships: [] },
+            elements: { ...model.elements, rootFn: { ...el('rootFn'), kind: 'SystemFunction' }, ownFn: { ...el('ownFn'), kind: 'SystemFunction' }, foreignFn: { ...el('foreignFn'), kind: 'SystemFunction' } },
+            relationships: [...model.relationships, rel('allocRootPump', 'rootFn', 'Pump'), rel('allocRootGen', 'rootFn', 'Gen'),
+                { ...rel('own', 'rootFn', 'ownFn'), type: 'composes' }, { ...rel('foreign', 'rootFn', 'foreignFn'), type: 'composes' }, rel('allocOwn', 'ownFn', 'Pump'), rel('allocForeign', 'foreignFn', 'Gen')],
+            workspaceMembership: { ...membership, membership: { ...membership.membership, rootFn: ['Pump', 'Gen'], ownFn: ['Pump', 'Gen'], foreignFn: ['Pump', 'Gen'] } },
+        } as unknown as MemoModelDTO;
+        source.relationships.filter(edge => edge.id.startsWith('alloc')).forEach(edge => edge.type = 'allocatedTo');
+        const scoped = scopeModel(source, 'Pump');
+        expect(scoped.elements.ownFn).toBeDefined(); expect(scoped.elements.foreignFn).toBeUndefined();
+        expect(source.elements.foreignFn).toBeDefined();
+        expect(scopeModel(scoped, 'Pump')).toBe(scoped);
+        expect(scopeModel(scoped, null)).toBe(source);
+    });
+
     it('lists the system of systems before the systems, each by name', () => {
         expect(workspaceOptions(membership).map(o => o.name)).toEqual(['Lab', 'Generator', 'Pump']);
         expect(workspaceOptions(undefined)).toEqual([]);

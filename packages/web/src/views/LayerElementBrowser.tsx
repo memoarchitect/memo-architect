@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import type { MemoElement, MemoModelDTO } from '@memoarchitect/tools/browser';
+import { functionalScope, indexKinds, kindConformsTo, type MemoElement, type MemoModelDTO } from '@memoarchitect/tools/browser';
 import { componentFunctionWorkspace, createComponentFunction } from '../lib/functional-authoring';
 import { COLOR, FONT } from '../styles/tokens';
 
@@ -12,13 +12,14 @@ interface Props {
     rootId?: string;
     shared?: ReadonlySet<string>;
     context?: ReadonlySet<string>;
+    unassigned?: ReadonlySet<string>;
     canWrite: boolean;
     kindLabel: (kind: string) => string;
     onElement: (id: string) => void;
 }
 
 /** Method taxonomy, native functional decomposition and component allocations in the current system. */
-export function LayerElementBrowser({ model, elements, workspace, scopeLabel, layerLabel, rootId, shared, context, canWrite, kindLabel, onElement }: Props) {
+export function LayerElementBrowser({ model, elements, workspace, scopeLabel, layerLabel, rootId, shared, context, unassigned, canWrite, kindLabel, onElement }: Props) {
     const [filter, setFilter] = useState('');
     const [menu, setMenu] = useState<{ id: string; x: number; y: number } | null>(null);
     const menuRef = useRef<HTMLDivElement>(null);
@@ -30,6 +31,11 @@ export function LayerElementBrowser({ model, elements, workspace, scopeLabel, la
         return () => { document.removeEventListener('mousedown', close); document.removeEventListener('keydown', escape); };
     }, [menu]);
     useEffect(() => setMenu(null), [workspace, layerLabel]);
+    const functionKinds = useMemo(() => indexKinds(model.registries?.kinds ?? []), [model.registries]);
+    const scopedFunctions = useMemo(() => workspace ? functionalScope(model, workspace).visible : undefined, [model, workspace]);
+    const allocatedFunction = (id: string) => !!model.elements[id]
+        && (!scopedFunctions || scopedFunctions.has(id))
+        && kindConformsTo(model.elements[id].kind, 'MemoFunction', functionKinds);
     const visible = new Set(elements.map(element => element.id));
     const matches = (element: MemoElement) => !filter || `${element.name} ${kindLabel(element.kind)}`.toLowerCase().includes(filter.toLowerCase());
     const elementButton = (element: MemoElement) => <button type="button" style={{ border: 0, padding: '4px 0', background: 'transparent', textAlign: 'left', color: '#0f766e', cursor: 'pointer', fontSize: FONT.sm }}
@@ -37,7 +43,7 @@ export function LayerElementBrowser({ model, elements, workspace, scopeLabel, la
             if (canWrite && componentFunctionWorkspace(model, element.id, workspace)) {
                 event.preventDefault(); setMenu({ id: element.id, x: event.clientX, y: event.clientY });
             }
-        }}>{element.name}{shared?.has(element.id) && <small style={{ color: COLOR.muted }}> · shared</small>}{context?.has(element.id) && <small style={{ color: COLOR.muted }}> · context</small>}</button>;
+        }}>{element.name}{shared?.has(element.id) && <small style={{ color: COLOR.muted }}> · shared</small>}{context?.has(element.id) && <small style={{ color: COLOR.muted }}> · context</small>}{unassigned?.has(element.id) && <small style={{ color: COLOR.muted }}> · unassigned</small>}</button>;
     const hierarchy = useMemo(() => {
         const children = new Map<string, string[]>(); const references = new Map<string, string>();
         for (const edge of model.relationships) {
@@ -76,7 +82,7 @@ export function LayerElementBrowser({ model, elements, workspace, scopeLabel, la
                 <summary style={{ cursor: 'pointer', fontSize: FONT.sm }}>{kindLabel(kind)} ({members.length})</summary>
                 <div style={{ display: 'grid', paddingLeft: 8 }}>{members.sort((a, b) => a.name.localeCompare(b.name)).map(element => <div key={element.id}>
                     {elementButton(element)}
-                    {model.relationships.filter(edge => edge.type === 'allocatedTo' && edge.targetId === element.id && visible.has(edge.sourceId)).map(edge => <div key={edge.id} style={{ paddingLeft: 14, borderLeft: `1px solid ${COLOR.border}` }}>{elementButton(model.elements[edge.sourceId])}</div>)}
+                    {model.relationships.filter(edge => edge.type === 'allocatedTo' && edge.targetId === element.id && allocatedFunction(edge.sourceId)).map(edge => <div key={edge.id} style={{ paddingLeft: 14, borderLeft: `1px solid ${COLOR.border}` }}>{elementButton(model.elements[edge.sourceId])}</div>)}
                 </div>)}</div>
             </details> : null;
         })}
