@@ -34,7 +34,7 @@ import { connectorEnds } from '../diagram/connector-ends';
 import { childKindOptions, declaredNameFor } from './templates/table-authoring';
 import { actionDrillSource, childrenOf, definitionSubtree, drillPath, drillTarget, enterLevel } from '../lib/system-navigator';
 import {
-    useEffect, useMemo, useState, useCallback, useRef,
+    useEffect, useMemo, useState, useCallback, useRef, useContext,
 } from 'react';
 import { FlowWalkthrough, WALK_CURRENT_CLASS, WALK_LANE_CLASS } from './FlowWalkthrough';
 import { animateLayout, layoutsDiffer } from '../lib/animate-layout';
@@ -118,7 +118,7 @@ import { GridView } from './GridView';
 import { BrowserView } from './BrowserView';
 import { ScreenLayoutView } from './ScreenLayoutView';
 import { DiagramInteractiveNode, type DiagramInteractiveNodeData } from './DiagramInteractiveNode';
-import { DiagramPalette, MEMO_KIND_MIME } from './DiagramPalette';
+import { DiagramPalette, MEMO_KIND_MIME, PaletteKindsContext } from './DiagramPalette';
 import { RelationshipPicker, type RelationshipChoice } from './RelationshipPicker';
 import { NodeContextMenu, EdgeContextMenu, type EdgeLineStyle } from './DiagramContextMenus';
 import { DecisionNode, ForkNode, StartEndNode } from './WorkflowNodes';
@@ -1117,7 +1117,8 @@ function DiagramCanvasInner() {
         () => localStorage.getItem('memo.minimap.open') !== 'false');
     // Bumped to force a fresh layout pass (e.g. tree Reset Layout)
     const [relayoutNonce, setRelayoutNonce] = useState(0);
-    const [paletteCollapsed, setPaletteCollapsed] = useState(true);
+    const paletteKinds = useContext(PaletteKindsContext);
+    const [paletteCollapsed, setPaletteCollapsed] = useState(!paletteKinds);
     // The floating toolbar drawer starts closed: on load it covers whatever the
     // diagram placed under it, which on a wide layout is real content. But the
     // choice is REMEMBERED, like the minimap's. It used to reset on every

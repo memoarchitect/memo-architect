@@ -84,11 +84,11 @@ export function MethodMap() {
         navigate(`/${view}`);
     };
     const inProgress = (rows: LayerRow[]) => rows.filter(row => row.done > 0 && row.done < row.steps.length).length;
-    const systemName = chosen?.name ?? 'the whole model';
+    const systemName = chosen?.name ?? (workspace ? 'Selected system' : 'the whole model');
 
     return (
         <div data-testid="method-map" style={{ flex: 1, display: 'flex', minHeight: 0, background: 'var(--color-bg)', color: 'var(--color-text)' }}>
-            {scopeOpen && <ScopeSelector tree={tree} workspace={workspace} supplied={supplied.map(part => part.name)}
+            {scopeOpen && <ScopeSelector tree={tree} loading={!model} hasScopeInfo={!!model?.workspaceMembership} workspace={workspace} supplied={supplied.map(part => part.name)}
                 filter={scopeFilter} onFilter={setScopeFilter} onSelect={setWorkspace} onClose={() => { setScopeOpen(false); scopeToggle.current?.focus(); }} />}
 
             <div style={{ flex: 1, overflow: 'auto', padding: '20px 28px 32px', minWidth: 0 }}>
@@ -175,8 +175,8 @@ function matchingScopes(nodes: ScopeNode[], query: string): ScopeNode[] {
     });
 }
 
-function ScopeSelector({ tree, workspace, supplied, filter, onFilter, onSelect, onClose }: {
-    tree: ReturnType<typeof scopeTree>; workspace: string | null; supplied: string[];
+function ScopeSelector({ tree, loading, hasScopeInfo, workspace, supplied, filter, onFilter, onSelect, onClose }: {
+    tree: ReturnType<typeof scopeTree>; loading: boolean; hasScopeInfo: boolean; workspace: string | null; supplied: string[];
     filter: string; onFilter: (value: string) => void; onSelect: (root: string | null) => void; onClose: () => void;
 }) {
     const query = filter.trim().toLocaleLowerCase();
@@ -197,9 +197,11 @@ function ScopeSelector({ tree, workspace, supplied, filter, onFilter, onSelect, 
                 style={{ ...lightButton, width: '100%', textAlign: 'left', marginBottom: 8, background: workspace === null ? SOFT_TEAL : '#fff', color: workspace === null ? INK : COLOR.primary }}>
                 Whole model
             </button>
-            {tree.roots.length === 0 && tree.external.length === 0 && <p style={{ fontSize: FONT.xs, color: COLOR.muted }}>The model declares no system yet.</p>}
+            {loading && <p role="status" style={{ fontSize: FONT.sm, color: COLOR.muted }}>Loading system choices…</p>}
+            {!loading && !hasScopeInfo && <p role="status" style={{ fontSize: FONT.sm, color: COLOR.muted }}>System scope information is not available in this snapshot.</p>}
+            {!loading && hasScopeInfo && tree.roots.length === 0 && tree.external.length === 0 && <p style={{ fontSize: FONT.xs, color: COLOR.muted }}>The model declares no system yet.</p>}
             {roots.map(node => <ScopeRow key={node.root} node={node} depth={0} selected={workspace} onSelect={onSelect} />)}
-            {query && roots.length === 0 && external.length === 0 && <p role="status" style={{ fontSize: FONT.sm, color: COLOR.muted }}>No systems match.</p>}
+            {!loading && hasScopeInfo && query && roots.length === 0 && external.length === 0 && <p role="status" style={{ fontSize: FONT.sm, color: COLOR.muted }}>No systems match.</p>}
             <div data-testid="scope-external" style={{ fontSize: FONT.xs, color: COLOR.muted, margin: '14px 4px 4px' }}>
                 Outside the boundary: {external.length === 0 ? (query ? 'no matches' : 'none yet') : external.map(system => (
                     <button type="button" key={system.root} aria-pressed={workspace === system.root} onClick={() => onSelect(system.root)}

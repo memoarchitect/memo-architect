@@ -144,6 +144,16 @@ describe('the method map page', () => {
         expect(risk.querySelector('[data-testid="row-open"]')!.textContent).toBe('Start here');
     });
 
+    it('does not claim systems are absent while the model snapshot is loading', async () => {
+        useModelStore.setState({ model: null });
+        const view = render(); await settle();
+        expect(view.textContent).toContain('Loading system choices…');
+        expect(view.textContent).not.toContain('The model declares no system yet.');
+        act(() => useModelStore.getState().setModel(model())); await settle();
+        expect(view.querySelectorAll('[data-testid="scope-node"]').length).toBeGreaterThan(0);
+        expect(view.textContent).not.toContain('Loading system choices…');
+    });
+
     it('returns from a system to the whole model and re-evaluates the guide', async () => {
         const view = render();
         await settle();

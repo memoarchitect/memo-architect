@@ -5,8 +5,8 @@
 // the view already contains; selecting an entry drives the shared model
 // selection and canvas highlight.
 
-import { useMemo, useState } from 'react';
-import type { MemoElement } from '@memoarchitect/tools/browser';
+import { createContext, useContext, useMemo, useState } from 'react';
+import { indexKinds, kindConformsTo, type MemoElement } from '@memoarchitect/tools/browser';
 import { getRegistries, useModelStore } from '../store/model-store';
 import { usageConstruct } from '../authoring';
 import { LAYER_COLORS } from '../constants';
@@ -16,6 +16,9 @@ import { ontologyLabel } from '../lib/ontology-labels';
 
 /** Drag payload the canvas' onDrop handler expects. */
 export const MEMO_KIND_MIME = 'application/memo-kind';
+
+/** An embedding method can supply kinds when the authored view declares no palette. */
+export const PaletteKindsContext = createContext<readonly string[] | undefined>(undefined);
 
 interface DiagramPaletteProps {
     collapsed: boolean;
@@ -34,6 +37,7 @@ export function DiagramPalette({
     collapsed, onToggleCollapse, elementIds = [], eligibleKinds,
 }: DiagramPaletteProps) {
     const model = useModelStore(s => s.model);
+    const fallbackKinds = useContext(PaletteKindsContext);
     const selectedElementId = useModelStore(s => s.selectedElementId);
     const inspectElement = useModelStore(s => s.inspectElement);
     const [search, setSearch] = useState('');
@@ -46,10 +50,13 @@ export function DiagramPalette({
      * offering one would produce a shape the model cannot hold.
      */
     const shapes = useMemo(() => {
-        if (!eligibleKinds?.size) return [];
+        if (!eligibleKinds?.size && !fallbackKinds?.length) return [];
+        const kinds = getRegistries(model).kinds;
+        const registry = indexKinds(kinds);
         const query = search.trim().toLowerCase();
-        return getRegistries(model).kinds
-            .filter(kind => eligibleKinds.has(kind.name) && !kind.isAbstract)
+        return kinds
+            .filter(kind => !kind.isAbstract && (eligibleKinds?.size ? eligibleKinds.has(kind.name)
+                : fallbackKinds?.some(base => kindConformsTo(kind.name, base, registry))))
             .filter(kind => !query
                 || kind.name.toLowerCase().includes(query)
                 || (kind.label ?? '').toLowerCase().includes(query))
@@ -60,7 +67,7 @@ export function DiagramPalette({
                 construct: usageConstruct(kind.construct),
             }))
             .sort((a, b) => a.label.localeCompare(b.label));
-    }, [model, eligibleKinds, search]);
+    }, [model, eligibleKinds, fallbackKinds, search]);
 
     const groups = useMemo(() => {
         if (!model) return [];

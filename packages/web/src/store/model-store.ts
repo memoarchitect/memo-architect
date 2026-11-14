@@ -39,10 +39,14 @@ const USER_VPS_KEY = 'memo:userViewpoints';
 const ACTIVE_VIEW_KEY = 'memo:activeView';
 
 /** Restore only stable, project-addressable navigation across browser reloads. */
-function restoreActiveView(): ActiveView {
+export function restoreActiveView(): ActiveView {
     try {
         const value = JSON.parse(sessionStorage.getItem(ACTIVE_VIEW_KEY) ?? 'null') as ActiveView | null;
         if (value?.type === 'diagram' && typeof value.diagramId === 'string') return value;
+        if (value?.type === 'guide') return { type: 'guide' };
+        if (value?.type === 'pathway' && typeof value.layer === 'string' && value.layer.trim()) {
+            return { type: 'pathway', layer: value.layer, ...(typeof value.diagramId === 'string' ? { diagramId: value.diagramId } : {}) };
+        }
     } catch { /* unavailable storage or stale value */ }
     return { type: 'welcome' };
 }
@@ -511,9 +515,12 @@ export interface ModelState {
         elementIds?: string[];
         /** Kinds the view selects by, written as `includeElementKinds`. */
         elementKinds?: string[];
+        properties?: Record<string, string>;
         /** Relations it draws, written as `includeRelationshipKinds`. */
         relationshipTypes?: string[];
         activate?: boolean;
+        /** Report compiler or persistence diagnostics to an embedding creation flow. */
+        onError?: (message: string) => void;
     }) => string | Promise<string | undefined>;
     updateDiagramElementIds: (diagramId: string, elementIds: string[]) => void;
     addElementToDiagram: (diagramId: string, elementId: string) => void;
@@ -1438,7 +1445,7 @@ export const useModelStore = create<ModelState>((set, get) => ({
         userViewpoints: s.userViewpoints.filter(v => v.id !== id),
         selectedViewpointId: s.selectedViewpointId === id ? null : s.selectedViewpointId,
     })),
-    createDiagram: ({ id: requestedId, name, diagramType, viewKind, viewpointId, elementIds = [], elementKinds, relationshipTypes, activate = true }) => {
+    createDiagram: ({ id: requestedId, name, diagramType, viewKind, viewpointId, elementIds = [], elementKinds, properties, relationshipTypes, activate = true, onError }) => {
         const selection = {
             ...(elementKinds?.length ? { elementKinds } : {}),
             ...(relationshipTypes?.length ? { relationshipTypes } : {}),
@@ -1448,8 +1455,8 @@ export const useModelStore = create<ModelState>((set, get) => ({
             // it, and the model then reports the element it made.
             return (async () => {
                 try {
-                    const result = await requestDiagramCreate({ name, diagramType, viewKind, viewpointId, elementIds, ...selection });
-                    if (!result.success) return undefined;
+                    const result = await requestDiagramCreate({ name, diagramType, viewKind, viewpointId, elementIds, properties, ...selection });
+                    if (!result.success) { onError?.(result.error ?? 'The server refused the new view.'); return undefined; }
                     const elementId = result.qualifiedName;
                     const listed = () => get().model?.diagrams?.find(d => d.elementId === elementId);
                     if (elementId && !listed()) {
@@ -1463,21 +1470,22 @@ export const useModelStore = create<ModelState>((set, get) => ({
                         set({ selectedDiagramId: diagram.id, activeView: { type: 'diagram', diagramId: diagram.id } });
                     }
                     return diagram?.id;
-                } catch {
+                } catch (error) {
+                    onError?.(error instanceof Error ? error.message : String(error));
                     return undefined;
                 }
             })();
         }
         const id = requestedId;
         const diagram: DiagramDTO = {
-            id, name, diagramType, viewKind, viewpointId, auto: false, elementIds, ...selection,
+            id, name, diagramType, viewKind, viewpointId, auto: false, elementIds, properties, ...selection,
         };
         set((s) => ({
             model: s.model ? { ...s.model, diagrams: [...(s.model.diagrams ?? []), diagram] } : null,
             selectedDiagramId: activate ? id : s.selectedDiagramId,
             activeView: activate ? { type: 'diagram', diagramId: id } : s.activeView,
         }));
-        sendDiagramCreate({ id, name, diagramType, viewKind, viewpointId, elementIds, ...selection });
+        sendDiagramCreate({ id, name, diagramType, viewKind, viewpointId, elementIds, properties, ...selection });
         return id;
     },
     /**

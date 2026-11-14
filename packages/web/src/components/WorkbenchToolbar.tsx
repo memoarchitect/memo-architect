@@ -79,7 +79,7 @@ export function WorkbenchToolbar() {
                         title="The method map: every layer and discipline, and where to start"
                         style={{ background: 'rgba(45,212,168,0.12)', border: '1px solid rgba(45,212,168,0.35)', color: '#2DD4A8', borderRadius: 6, padding: '4px 10px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
                     >
-                        Method
+                        Method map
                     </button>
                 </>
             )}

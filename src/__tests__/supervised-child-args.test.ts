@@ -1,5 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import { runningArchitectsForProject, supervisedChildArgs } from '../commands/dev.js';
+import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { runningArchitectsForProject, resolveArchitectClientRoot, supervisedChildArgs } from '../commands/dev.js';
 
 // ─── Supervised child argv ──────────────────────────────────────────────────
 //
@@ -65,5 +68,21 @@ describe('runningArchitectsForProject', () => {
         await expect(runningArchitectsForProject('/workspace/pump', run)).resolves.toEqual([
             { pid: 100, command: 'node /workspace/pump/node_modules/.bin/memo-architect dev --port 3111' },
         ]);
+    });
+});
+
+
+describe('stable production previews', () => {
+    it('serves the built client even when development sources exist', () => {
+        const root = mkdtempSync(join(tmpdir(), 'architect-client-'));
+        try {
+            mkdirSync(join(root, 'packages/web'), { recursive: true });
+            writeFileSync(join(root, 'packages/web/index.html'), 'source');
+            expect(resolveArchitectClientRoot(root, false)).toBe(join(root, 'packages/web'));
+            expect(() => resolveArchitectClientRoot(root, true)).toThrow('not built');
+            mkdirSync(join(root, 'dist'));
+            writeFileSync(join(root, 'dist/index.html'), 'built');
+            expect(resolveArchitectClientRoot(root, true)).toBe(root);
+        } finally { rmSync(root, { recursive: true, force: true }); }
     });
 });
