@@ -6,7 +6,7 @@ import { describe, it, expect, afterEach, vi, beforeEach } from 'vitest';
 import { createRoot, type Root } from 'react-dom/client';
 import { createElement } from 'react';
 import { MemoryRouter } from 'react-router-dom';
-import { act } from 'react-dom/test-utils';
+import { act, Simulate } from 'react-dom/test-utils';
 import type { MemoModelDTO } from '@memoarchitect/tools/browser';
 import { MethodMap } from '../views/MethodMap';
 import type { GuideResult, GuideStepStatus } from '../lib/guide-view';
@@ -142,6 +142,60 @@ describe('the method map page', () => {
         expect(risk.textContent).toContain('What can go wrong. · ISO 14971');
         expect(risk.textContent).toContain('Links: controls in Logical');
         expect(risk.querySelector('[data-testid="row-open"]')!.textContent).toBe('Start here');
+    });
+
+    it('returns from a system to the whole model and re-evaluates the guide', async () => {
+        const view = render();
+        await settle();
+        click(view, 'scope-whole-model');
+        await settle();
+        expect(useModelStore.getState().workspace).toBeNull();
+        expect(asked.at(-1)).toBeNull();
+        expect(saved.at(-1)).not.toHaveProperty('workspace');
+        expect(view.querySelector('[data-testid="scope-whole-model"]')!.getAttribute('aria-pressed')).toBe('true');
+        expect(view.querySelector('[data-testid="map-scope"]')!.textContent).toContain('the whole model');
+        act(() => (view.querySelector('[data-root="c::Eye"]') as HTMLElement).click());
+        await settle();
+        expect(useModelStore.getState().workspace).toBe('c::Eye');
+        expect(saved.at(-1)).toMatchObject({ workspace: 'c::Eye' });
+        expect(view.querySelectorAll('[data-testid="scope-node"][aria-pressed="true"]')).toHaveLength(1);
+        expect(view.querySelector('[data-testid="scope-whole-model"]')!.getAttribute('aria-pressed')).toBe('false');
+    });
+
+    it('filters system choices with ancestor context and keeps Whole model available', async () => {
+        const view = render();
+        await settle();
+        const input = view.querySelector('input[aria-label="Filter systems"]') as HTMLInputElement;
+        const filter = (value: string) => act(() => { input.value = value; Simulate.change(input); });
+        filter(' eYe ');
+        expect([...view.querySelectorAll('[data-testid="scope-node"]')].map(node => node.getAttribute('data-root'))).toEqual(['c::Cell', 'c::Eye']);
+        expect(useModelStore.getState().workspace).toBe('c::Arm');
+        expect(view.querySelector('[data-testid="map-scope"]')!.textContent).toContain('Arm');
+        filter('LAB');
+        expect(view.querySelectorAll('[data-testid="scope-node"]')).toHaveLength(0);
+        expect(view.querySelector('[data-testid="scope-external"]')!.textContent).toContain('Lab');
+        filter('missing system');
+        expect(view.querySelector('[role="status"]')!.textContent).toBe('No systems match.');
+        click(view, 'scope-whole-model');
+        expect(useModelStore.getState().workspace).toBeNull();
+    });
+
+    it('minimizes the selector without changing scope and reopens it from the current choice', async () => {
+        const view = render();
+        await settle();
+        const input = view.querySelector('input[aria-label="Filter systems"]') as HTMLInputElement;
+        act(() => { input.value = 'arm'; Simulate.change(input); });
+        click(view, 'scope-minimize');
+        expect(view.querySelector('[data-testid="scope-tree"]')).toBeNull();
+        const choice = view.querySelector('[data-testid="map-scope"]')!;
+        expect(choice.textContent).toContain('Arm');
+        expect(choice.getAttribute('aria-expanded')).toBe('false');
+        expect(document.activeElement).toBe(choice);
+        expect(useModelStore.getState().workspace).toBe('c::Arm');
+        click(view, 'map-scope');
+        expect(view.querySelector('[data-testid="scope-tree"]')).not.toBeNull();
+        expect((view.querySelector('input[aria-label="Filter systems"]') as HTMLInputElement).value).toBe('arm');
+        expect(choice.getAttribute('aria-expanded')).toBe('true');
     });
 
     it('continues at the next step, remembers the step opened, and hides the guidance with Pathways off', async () => {

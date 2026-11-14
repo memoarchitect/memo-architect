@@ -13,7 +13,7 @@
 // how it links to the layers. Nothing here names a kind, a stage or a row.
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useModelStore } from '../store/model-store';
 import { useGuideEvaluation } from '../lib/use-guide';
@@ -44,6 +44,9 @@ export function MethodMap() {
     const navigate = useNavigate();
     const problem = useGuideEvaluation();
     const [mine, setMine] = useState(false);
+    const [scopeOpen, setScopeOpen] = useState(true);
+    const [scopeFilter, setScopeFilter] = useState('');
+    const scopeToggle = useRef<HTMLButtonElement>(null);
     const axes = axesOf(guide);
     const [tab, setTab] = useState<string | null>(null);
     const current = tab ?? axes[0] ?? HISTORY;
@@ -85,27 +88,20 @@ export function MethodMap() {
 
     return (
         <div data-testid="method-map" style={{ flex: 1, display: 'flex', minHeight: 0, background: 'var(--color-bg)', color: 'var(--color-text)' }}>
-            <aside data-testid="scope-tree" style={{ width: 230, flexShrink: 0, borderRight: `1px solid ${COLOR.border}`, background: '#FFFFFF', padding: '14px 10px', overflow: 'auto' }}>
-                <div style={{ fontSize: 11, color: COLOR.faint, fontWeight: 600, letterSpacing: '0.06em', margin: '0 4px 8px' }}>SCOPE</div>
-                {tree.roots.length === 0 && <div style={{ fontSize: FONT.xs, color: COLOR.muted, margin: '0 4px' }}>The model declares no system yet.</div>}
-                {tree.roots.map(node => <ScopeRow key={node.root} node={node} depth={0} selected={workspace} onSelect={setWorkspace} />)}
-                <div data-testid="scope-external" style={{ fontSize: FONT.xs, color: COLOR.muted, margin: '14px 4px 4px' }}>
-                    Outside the boundary: {tree.external.length === 0 ? 'none yet' : tree.external.map(system => (
-                        <button key={system.root} onClick={() => setWorkspace(system.root)} style={quietLink}>{system.name}</button>
-                    ))}
-                </div>
-                <div data-testid="scope-supplied" style={{ fontSize: FONT.xs, color: COLOR.muted, margin: '6px 4px' }}>
-                    Supplied: {supplied.length === 0 ? 'none' : supplied.map(part => part.name).join(', ')}
-                </div>
-            </aside>
+            {scopeOpen && <ScopeSelector tree={tree} workspace={workspace} supplied={supplied.map(part => part.name)}
+                filter={scopeFilter} onFilter={setScopeFilter} onSelect={setWorkspace} onClose={() => { setScopeOpen(false); scopeToggle.current?.focus(); }} />}
 
             <div style={{ flex: 1, overflow: 'auto', padding: '20px 28px 32px', minWidth: 0 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
                     <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0, color: TITLE }}>Method map</h1>
-                    <span data-testid="map-scope" style={{ fontSize: FONT.sm, border: `1px solid ${COLOR.border}`, borderRadius: 6, padding: '2px 10px', background: '#fff' }}>
+                    <button ref={scopeToggle} type="button" data-testid="map-scope" aria-label="Choose working scope" aria-expanded={scopeOpen}
+                        aria-controls="method-scope-selector" onClick={() => setScopeOpen(open => !open)}
+                        style={{ cursor: 'pointer', textAlign: 'left', fontSize: FONT.sm, border: `1px solid ${COLOR.border}`, borderRadius: 6, padding: '2px 10px', background: '#fff' }}>
+                        <span style={{ color: COLOR.muted }}>Working on: </span>
                         {path.length > 1 ? path.map(node => node.name).join(' ▸ ') : systemName}
                         {chosen && <span style={{ marginLeft: 8, fontSize: 10, fontWeight: 700, color: '#1D4ED8', background: SOFT_BLUE, padding: '1px 6px', borderRadius: 4 }}>{chosen.scope === 'sos' ? 'SYSTEM OF SYSTEMS' : 'SYSTEM'}</span>}
-                    </span>
+                        <span aria-hidden style={{ marginLeft: 8 }}>{scopeOpen ? '▴' : '▾'}</span>
+                    </button>
                 </div>
                 {problem && <p data-testid="map-problem" style={{ fontSize: FONT.sm, color: '#B42318' }}>{problem}</p>}
 
@@ -169,11 +165,59 @@ export function MethodMap() {
     );
 }
 
+/** A filtered hierarchy retains the path to every matching descendant. */
+function matchingScopes(nodes: ScopeNode[], query: string): ScopeNode[] {
+    if (!query) return nodes;
+    return nodes.flatMap(node => {
+        if (node.name.toLocaleLowerCase().includes(query)) return [node];
+        const children = matchingScopes(node.children, query);
+        return children.length ? [{ ...node, children }] : [];
+    });
+}
+
+function ScopeSelector({ tree, workspace, supplied, filter, onFilter, onSelect, onClose }: {
+    tree: ReturnType<typeof scopeTree>; workspace: string | null; supplied: string[];
+    filter: string; onFilter: (value: string) => void; onSelect: (root: string | null) => void; onClose: () => void;
+}) {
+    const query = filter.trim().toLocaleLowerCase();
+    const roots = matchingScopes(tree.roots, query);
+    const external = tree.external.filter(system => system.name.toLocaleLowerCase().includes(query));
+    return (
+        <aside id="method-scope-selector" data-testid="scope-tree" aria-label="Working scope"
+            style={{ width: 230, flexShrink: 0, borderRight: `1px solid ${COLOR.border}`, background: '#FFFFFF', padding: '14px 10px', overflow: 'auto' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', margin: '0 4px 8px' }}>
+                <span style={{ fontSize: 11, color: COLOR.faint, fontWeight: 600, letterSpacing: '0.06em' }}>WORK ON</span>
+                <button type="button" data-testid="scope-minimize" aria-label="Minimize system selector" onClick={onClose} style={quietLink}>‹</button>
+            </div>
+            <p style={{ fontSize: FONT.xs, color: COLOR.muted, margin: '0 4px 10px' }}>Choose one system, or the whole model.</p>
+            <input type="search" aria-label="Filter systems" placeholder="Filter systems…" value={filter}
+                onChange={event => onFilter(event.target.value)}
+                style={{ boxSizing: 'border-box', width: '100%', padding: '7px 8px', border: `1px solid ${COLOR.border}`, borderRadius: 6, marginBottom: 8, font: 'inherit', fontSize: FONT.sm }} />
+            <button type="button" data-testid="scope-whole-model" aria-pressed={workspace === null} onClick={() => onSelect(null)}
+                style={{ ...lightButton, width: '100%', textAlign: 'left', marginBottom: 8, background: workspace === null ? SOFT_TEAL : '#fff', color: workspace === null ? INK : COLOR.primary }}>
+                Whole model
+            </button>
+            {tree.roots.length === 0 && tree.external.length === 0 && <p style={{ fontSize: FONT.xs, color: COLOR.muted }}>The model declares no system yet.</p>}
+            {roots.map(node => <ScopeRow key={node.root} node={node} depth={0} selected={workspace} onSelect={onSelect} />)}
+            {query && roots.length === 0 && external.length === 0 && <p role="status" style={{ fontSize: FONT.sm, color: COLOR.muted }}>No systems match.</p>}
+            <div data-testid="scope-external" style={{ fontSize: FONT.xs, color: COLOR.muted, margin: '14px 4px 4px' }}>
+                Outside the boundary: {external.length === 0 ? (query ? 'no matches' : 'none yet') : external.map(system => (
+                    <button type="button" key={system.root} aria-pressed={workspace === system.root} onClick={() => onSelect(system.root)}
+                        style={{ ...quietLink, background: workspace === system.root ? SOFT_TEAL : 'transparent', fontWeight: workspace === system.root ? 600 : 400 }}>{system.name}</button>
+                ))}
+            </div>
+            <div data-testid="scope-supplied" style={{ fontSize: FONT.xs, color: COLOR.muted, margin: '6px 4px' }}>
+                Supplied: {supplied.length === 0 ? 'none' : supplied.join(', ')}
+            </div>
+        </aside>
+    );
+}
+
 function ScopeRow({ node, depth, selected, onSelect }: { node: ScopeNode; depth: number; selected: string | null; onSelect: (root: string) => void }) {
     const active = node.root === selected;
     return (
         <>
-            <button data-testid="scope-node" data-root={node.root} onClick={() => onSelect(node.root)}
+            <button type="button" data-testid="scope-node" data-root={node.root} aria-pressed={active} onClick={() => onSelect(node.root)}
                 style={{ display: 'flex', alignItems: 'baseline', gap: 6, width: '100%', textAlign: 'left', border: 0, cursor: 'pointer', borderRadius: 6,
                     padding: `4px 8px 4px ${8 + depth * 14}px`, background: active ? SOFT_TEAL : 'transparent', color: active ? INK : COLOR.primary,
                     fontSize: FONT.sm, fontWeight: active ? 600 : 400 }}>
