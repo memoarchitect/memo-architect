@@ -1,4 +1,4 @@
-import { useDiagramDisplayModel } from '../../display-scope';
+import { DiagramActionSubject, useDiagramDisplayModel } from '../../display-scope';
 // ─── MaxGraphCanvas ───────────────────────────────────────────────────────────
 //
 // Alternate diagram surface on maxGraph (@maxgraph/core), the maintained
@@ -12,7 +12,7 @@ import { useDiagramDisplayModel } from '../../display-scope';
 // Element creation, edge drawing and context menus stay on ReactFlow.
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import {
     ConnectionHandler, FitPlugin, Graph, InternalEvent, Point,
     RubberBandHandler, SelectionHandler, getDefaultPlugins,
@@ -180,7 +180,9 @@ export function MaxGraphCanvas() {
     const [direction, setDirection] = useState<'horizontal' | 'vertical'>('horizontal');
     const [visibleFlowKinds, setVisibleFlowKinds] = useState<Set<ActionFlowKind>>(new Set(['control', 'data', 'energy', 'material']));
     const [expandedActionIds, setExpandedActionIds] = useState<Set<string>>(new Set());
-    const [focusedActionId, setFocusedActionId] = useState<string | null>(null);
+    const actionSubject = useContext(DiagramActionSubject);
+    const [focusedActionId, setFocusedActionId] = useState<string | null>(actionSubject);
+    useEffect(() => { setFocusedActionId(actionSubject); setSwimlanes(!actionSubject); }, [selectedDiagramId, actionSubject]);
     /** Selected vertex count — the align tools appear from two. */
     const [selectionCount, setSelectionCount] = useState(0);
     /** Open relationship picker for an interactively drawn connector. */

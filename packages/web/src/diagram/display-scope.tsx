@@ -5,6 +5,9 @@ import { idsInWorkspace, scopeModel } from '../lib/workspace-scope';
 import { rendererModel } from './renderer-model';
 
 /** A display projection; canonical views, source and mutation targets stay in the store. */
+/** The action whose steps an embedded task is reviewing. */
+export const DiagramActionSubject = createContext<string | null>(null);
+
 export const DiagramDisplayScope = createContext<string | null>(null);
 
 export function projectDiagramModel(model: MemoModelDTO, workspace: string | null): MemoModelDTO {

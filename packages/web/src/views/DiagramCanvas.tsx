@@ -7,7 +7,7 @@ import { nearestFreePosition } from '../diagram/nearest-free-position';
 import { spaceParts, spacePorts, type SpacingPart, type SpacingSide } from '../diagram/ibd-spacing';
 import { placementRouteConflicts } from '../diagram/ibd-placement-score';
 import { draggedPortSlot, legalPortSlot, measuredPortBounds, measurePortEnvelopes, type PortConstraintRect } from '../diagram/ibd-port-constraints';
-import { DiagramDisplayScope, mergeScopedMembers, useDiagramDisplayModel } from '../diagram/display-scope';
+import { DiagramActionSubject, DiagramDisplayScope, mergeScopedMembers, useDiagramDisplayModel } from '../diagram/display-scope';
 import { shortenAutomaticPortRoutes, improvesPlacement } from '../diagram/ibd-port-placement';
 import { elbowRoute, attachedRoute, cubicRoutePath, arcRoutePath, polylinePath } from '../diagram/ibd-routing';
 import { captureMovementGeometry, movementGeometryChanges, restoreMovementGeometry, type MovementGeometry } from '../diagram/movement-history';
@@ -1017,6 +1017,7 @@ function DiagramCanvasInner() {
     const setNodeLayout = readOnly ? (noWrite as unknown as typeof storeSetNodeLayout) : storeSetNodeLayout;
     const mergeDiagramLayouts = readOnly ? (noWrite as unknown as typeof storeMergeDiagramLayouts) : storeMergeDiagramLayouts;
     const displayWorkspace = useContext(DiagramDisplayScope);
+    const actionSubject = useContext(DiagramActionSubject);
     const updateDiagramElementIds = useCallback((diagramId: string, ids: string[]) => {
         if (readOnly) return;
         const canonical = useModelStore.getState().model;
@@ -1154,7 +1155,7 @@ function DiagramCanvasInner() {
     const [snapEnabled, setSnapEnabled] = useState(true);
     const [gridVisible, setGridVisible] = useState(true);
     // Action Flow template (KK-4): allocation lanes are on by default.
-    const [swimlanesOn, setSwimlanesOn] = useState(true);
+    const [swimlanesOn, setSwimlanesOn] = useState(!actionSubject);
     const [actionFlowDirection, setActionFlowDirection] = useState<'horizontal' | 'vertical'>('horizontal');
     const [walking, setWalking] = useState(false);
     const [cardDismissedFor, setCardDismissedFor] = useState<string | null>(null);
@@ -1785,7 +1786,7 @@ function DiagramCanvasInner() {
         // A view's display is part of the view's declaration, not of its layout.
         void saveViewDisplay(selectedDiagramId, patch).catch(error => console.warn('[View] display not saved:', error));
     }, [selectedDiagramId]);
-    const [focusedActionId, setFocusedActionId] = useState<string | null>(null);
+    const [focusedActionId, setFocusedActionId] = useState<string | null>(actionSubject);
     // The levels drilled through, outermost first. A drill that lands on a definition (a usage is made of the
     // definition it is typed by) has no composition or parent-action chain back to where it came from, so the
     // way out is the way in, not a reconstruction.
@@ -1883,7 +1884,7 @@ function DiagramCanvasInner() {
         // The view's own hint sets how connectors start, and a choice made in the toolbar is written back to it.
         setUseCaseEdgeStyle(useCaseViewOptions(selectedDiagram?.properties).edgeStyle ?? 'straight');
         setHiddenUseCaseActorIds(new Set());
-        setSwimlanesOn(true);
+        setSwimlanesOn(!actionSubject);
         // The diagram the page opened on keeps what its address asked for; any other starts from the defaults.
         if (openingDiagramRef.current === undefined && selectedDiagramId) openingDiagramRef.current = selectedDiagramId;
         if (selectedDiagramId && selectedDiagramId !== openingDiagramRef.current) {
@@ -1920,8 +1921,8 @@ function DiagramCanvasInner() {
         // (`process::**`). Auto-focus on that action so the template renders
         // its children directly — the same behaviour as drilling in from the
         // parent view.
-        let autoFocusAction: string | null = null;
-        if (model && selectedDiagram
+        let autoFocusAction: string | null = actionSubject && model?.elements[actionSubject]?.construct === 'action' ? actionSubject : null;
+        if (!autoFocusAction && model && selectedDiagram
             && (selectedDiagram.viewKind === 'actionflow' || selectedDiagram.diagramType === 'afd'
                 || selectedDiagram.diagramType === 'ofd' || selectedDiagram.diagramType === 'ffd')) {
             const viewEl = viewElementOf(model, selectedDiagram);
@@ -1945,7 +1946,7 @@ function DiagramCanvasInner() {
         setActionFlowNesting('flat');
         setFocusedStateId(null);
         positionCacheRef.current.clear();
-    }, [selectedDiagramId, selectedDiagram?.properties?.layoutHint, selectedDiagram?.properties?.styleHint, selectedDiagram?.properties?.portDisplay, selectedDiagram?.properties?.connectionDisplay]);
+    }, [selectedDiagramId, actionSubject, selectedDiagram?.properties?.layoutHint, selectedDiagram?.properties?.styleHint, selectedDiagram?.properties?.portDisplay, selectedDiagram?.properties?.connectionDisplay]);
 
     // Custom node types
     const nodeTypes = useMemo(() => ({

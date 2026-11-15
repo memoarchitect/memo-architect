@@ -40,6 +40,7 @@ Behavior beyond ordering lives here too: a `StateMachine` for modes,
 
 | Relationship | Meaning |
 |---|---|
+| `#ModelingMetadata::Refinement dependency from … to …` | The component function realizes the system function. |
 | `allocate … to …` (native) | This element is responsible for this function. |
 | `flow … from … to …` (native) | This item flows between these pins. |
 | `succession` / `first … then …` (native) | This action follows that one. |
@@ -64,6 +65,26 @@ allocate infusionDeliveryFlow.acquireSensors to gpcaDevice.gpcaDeviceSensors;
 ```
 
 ## In Architect
+
+Choose a system in **Working on**, then open **Functional** from the method map.
+The method offers two primary tasks:
+
+- **Functional tree**: select the system parent function, add child system
+  functions, or select an existing function to review its purpose and implementation.
+  Set up the explicit parent first if the model does not declare one. Existing
+  functions retain their identities.
+- **Functional flows**: create a named flow and choose its ordered steps from
+  the same system functions. Reorder or remove steps with the sequence controls.
+  Repeated steps reference the same function; they have their own execution identities.
+  The full flow diagram is available for branches and richer behavior.
+
+Selecting a system function shows **Realization and allocation**. Create a
+component function and choose its logical component in one operation, or link an
+existing component function. The resulting model contains a native refinement
+from the component function to the system function and an allocation from the
+component function to the component. **Needs realization or allocation** narrows
+review to incomplete chains.
+
 
 - A **function flow diagram** (`ffd`) and an **activity diagram** (`act`, `afd`)
   are [action flow views](../views/action-flow.md).

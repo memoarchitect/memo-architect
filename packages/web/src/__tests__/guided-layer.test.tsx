@@ -40,7 +40,89 @@ const click = async (text: string) => { act(() => buttons(text)[0].click()); awa
 const choose = async (label: string, value: string) => { const select = container.querySelector(`select[aria-label="${label}"]`) as HTMLSelectElement; act(() => { select.value = value; select.dispatchEvent(new Event('change', { bubbles: true })); }); await settle(); };
 beforeEach(() => { answer = baseGuide(); window.__MEMO_FLAGS__ = { experimental: true }; useModelStore.setState({ model: model(), guide: answer, workspace: 'host', connected: true, preferencesLoaded: true, pathways: true, lastStep: null, pinned: null, activeView: { type: 'pathway', layer: 'layerWork' }, selectedDiagramId: null }); });
 afterEach(() => { act(() => root?.unmount()); container?.remove(); vi.restoreAllMocks(); });
+function prepareFunctionalWorkbench() {
+        const next = model();
+        next.registries!.kinds.push({ name: 'MemoFunction' } as never, { name: 'SystemFunction', superType: 'MemoFunction' } as never,
+            { name: 'ComponentFunction', superType: 'MemoFunction' } as never, { name: 'FunctionalFlow', superType: 'MemoFunction' } as never, { name: 'LogicalComponent' } as never);
+        next.elements.fn = { ...next.elements.fn, kind: 'SystemFunction', parentAction: 'root' };
+        next.elements.root = element('root', 'SystemFunction', 'System purpose');
+        next.elements.implementation = { ...element('implementation', 'ComponentFunction', 'Calculate signal'), parentAction: 'root' };
+        next.elements.controller = { ...element('controller', 'LogicalComponent', 'Controller'), owner: 'host' };
+        next.elements.flow = { ...element('flow', 'FunctionalFlow', 'Run measurement'), parentAction: 'root' };
+        next.elements.step = { ...element('step', 'SystemFunction', 'Measure here'), parentAction: 'flow' };
+        for (const id of ['root', 'implementation', 'controller', 'flow', 'step']) next.workspaceMembership!.membership[id] = ['host'];
+        next.relationships.push(...[
+            { id: 'root-link', type: 'functionalRoot', sourceId: 'host', targetId: 'root' },
+            { id: 'fn-child', type: 'composes', sourceId: 'root', targetId: 'fn' },
+            { id: 'flow-child', type: 'composes', sourceId: 'root', targetId: 'flow' },
+            { id: 'step-child', type: 'composes', sourceId: 'flow', targetId: 'step' },
+            { id: 'implementation-child', type: 'composes', sourceId: 'root', targetId: 'implementation' },
+            { id: 'reuse', type: 'subsets', sourceId: 'step', targetId: 'fn' },
+            { id: 'realization', type: 'realizes', sourceId: 'implementation', targetId: 'fn' },
+            { id: 'allocation', type: 'allocatedTo', sourceId: 'implementation', targetId: 'controller' },
+        ] as never[]);
+        answer.layers[0].workbench = 'functional';
+        answer.layers[0].tasks = [
+            { id: 'tree', kind: 'decomposition', label: 'Function tree', primary: true, subjectKind: 'SystemFunction' },
+            { id: 'flows', kind: 'sequence', label: 'Function flows', primary: true, subjectKind: 'FunctionalFlow', referenceKind: 'SystemFunction' },
+            { id: 'realize', kind: 'realization', label: 'Realization', primary: false, subjectKind: 'SystemFunction', implementationKind: 'ComponentFunction', allocationKind: 'LogicalComponent' },
+        ];
+        useModelStore.setState({ model: next });
+}
 describe('the guided layer workspace', () => {
+    it('presents method-defined functional tasks and a contextual realization chain', async () => {
+        prepareFunctionalWorkbench(); await render();
+        expect(container.querySelector('[data-testid="functional-workbench"]')).not.toBeNull();
+        expect(container.querySelector('[data-testid="guide-rail"]')).toBeNull();
+        expect(container.querySelector('[aria-label="Functional tree"]')!.textContent).not.toContain('Measure here');
+        await click('Compute signal');
+        expect(container.querySelector('[aria-label="Current functional task"]')!.textContent).toContain('Calculate signal → Controller');
+        await click('Function flows'); await click('Run measurement1 steps');
+        expect(container.querySelector('[aria-label="Current functional task"]')!.textContent).toContain('Compute signal');
+        expect(useModelStore.getState().activeView).toMatchObject({ type: 'pathway', layer: 'layerWork' });
+    });
+
+    it('clears an existing allocation when starting a new component function', async () => {
+        prepareFunctionalWorkbench(); await render(); await click('Compute signal');
+        await click('Use existing component function');
+        const implementation = container.querySelector('[aria-label="Current functional task"] select') as HTMLSelectElement;
+        act(() => { implementation.value = 'implementation'; implementation.dispatchEvent(new Event('change', { bubbles: true })); }); await settle();
+        expect((container.querySelectorAll('[aria-label="Current functional task"] select')[1] as HTMLSelectElement).disabled).toBe(true);
+        await click('Cancel'); await click('+ Component function');
+        const allocation = container.querySelector('[aria-label="Current functional task"] select') as HTMLSelectElement;
+        expect(allocation.disabled).toBe(false); expect(allocation.value).toBe('');
+    });
+
+    it('ignores late save selection after switching functional tasks', async () => {
+        prepareFunctionalWorkbench(); await render(); await click('+ Function');
+        let finish!: (value: never) => void;
+        vi.mocked(sendElementCreate).mockImplementationOnce(() => new Promise(resolve => { finish = resolve; }));
+        const form = container.querySelector('[aria-label="Current functional task"] form')!;
+        act(() => { form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })); }); await settle();
+        await click('Function flows');
+        await act(async () => { finish({ success: true, elementId: 'fn' } as never); }); await settle();
+        expect(container.querySelector('[aria-label="Current functional task"]')!.textContent).not.toContain('Compute signal');
+        expect(container.querySelector('[role="status"]')).toBeNull();
+        expect(buttons('Function flows')[0].getAttribute('aria-pressed')).toBe('true');
+    });
+
+    it('waits for the saved realization to arrive before enabling another write', async () => {
+        prepareFunctionalWorkbench(); await render(); await click('Compute signal'); await click('+ Component function');
+        const allocation = container.querySelector('[aria-label="Current functional task"] select') as HTMLSelectElement;
+        act(() => { allocation.value = 'controller'; allocation.dispatchEvent(new Event('change', { bubbles: true })); }); await settle();
+        vi.mocked(sendElementCreate).mockResolvedValueOnce({ success: true, elementId: 'newImplementation' } as never);
+        act(() => { container.querySelector('[aria-label="Current functional task"] form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })); }); await settle();
+        const waiting = buttons('+ Child function')[0].disabled;
+        const previous = useModelStore.getState().model!;
+        act(() => useModelStore.setState({ model: { ...previous, elements: { ...previous.elements, newImplementation: { ...previous.elements.implementation, id: 'newImplementation', name: 'Compute command' } }, relationships: [...previous.relationships,
+            { id: 'new-realization', type: 'realizes', sourceId: 'newImplementation', targetId: 'fn' },
+            { id: 'new-allocation', type: 'allocatedTo', sourceId: 'newImplementation', targetId: 'controller' },
+        ] as never } })); await settle();
+        expect(waiting).toBe(true);
+        expect(buttons('+ Child function')[0].disabled).toBe(false);
+        expect(container.querySelector('[role="status"]')!.textContent).toBe('Saved to the model.');
+    });
+
     it('shows the existing breakdown beneath a parent performance reference without duplicating its original', async () => {
         const next = model();
         next.registries!.kinds.push({ name: 'MemoFunction' } as never, { name: 'SystemFunction', superType: 'MemoFunction' } as never);

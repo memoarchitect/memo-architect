@@ -1,4 +1,4 @@
-import { functionalStructure, indexKinds, kindConformsTo, type MemoModelDTO } from '@memoarchitect/tools/browser';
+import { functionalStructure, functionalFlowSteps, indexKinds, kindConformsTo, type FunctionalWriteContext, type MemoModelDTO } from '@memoarchitect/tools/browser';
 import { askText, alertDialog } from '../components/AppDialogs';
 import { useModelStore } from '../store/model-store';
 import { sendElementCreate } from '../store/ws-client';
@@ -34,4 +34,37 @@ export function createComponentFunction(componentId: string) {
     const state = useModelStore.getState();
     const workspace = state.model && componentFunctionWorkspace(state.model, componentId, state.workspace);
     if (workspace) return createNativeFunction(workspace, componentId);
+}
+
+/** Keep authoring in the guided task while the server validates and chooses source identities. */
+export async function writeFunctionalWork(context: FunctionalWriteContext, name = '') {
+    const state = useModelStore.getState();
+    if (!state.model || !state.connected || state.pinned) throw new Error('Connect to a writable model first.');
+    const structure = functionalStructure(state.model, context.workspace);
+    const homeId = context.flowId ?? context.componentFunctionId ?? context.parentFunctionId;
+    const home = homeId ? state.model.elements[homeId] : structure.home;
+    if (!home) throw new Error('Choose a system with a writable function source.');
+    const component = context.componentId ? state.model.elements[context.componentId] : undefined;
+    const result = await sendElementCreate({ id: '', name, kind: context.operation === 'flow' ? 'FunctionalFlow' : 'SystemFunction', construct: 'action', file: home.file,
+        functionContext: { ...context, ...(component ? { componentSourceHash: state.model.sourceHashes?.[component.file] } : {}) } });
+    if (!result.success) throw new Error(result.error ?? 'The change could not be saved.');
+    // A write acknowledgement can precede the watcher's model broadcast. Keep the next task
+    // from submitting a stale source hash while the new semantic state is still on its way.
+    const ready = (model: MemoModelDTO | null) => {
+        if (!model || !result.elementId || !model.elements[result.elementId]) return false;
+        if (context.operation === 'root') return model.relationships.some(edge => edge.type === 'functionalRoot' && edge.sourceId === context.workspace && edge.targetId === result.elementId);
+        if (context.operation === 'flow' || context.operation === 'update-flow') {
+            const actual = functionalFlowSteps(model, result.elementId).steps;
+            return actual.length === context.steps?.length && actual.every((item, index) => item.functionId === context.steps![index].functionId && (!context.steps![index].stepId || item.step.id === context.steps![index].stepId));
+        }
+        return (!context.systemFunctionId || model.relationships.some(edge => edge.type === 'realizes' && edge.sourceId === result.elementId && edge.targetId === context.systemFunctionId))
+            && (!context.componentId || model.relationships.some(edge => edge.type === 'allocatedTo' && edge.sourceId === result.elementId && edge.targetId === context.componentId));
+    };
+    if (!ready(useModelStore.getState().model)) await new Promise<void>((resolve, reject) => {
+        const unsubscribe = useModelStore.subscribe(next => { if (ready(next.model)) { clearTimeout(timer); unsubscribe(); resolve(); } });
+        const timer = setTimeout(() => { unsubscribe(); reject(new Error('The change was saved. Reload the model before making another change; its refreshed state has not arrived yet.')); }, 30_000);
+        // Cover a broadcast between the initial check and subscribing.
+        if (ready(useModelStore.getState().model)) { clearTimeout(timer); unsubscribe(); resolve(); }
+    });
+    return result.elementId;
 }
