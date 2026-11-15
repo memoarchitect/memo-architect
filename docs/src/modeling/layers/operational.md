@@ -74,6 +74,37 @@ connection : RealizesUseCase
 
 ## In Architect
 
+Open **Operational** from the method map. The guided workspace has two tasks:
+
+- **Clinical** describes the product-independent baseline. Choose an operational
+  entity as the subject of a clinical use case. Add a clinical workflow for the
+  goal, then its nominal and alternate scenarios and their steps.
+- **System** describes work supported by the selected system or system of systems.
+  Add system use cases, their system workflows, scenarios and activities. Include
+  existing use cases to reuse services across systems, retaining each subject.
+
+The hierarchy presents use-case inclusion, workflow realization and scenario/step
+ownership as distinct links. System refinements appear under clinical intent as
+labelled context; **Work on …** switches to that system for editing. Unlinked
+workflows and scenarios without an owning workflow remain visible for review.
+
+Clinical and system scenarios both use `OperativeScenario`. Their level comes
+from the workflow that owns them. Nominal and alternate paths are siblings,
+not separate scenario types. Reused steps keep their canonical identity.
+
+Select a system activity to link its clinical counterpart, performer and canonical
+system functions. **Functional flow** adds native refinement from an existing flow
+to that activity. The separate **Link flow to whole scenario** action says the flow
+realizes the entire scenario. A flow realization retains the activity's direct
+system-function performances; it does not replace them. Clicking a linked flow
+opens that flow in Functional.
+
+Scenario sequence controls reorder native steps without replacing their bodies or
+identities. **Open scenario diagram** opens the selected path's action editor;
+branching and guarded behavior use that editor. **Details** exposes the element's
+other properties when needed.
+
+
 - **☰ › Views › Use Cases** lists use cases grouped by declared level, with each
   use case's workflows and scenarios. Select a scenario to see it as an
   operational flow (`ofd`). Variants of a flow show as rows you can switch between.

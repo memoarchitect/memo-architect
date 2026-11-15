@@ -18,10 +18,12 @@ export function FunctionalWorkbench({ model, row, workspace, canWrite }: { model
     const treeTask = tasks.find(task => task.kind === 'decomposition');
     const flowTask = tasks.find(task => task.kind === 'sequence');
     const realizationTask = tasks.find(task => task.kind === 'realization');
-    const [taskId, setTaskId] = useState(treeTask?.id ?? tasks[0]?.id);
+    const [openingFlow] = useState(() => { const id = useModelStore.getState().selectedElementId; return id && functionalCatalog(model, workspace, 'FunctionalFlow').some(flow => flow.id === id) ? id : undefined; });
+    const openingFlowRef = useRef(openingFlow);
+    const [taskId, setTaskId] = useState(openingFlow ? flowTask?.id : treeTask?.id ?? tasks[0]?.id);
     const task = tasks.find(task => task.id === taskId) ?? treeTask;
     const contextRef = useRef('');
-    const [selectedId, setSelectedId] = useState<string>();
+    const [selectedId, setSelectedId] = useState<string | undefined>(openingFlow);
     contextRef.current = `${workspace ?? ''}:${task?.id ?? ''}:${selectedId ?? ''}`;
     const [filter, setFilter] = useState('');
     const [review, setReview] = useState(false);
@@ -43,7 +45,7 @@ export function FunctionalWorkbench({ model, row, workspace, canWrite }: { model
     const items = flowMode ? flows : functions;
     const selected = items.find(item => item.id === selectedId);
     const visible = items.filter(element => element.name.toLowerCase().includes(filter.toLowerCase()) && (!review || flowMode || gaps(element.id)));
-    useEffect(() => { setSelectedId(undefined); setDiagramId(undefined); setAdding(false); setNotice(''); setFilter(''); }, [workspace]);
+    useEffect(() => { setSelectedId(openingFlowRef.current); openingFlowRef.current = undefined; setDiagramId(undefined); setAdding(false); setNotice(''); setFilter(''); }, [workspace]);
     useEffect(() => { if (diagramId) selectDiagram(diagramId); }, [diagramId, selectDiagram]);
     useEffect(() => { if (!diagramId) useModelStore.getState().inspectElement(null); }, [diagramId, workspace, taskId, selectedId]);
     const save = async (work: () => Promise<string | undefined>, after?: (id?: string) => void) => {

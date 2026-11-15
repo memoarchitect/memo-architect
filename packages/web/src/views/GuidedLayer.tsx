@@ -1,3 +1,4 @@
+import { OperationalWorkbench } from './OperationalWorkbench';
 import { FunctionalWorkbench } from './FunctionalWorkbench';
 import { LayerElementBrowser } from './LayerElementBrowser';
 import { functionalDisplayIds, functionalScope, functionalStructure } from '@memoarchitect/tools/browser';
@@ -51,6 +52,7 @@ export function GuidedLayer({ layer }: { layer: string }) {
     const [notice, setNotice] = useState<string | null>(null);
     const [linkFrom, setLinkFrom] = useState<string | null>(null);
     const row = guide?.layers.find(candidate => candidate.name === layer);
+    const taskWorkbench = row?.workbench === 'functional' || row?.workbench === 'operational';
     const steps = useMemo(() => guide && row ? stepsOfLayer(guide, row) : [], [guide, row]);
     const step = currentStep(steps, lastStep);
     const chosen = model?.workspaceMembership?.workspaces.find(candidate => candidate.root === workspace);
@@ -76,7 +78,7 @@ export function GuidedLayer({ layer }: { layer: string }) {
         setActiveView(view); navigate(viewToPath(view)!);
     };
     // Source follows the editor prop; the visual canvas follows this shared selection.
-    useEffect(() => { if (row?.workbench !== 'functional') selectDiagram(openView?.diagram.id ?? null); }, [openView?.diagram.id, row?.workbench, selectDiagram]);
+    useEffect(() => { if (!taskWorkbench) selectDiagram(openView?.diagram.id ?? null); }, [openView?.diagram.id, taskWorkbench, selectDiagram]);
     useEffect(() => { setNotice(null); setLinkFrom(null); }, [layer, workspace]);
     const openElement = (id: string) => {
         if (!model?.elements[id]) return;
@@ -124,11 +126,11 @@ export function GuidedLayer({ layer }: { layer: string }) {
                 <option value="">Whole model</option>{workspace && !chosen && <option value={workspace}>Selected system (loading…)</option>}{workspaceOptions(model?.workspaceMembership).map(option => <option key={option.root} value={option.root}>{option.name}</option>)}
             </select></label>
             <span data-testid="layer-scope" style={{ fontSize: FONT.xs, color: COLOR.muted }}>{scope}</span><span style={{ flex: 1 }} />
-            {row?.workbench !== 'functional' && pathways && <button type="button" style={button} aria-expanded={railOpen} onClick={() => setRailOpen(value => !value)}>{railOpen ? 'Hide guidance' : 'Show guidance'}</button>}
-            {row?.workbench !== 'functional' && <button type="button" style={button} aria-expanded={viewpointsOpen} onClick={() => setViewpointsOpen(value => !value)}>{viewpointsOpen ? 'Hide layer browser' : 'Show layer browser'}</button>}
+            {!taskWorkbench && pathways && <button type="button" style={button} aria-expanded={railOpen} onClick={() => setRailOpen(value => !value)}>{railOpen ? 'Hide guidance' : 'Show guidance'}</button>}
+            {!taskWorkbench && <button type="button" style={button} aria-expanded={viewpointsOpen} onClick={() => setViewpointsOpen(value => !value)}>{viewpointsOpen ? 'Hide layer browser' : 'Show layer browser'}</button>}
         </header>
         {problem && <p role="alert" style={{ margin: 12, color: '#B42318' }}>{problem}</p>}{notice && <p role="status" style={{ margin: 12 }}>{notice}</p>}
-        {!guide || !model || (workspace && !chosen) ? <p style={{ padding: 20 }}>Reading the method…</p> : !row ? <p style={{ padding: 20 }}>This layer is not part of the selected method. Choose another layer above.</p> : row.workbench === 'functional' ? <FunctionalWorkbench key={row.id} model={model} row={row} workspace={workspace} canWrite={canWrite} /> : <div style={{ flex: 1, display: 'flex', overflow: 'hidden', minHeight: 0 }}>
+        {!guide || !model || (workspace && !chosen) ? <p style={{ padding: 20 }}>Reading the method…</p> : !row ? <p style={{ padding: 20 }}>This layer is not part of the selected method. Choose another layer above.</p> : row.workbench === 'operational' ? <OperationalWorkbench key={row.id} model={model} row={row} workspace={workspace} canWrite={canWrite} /> : row.workbench === 'functional' ? <FunctionalWorkbench key={row.id} model={model} row={row} workspace={workspace} canWrite={canWrite} /> : <div style={{ flex: 1, display: 'flex', overflow: 'hidden', minHeight: 0 }}>
             {pathways && railOpen && <aside aria-label="Layer guidance" data-testid="guide-rail" style={{ ...panel, width: 270, borderRight: `1px solid ${COLOR.border}` }}>
                 <h1 style={{ fontSize: 20, margin: '0 0 8px' }}>{row.label}</h1><p style={{ fontSize: FONT.sm, color: COLOR.muted }}>{row.purpose}</p>
                 {starting && <section aria-label="Start here" style={{ padding: 12, background: '#eef8f5', borderRadius: 8, marginBottom: 16 }}>
