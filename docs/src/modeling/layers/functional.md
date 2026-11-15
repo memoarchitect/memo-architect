@@ -76,7 +76,12 @@ The method offers two primary tasks:
 - **Functional flows**: create a named flow and choose its ordered steps from
   the same system functions. Reorder or remove steps with the sequence controls.
   Repeated steps reference the same function; they have their own execution identities.
-  The full flow diagram is available for branches and richer behavior.
+  **Table** shows the ordered steps and their system functions. **Visual** opens
+  the flow's activity diagram for branches and richer behavior.
+
+In **Function tree**, switch from **Tree** to **Visual** for a block definition
+diagram (BDD) of the selected function's decomposition. The task and presentation
+controls stay visible while a diagram is open.
 
 Selecting a system function shows **Realization and allocation**. Create a
 component function and choose its logical component in one operation, or link an

@@ -18,7 +18,7 @@ import { computeActionFlowViewLayout } from '../../../views/templates/actionflow
 import type { ActionFlowDisplayLevel, ActionFlowKind, ActionFlowLaneGrouping } from '../../../views/templates/actionflow-view';
 import { computeStateTransitionLayout } from '../../../views/templates/statetransition-view';
 import { computeSequenceLayout } from '../../../views/templates/sequence-view';
-import { computeUseCaseViewLayout, useCaseViewOptions } from '../../../views/templates/use-case-view';
+import { computeUseCaseViewLayout, useCaseSubjectOptions, useCaseViewOptions } from '../../../views/templates/use-case-view';
 import { computeContextViewLayout } from '../../../views/templates/context-view';
 import { projectLayoutToNotationScene, type NotationScene } from '../../notation-scene';
 import { projectIrSemantics } from '../../ir-scene-projection';
@@ -26,6 +26,7 @@ import { resolveDiagramProfile } from '../../diagram-profile';
 
 export interface SceneRequest {
     model: MemoModelDTO;
+    useCaseSubjectId?: string | null;
     diagram: DiagramDTO | null;
     selectedViewpointId: string | null;
     hiddenLayers: ReadonlySet<string>;
@@ -118,7 +119,7 @@ export async function computeDiagramScene(request: SceneRequest): Promise<Notati
 
     let result: { nodes: unknown[]; edges: unknown[] };
     if (diagramProfile === 'usecase' && diagram) {
-        result = computeUseCaseViewLayout(model, { systemName: diagram.name, ...useCaseViewOptions(diagram.properties) });
+        result = computeUseCaseViewLayout(model, { ...useCaseSubjectOptions(model, request.useCaseSubjectId, diagram.name, diagram.elementIds), viewpointFilter: request.useCaseSubjectId || diagram.properties?.autoPopulate === 'false' ? viewpointFilter : undefined, ...useCaseViewOptions(diagram.properties) });
     } else if (diagramProfile === 'context' && diagram) {
         result = computeContextViewLayout(model, diagram.name, {
             viewpointFilter,

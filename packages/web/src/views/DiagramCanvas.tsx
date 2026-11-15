@@ -7,7 +7,7 @@ import { nearestFreePosition } from '../diagram/nearest-free-position';
 import { spaceParts, spacePorts, type SpacingPart, type SpacingSide } from '../diagram/ibd-spacing';
 import { placementRouteConflicts } from '../diagram/ibd-placement-score';
 import { draggedPortSlot, legalPortSlot, measuredPortBounds, measurePortEnvelopes, type PortConstraintRect } from '../diagram/ibd-port-constraints';
-import { DiagramActionSubject, DiagramDisplayScope, mergeScopedMembers, useDiagramDisplayModel } from '../diagram/display-scope';
+import { DiagramUseCaseSubject, DiagramActionSubject, DiagramDisplayScope, mergeScopedMembers, useDiagramDisplayModel } from '../diagram/display-scope';
 import { shortenAutomaticPortRoutes, improvesPlacement } from '../diagram/ibd-port-placement';
 import { elbowRoute, attachedRoute, cubicRoutePath, arcRoutePath, polylinePath } from '../diagram/ibd-routing';
 import { captureMovementGeometry, movementGeometryChanges, restoreMovementGeometry, type MovementGeometry } from '../diagram/movement-history';
@@ -94,7 +94,7 @@ import {
 import { assignLanes, collectActionFlowActions, commonDisplayLevels, findFloatingActions, LANE_OUTER_MARGIN, laneBoxRect, parameterOfHandle, type ActionFlowDisplayLevel, type ActionFlowLaneGrouping, type ActionFlowLaneStyle, type ActionFlowNesting } from './templates/actionflow-view';
 import { isStateElement } from './templates/statetransition-view';
 import { bendConnector, type Wall } from './templates/connector-bend';
-import { useCaseActorOptions, useCaseMaxDepth, useCaseViewOptions, type UseCaseEdgeStyle } from './templates/use-case-view';
+import { useCaseActorOptions, useCaseMaxDepth, useCaseSubjectOptions, useCaseViewOptions, type UseCaseEdgeStyle } from './templates/use-case-view';
 import { templateRegistry } from '../diagram/templates';
 import type { TemplateOptionSlices } from '../diagram/template-provider';
 import { resolveDiagramProfile } from '../diagram/diagram-profile';
@@ -1018,6 +1018,7 @@ function DiagramCanvasInner() {
     const mergeDiagramLayouts = readOnly ? (noWrite as unknown as typeof storeMergeDiagramLayouts) : storeMergeDiagramLayouts;
     const displayWorkspace = useContext(DiagramDisplayScope);
     const actionSubject = useContext(DiagramActionSubject);
+    const useCaseSubject = useContext(DiagramUseCaseSubject);
     const updateDiagramElementIds = useCallback((diagramId: string, ids: string[]) => {
         if (readOnly) return;
         const canonical = useModelStore.getState().model;
@@ -3313,8 +3314,8 @@ function DiagramCanvasInner() {
                     // A UCD selection can be derived before relationship endpoints
                     // are resolved. The template itself selects only actors linked
                     // to its visible use cases, so do not drop actors here.
-                    viewpointFilter: undefined,
-                    systemName: selectedDiagram?.name,
+                    viewpointFilter: useCaseSubject || selectedDiagram?.properties?.autoPopulate === 'false' ? viewpointFilter : undefined,
+                    ...useCaseSubjectOptions(model, useCaseSubject, selectedDiagram?.name, selectedDiagram?.elementIds),
                     ...(selectedDiagram ? useCaseViewOptions(selectedDiagram.properties) : {}),
                     level: useCaseDisplayLevel, edgeStyle: useCaseEdgeStyle, hiddenActorIds: hiddenUseCaseActorIds,
                 },
@@ -3431,7 +3432,7 @@ function DiagramCanvasInner() {
         viewKind, isGeneralTemplate, generalMode, diagramProfile, swimlanesOn, relayoutNonce,
         selectedDiagram?.relationshipTypes, selectedDiagram?.diagramType, selectedDiagram?.name, useCaseDisplayLevel, useCaseEdgeStyle, hiddenUseCaseActorIds,
         layoutProviderId,
-        expandedNodes, collapsedInterconnectionNodes, focusedInterconnectionId, interconnectionPortDisplay, interconnectionConnectionDisplay, showIbdPortText, showIbdConnectionText, showActionFlowItems, edgeLabelVisibility, activeRenderer, portWalls, activeLegend, expandedActionNodes, focusedActionId, visibleActionFlowKinds, actionFlowDirection, actionFlowLaneGrouping, actionFlowLaneStyle, actionFlowDisplayLevel, actionFlowNesting, nodeDirections,
+        expandedNodes, collapsedInterconnectionNodes, focusedInterconnectionId, interconnectionPortDisplay, interconnectionConnectionDisplay, showIbdPortText, showIbdConnectionText, showActionFlowItems, edgeLabelVisibility, activeRenderer, portWalls, activeLegend, expandedActionNodes, focusedActionId, useCaseSubject, visibleActionFlowKinds, actionFlowDirection, actionFlowLaneGrouping, actionFlowLaneStyle, actionFlowDisplayLevel, actionFlowNesting, nodeDirections,
         collapsedStateNodes, focusedStateId, toggleStateCollapse, drillIntoState, drillIntoAction,
         toggleExpand, toggleInterconnectionCollapse, toggleActionExpand, toggleDirection, selectedDiagramId,
         drillIntoInterconnection,

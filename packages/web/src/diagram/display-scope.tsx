@@ -6,6 +6,8 @@ import { rendererModel } from './renderer-model';
 
 /** A display projection; canonical views, source and mutation targets stay in the store. */
 /** The action whose steps an embedded task is reviewing. */
+export const DiagramUseCaseSubject = createContext<string | null>(null);
+
 export const DiagramActionSubject = createContext<string | null>(null);
 
 export const DiagramDisplayScope = createContext<string | null>(null);

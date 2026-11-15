@@ -83,7 +83,13 @@ Open **Operational** from the method map. The guided workspace has two tasks:
   Add system use cases, their system workflows, scenarios and activities. Include
   existing use cases to reuse services across systems, retaining each subject.
 
-The hierarchy presents use-case inclusion, workflow realization and scenario/step
+Choose **Use cases**, **Workflows**, or **Scenarios** within the current task.
+**Table** lists that type and opens its guided editor. **Visual** shows a use-case
+diagram with its subject and actors, a workflow's scenario structure, or the
+selected scenario's activity diagram. Select a scenario in the workflow visual
+to open its diagram.
+
+**Hierarchy** presents use-case inclusion, workflow realization and scenario/step
 ownership as distinct links. System refinements appear under clinical intent as
 labelled context; **Work on …** switches to that system for editing. Unlinked
 workflows and scenarios without an owning workflow remain visible for review.

@@ -63,8 +63,8 @@ function prepareFunctionalWorkbench() {
         ] as never[]);
         answer.layers[0].workbench = 'functional';
         answer.layers[0].tasks = [
-            { id: 'tree', kind: 'decomposition', label: 'Function tree', primary: true, subjectKind: 'SystemFunction' },
-            { id: 'flows', kind: 'sequence', label: 'Function flows', primary: true, subjectKind: 'FunctionalFlow', referenceKind: 'SystemFunction' },
+            { id: 'tree', kind: 'decomposition', label: 'Function tree', primary: true, subjectKind: 'SystemFunction', viewpoint: viewpoints[0] },
+            { id: 'flows', kind: 'sequence', label: 'Function flows', primary: true, subjectKind: 'FunctionalFlow', referenceKind: 'SystemFunction', viewpoint: { id: 'catalog::vpFlow', name: 'vpFlow', label: 'Flow', viewKind: 'actionflow' } },
             { id: 'realize', kind: 'realization', label: 'Realization', primary: false, subjectKind: 'SystemFunction', implementationKind: 'ComponentFunction', allocationKind: 'LogicalComponent' },
         ];
         useModelStore.setState({ model: next });
@@ -80,6 +80,33 @@ describe('the guided layer workspace', () => {
         await click('Function flows'); await click('Run measurement1 steps');
         expect(container.querySelector('[aria-label="Current functional task"]')!.textContent).toContain('Compute signal');
         expect(useModelStore.getState().activeView).toMatchObject({ type: 'pathway', layer: 'layerWork' });
+    });
+
+    it('switches between function BDDs, flow activity diagrams and the step table', async () => {
+        prepareFunctionalWorkbench();
+        const originalCreate = useModelStore.getState().createDiagram;
+        const createDiagram = vi.fn(async ({ diagramType }: { diagramType: string }) => diagramType);
+        useModelStore.setState({ createDiagram });
+        try {
+            await render();
+            await click('Visual');
+            expect(createDiagram).not.toHaveBeenCalled();
+            await click('Create diagram');
+            expect(createDiagram).toHaveBeenLastCalledWith(expect.objectContaining({
+                diagramType: 'bdd', elementIds: ['root', 'fn'],
+                properties: { autoPopulate: 'false', layoutHint: 'tree', styleHint: 'expanded:root' },
+            }));
+            await click('Function flows');
+            expect(buttons('Visual')[0].getAttribute('aria-pressed')).toBe('true');
+            expect(createDiagram).toHaveBeenCalledTimes(1);
+            await click('Create diagram');
+            expect(createDiagram).toHaveBeenLastCalledWith(expect.objectContaining({ diagramType: 'afd', elementIds: ['flow', 'step'] }));
+            await click('Table');
+            await click('Run measurement1 steps');
+            expect(container.querySelector('table')?.textContent).toContain('Compute signal');
+        } finally {
+            useModelStore.setState({ createDiagram: originalCreate });
+        }
     });
 
     it('clears an existing allocation when starting a new component function', async () => {
