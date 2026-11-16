@@ -1,4 +1,5 @@
 import { affectedMovementRoutes, routeEntersBody } from '../diagram/ibd-movement-routing';
+import { answerOf, type AnswerOptions } from '../diagram/layout-answers';
 import { nearestFreePosition } from '../diagram/nearest-free-position';
 import { spaceParts, spacePorts, type SpacingPart, type SpacingSide } from '../diagram/ibd-spacing';
 import { placementRouteConflicts } from '../diagram/ibd-placement-score';
@@ -360,6 +361,8 @@ function reroutePositionedEdges(
     endpointsOnly = false,
     movement?: MovementRouting,
     fixedEdgeIds?: Set<string>,
+    /** Given when a diagram is opened: the routes are read back if this board was routed before. Never on an edit. */
+    answers?: AnswerOptions,
 ): FlowEdge[] {
     const byId = new Map(nodes.map(n => [n.id, n]));
     const absolute = new Map<string, { x: number; y: number }>();
@@ -511,10 +514,11 @@ function reroutePositionedEdges(
     const avoidsParts = (type: IbdRoutingType) => type === 'manhattan' || type === 'orthogonal' && (quality === 'tidy' || Boolean(movement));
     const automaticRequests = requests.filter(request => !fixedRoutes.has(request.id));
     const routerRequests = automaticRequests.filter(request => avoidsParts(typeOf(request.id)));
-    const routes = routerRequests.length
-        ? routeClearOfPorts(requests.filter(request => fixedRoutes.has(request.id) || avoidsParts(typeOf(request.id))),
-            obstacles, partObstacles, quality, fixedRoutes)
-        : new Map<string, Array<{ x: number; y: number }>>();
+    const planned = requests.filter(request => fixedRoutes.has(request.id) || avoidsParts(typeOf(request.id)));
+    const plan = () => routeClearOfPorts(planned, obstacles, partObstacles, quality, fixedRoutes);
+    const routes = !routerRequests.length ? new Map<string, Array<{ x: number; y: number }>>()
+        : answers ? answerOf('reroute', { planned, obstacles, partObstacles, quality, fixedRoutes }, plan, answers)
+            : plan();
     const direct = automaticRequests.filter(request => !avoidsParts(typeOf(request.id)));
     for (const request of direct) {
         const type = typeOf(request.id);
@@ -3045,6 +3049,16 @@ function DiagramCanvasInner() {
         // not overwrite the result of the branch this effect run selected
         // (e.g. graph ELK resolving after a sync containment layout)
         let cancelled = false;
+        // An interconnection view reads its arrangement and routes back when it was drawn before, so it shows
+        // progress only once a step has to be computed. The other views compute on every pass and show it at once.
+        const readsBack = viewKind === 'interconnection';
+        let progressShown = false;
+        const showProgress = () => {
+            if (cancelled || progressShown) return;
+            progressShown = true;
+            setIsLayouting(true);
+            return nextPaint();
+        };
         const apply = (
             { nodes: n, edges: e }: { nodes: NotationLayoutNode[]; edges: NotationLayoutEdge[] },
             interactive = true,
@@ -3190,7 +3204,8 @@ function DiagramCanvasInner() {
                 return typeof saved?.manualRoute === 'boolean' && (edge.data as Record<string, unknown>).points === saved.points;
             }).map(edge => edge.id), ...restoredIds]);
             const toEdges = reroutePositionedEdges(positioned, preparedEdges, activeRendererRef.current.routeQuality,
-                activeRendererRef.current.forcedPortSize, routingRef.current.type, false, undefined, fixedEdgeIds);
+                activeRendererRef.current.forcedPortSize, routingRef.current.type, false, undefined, fixedEdgeIds,
+                { beforeComputing: showProgress });
             cancelLayoutAnimation();
             const sameDiagram = laidOutDiagramRef.current === (selectedDiagramId ?? null);
             laidOutDiagramRef.current = selectedDiagramId ?? null;
@@ -3228,7 +3243,7 @@ function DiagramCanvasInner() {
             interactive = true,
         ) => {
             cancelLayoutAnimation();
-            setIsLayouting(true);
+            if (!readsBack) setIsLayouting(true);
             setLayoutError(null);
             boundedLayout(promise, label).then(r => apply(r, interactive)).catch(fail(label));
         };
@@ -3274,6 +3289,7 @@ function DiagramCanvasInner() {
                     portWalls,
                     // What the view saved is what `apply` draws, so the template need not arrange or route it again.
                     saved: selectedDiagramId ? useModelStore.getState().diagramLayouts[selectedDiagramId] : undefined,
+                    beforeComputing: showProgress,
                     // The legend is declared in the view's SysML. It used to be
                     // read from the layout companion, which put a statement
                     // about what colour MEANS in the file that records where
@@ -3347,6 +3363,7 @@ function DiagramCanvasInner() {
         };
 
         const timer = window.setTimeout(() => {
+            if (readsBack) { dispatch(); return; }
             // Show the progress surface, let it paint, then do the work that blocks the page.
             setIsLayouting(true);
             void nextPaint().then(() => {

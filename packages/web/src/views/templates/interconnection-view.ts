@@ -32,6 +32,7 @@ import {
     resolveGraphLayout, routeOrthogonalEdges,
     type LayoutResult, type OrthogonalRouteRequest, type ResolvedGraphLayout,
 } from '../layout';
+import { answerOfAsync } from '../../diagram/layout-answers';
 import { buildCompositionTree, COMPOSITION_REL_TYPES } from './composition-tree';
 import { edgeAttachment, toModelType } from '@memoarchitect/tools/browser';
 
@@ -709,6 +710,12 @@ export interface InterconnectionOptions {
      * says, so arranging and routing them first is work no one sees.
      */
     saved?: Pick<DiagramLayout, 'nodes' | 'edges'>;
+    /**
+     * Called before the first arrangement or routing that has to be computed,
+     * and awaited. A diagram whose answers are all held never calls it, so its
+     * caller shows progress only when there is work to wait for.
+     */
+    beforeComputing?: () => void | Promise<void>;
     /** A declared enum's literal colours, keyed by the element attribute value. */
     /**
      * The colour a legend gives an element, or undefined when it says nothing.
@@ -1047,6 +1054,11 @@ export async function computeInterconnectionLayout(
         return placed;
     };
 
+    // Arranging and routing are answered from what was computed before whenever their inputs are the same.
+    const answers = { beforeComputing: options?.beforeComputing };
+    const arrange = (input: Parameters<typeof resolveGraphLayout>[0]) =>
+        answerOfAsync('arrange', input, () => resolveGraphLayout(input), answers);
+
     // ── Recursive container layout ──
     const layouts = new Map<string, PartLayout>();
     /** ELK's crossing-minimised y per own-port, captured during a container pass. */
@@ -1142,7 +1154,7 @@ export async function computeInterconnectionLayout(
                     id, width: kidLayouts.get(id)!.width, height: kidLayouts.get(id)!.height,
                     x: savedKids.get(id)!.x - g.left, y: savedKids.get(id)!.y - HEADER_BAND,
                 })),
-            } : await resolveGraphLayout({
+            } : await arrange({
                 id: `container-${partId}`,
                 nodes: elkKids.map(id => ({
                     id,
@@ -1397,7 +1409,7 @@ export async function computeInterconnectionLayout(
                 });
             }
         });
-        const resolved = await resolveGraphLayout({
+        const resolved = await arrange({
             id: 'interconnection-roots',
             nodes: roots.map(id => ({ id, width: layouts.get(id)!.width, height: layouts.get(id)!.height })),
             edges: rootEdges,
@@ -1752,9 +1764,11 @@ export async function computeInterconnectionLayout(
         const saved = options?.saved?.edges?.[edge.id];
         if (saved?.points && saved.points.length >= 2 && savedEdgeStillAttached(saved, edge)) savedRoutes.set(edge.id, saved.points);
     }
+    const requests = edgeDrafts.map(d => d.route);
     const routes = edgeDrafts.every(d => savedRoutes.has(d.edge.id))
         ? savedRoutes
-        : routeOrthogonalEdges(edgeDrafts.map(d => d.route), obstacles, 28, 'short-first', { fixedRoutes: savedRoutes });
+        : await answerOfAsync('route', { requests, obstacles, fixed: savedRoutes },
+            () => routeOrthogonalEdges(requests, obstacles, 28, 'short-first', { fixedRoutes: savedRoutes }), answers);
     // Labelled connectors (typed flow items) share one placement pass so two
     // flows through the same corridor don't stack their labels.
     const labelPoints = placeConnectorLabels(

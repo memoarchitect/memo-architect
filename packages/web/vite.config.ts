@@ -9,6 +9,9 @@ import react from '@vitejs/plugin-react';
 export default defineConfig({
     root: fileURLToPath(new URL('.', import.meta.url)),
     plugins: [react()],
+    // Identifies this build to the layout answers kept in the browser: a new build may arrange or route differently,
+    // so answers stored by another one are dropped (`diagram/layout-answers.ts`).
+    define: { __LAYOUT_BUILD__: JSON.stringify(new Date().toISOString()) },
     // The local memo-meta workspace links Architect beside the ontology and
     // tools packages. Force peer dependencies such as ReactFlow to share the
     // app's React instance even when Vite itself resolves from the workspace

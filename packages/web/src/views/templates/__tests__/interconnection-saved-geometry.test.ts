@@ -6,9 +6,10 @@
 // view places entirely comes back as saved, a route whose ends changed does not,
 // and a view that leaves a port unplaced is still laid out.
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { edgeAttachment, type DiagramLayout, type MemoElement, type MemoModelDTO } from '@memoarchitect/tools/browser';
 import { computeInterconnectionLayout } from '../interconnection-view';
+import { forgetLayoutAnswers } from '../../../diagram/layout-answers';
 
 const part = (id: string): MemoElement => ({
     id, name: id, kind: 'HardwareComponent', construct: 'part',
@@ -42,6 +43,34 @@ function savedGeometry(attachment = edgeAttachment({ source: 'sender', target: '
         edges: { link: { points: route, attachment } },
     } satisfies Pick<DiagramLayout, 'nodes' | 'edges'>;
 }
+
+describe('an interconnection view drawn before', () => {
+    it('is arranged and routed once, then read back with no computation', async () => {
+        forgetLayoutAnswers();
+        const beforeComputing = vi.fn();
+        const first = await computeInterconnectionLayout(twoBoards(), { beforeComputing });
+        expect(beforeComputing).toHaveBeenCalled();
+        beforeComputing.mockClear();
+        const again = await computeInterconnectionLayout(twoBoards(), { beforeComputing });
+        expect(beforeComputing).not.toHaveBeenCalled();
+        expect(again.nodes.map(n => [n.id, n.position])).toEqual(first.nodes.map(n => [n.id, n.position]));
+        expect(again.edges.map(e => (e.data as { points: unknown }).points))
+            .toEqual(first.edges.map(e => (e.data as { points: unknown }).points));
+    });
+
+    it('computes again when a connector is added', async () => {
+        forgetLayoutAnswers();
+        await computeInterconnectionLayout(twoBoards());
+        const beforeComputing = vi.fn();
+        const model = twoBoards();
+        const more = { ...model,
+            elements: { ...model.elements, out2: port('out2', 'sender', 'out'), in2: port('in2', 'receiver', 'in') },
+            relationships: [...model.relationships, { ...model.relationships[0], id: 'link2', sourceId: 'out2', targetId: 'in2' }],
+        } as MemoModelDTO;
+        await computeInterconnectionLayout(more, { beforeComputing });
+        expect(beforeComputing).toHaveBeenCalled();
+    });
+});
 
 describe('saved interconnection geometry', () => {
     it('places the boxes and keeps the route the view saved', async () => {
