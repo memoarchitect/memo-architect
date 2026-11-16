@@ -3,6 +3,8 @@ import { OperationalWorkbench } from './OperationalWorkbench';
 import { FunctionalWorkbench } from './FunctionalWorkbench';
 import { LogicalResponsibilities } from './LogicalResponsibilities';
 import { ImplementationLinks } from './ImplementationLinks';
+import { DisciplineGuides } from './DisciplineGuides';
+import type { DisciplineMode } from '../lib/discipline-guides';
 import { DeploymentLinks, DeploymentWorkbench } from './DeploymentWorkbench';
 import { LayerElementBrowser } from './LayerElementBrowser';
 import { functionalDisplayIds, functionalScope, functionalStructure, functionalScopes, operationalConforms, operationalWorkLevel, functionalCatalog, functionalFlowsInScope } from '@memoarchitect/tools/browser';
@@ -218,6 +220,9 @@ export function GuidedLayer({ layer }: { layer: string }) {
     const goToImplementation = (id: string) => goToStructuralArtifact('layerImplementation', id);
     const goToDeployment = (id: string) => goToStructuralArtifact('layerRealization', id);
     const realizationLayer = guide?.layers.find(candidate => candidate.name === 'layerRealization');
+    const engineeringLayer = layer === 'layerImplementation' || layer === 'layerRealization' ? layer : undefined;
+    const [discipline, setDiscipline] = useState<{ layer: string; mode: DisciplineMode }>();
+    const disciplineMode = discipline?.layer === layer ? discipline.mode : 'all';
     const implementationLayer = guide?.layers.find(candidate => candidate.name === 'layerImplementation');
     const addElement = async (kind: string) => {
         const name = await askText(`Name the ${kindLabel(kind).toLowerCase()}:`);
@@ -304,8 +309,11 @@ export function GuidedLayer({ layer }: { layer: string }) {
                         implementationKinds={kindsOfLayer(guide, implementationLayer)} artifactId={componentId} canWrite={canWrite}
                         onSelect={goToLogical} onPeer={goToImplementation} /> : undefined} />
                     : <p style={{ padding: 20 }}>Choose a system to work on component responsibilities.</p>)}
+                {engineeringLayer && <DisciplineGuides key={`${engineeringLayer}:${model.metadata?.modelName ?? model.metadata?.projectName ?? ''}`}
+                    layer={engineeringLayer} model={model} workspace={workspace} mode={disciplineMode}
+                    onMode={mode => setDiscipline({ layer, mode })} onOpen={openElement} />}
                 {layer === 'layerImplementation' && implementationLayer && <ImplementationLinks key={`${workspace ?? ''}:${requestedArtifact ?? ''}`}
-                    logical={false} model={model} workspace={workspace} implementationKinds={kindsOfLayer(guide, implementationLayer)}
+                    logical={false} model={model} workspace={workspace} discipline={disciplineMode} implementationKinds={kindsOfLayer(guide, implementationLayer)}
                     artifactId={requestedArtifact} canWrite={canWrite} onSelect={goToImplementation}
                     onPeer={guide.layers.some(candidate => candidate.name === 'layerLogical') ? goToLogical : undefined}
                     deploymentLinks={realizationLayer && kindsOfLayer(guide, realizationLayer).includes('SoftwareDeploymentUnit') ? selected =>
@@ -313,7 +321,7 @@ export function GuidedLayer({ layer }: { layer: string }) {
                             direction="outgoing" onPeer={goToDeployment} /> : undefined} />}
                 {layer === 'layerRealization' && paletteKinds.some(kind => ['SoftwareDeploymentUnit', 'ProcessingNode', 'RuntimeEnvironment'].includes(kind)) &&
                     <DeploymentWorkbench key={`${workspace ?? ''}:${requestedArtifact ?? ''}`} model={model} workspace={workspace}
-                        artifactId={requestedArtifact} canWrite={canWrite} realizationKinds={paletteKinds} onSelect={goToDeployment}
+                        artifactId={requestedArtifact} canWrite={canWrite} discipline={disciplineMode} realizationKinds={paletteKinds} onSelect={goToDeployment}
                         onModule={implementationLayer ? goToImplementation : undefined} />}
                 {admitsSystemFunctions && chosen && <section aria-label="Parent function" style={{ padding: '8px 12px', background: '#eef8f5', fontSize: FONT.sm }}>Parent function: {functionRoot ? elementButton(functionRoot.id) : <button style={button} disabled={!canWrite} onClick={() => void createNativeFunction(chosen.root)}>Set up parent function</button>}</section>}
                 <div role="tablist" aria-label="Views in this layer" style={{ display: 'flex', flexWrap: 'wrap', gap: 4, padding: '8px 12px', borderBottom: `1px solid ${COLOR.border}`, background: '#fff' }}>{uniqueViews.map(({ diagram }) => <button type="button" key={diagram.id} role="tab" aria-selected={diagram.id === openView?.diagram.id} style={{ ...button, background: diagram.id === openView?.diagram.id ? '#e8f8f3' : '#fff' }} onClick={() => goToRow(layer, diagram.id)}>{diagram.name}</button>)}</div>

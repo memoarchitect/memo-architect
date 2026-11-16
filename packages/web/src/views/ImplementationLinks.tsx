@@ -1,14 +1,15 @@
 import type { ReactNode } from 'react';
+import type { DisciplineMode } from '../lib/discipline-guides';
 import { indexKinds, kindConformsTo, type MemoElement, type MemoModelDTO } from '@memoarchitect/tools/browser';
 import { PathwayPartCreate } from './PathwayPartCreate';
 import { PathwayRelationship } from './PathwayRelationship';
 import './pathway-workbench.css';
 
-const PART_KINDS = ['SoftwareSystem', 'SoftwareModule', 'SoftwareComponent', 'HardwareAssembly', 'HardwareComponent'];
+const PART_KINDS = ['SoftwareSystem', 'SoftwareModule', 'SoftwareComponent', 'HardwareAssembly', 'HardwareComponent', 'MechanicalPart', 'Enclosure', 'RosNode'];
 
-export function ImplementationLinks({ model, workspace, implementationKinds, logical, artifactId, canWrite, onSelect, onPeer, deploymentLinks }: {
+export function ImplementationLinks({ model, workspace, implementationKinds, logical, artifactId, canWrite, onSelect, onPeer, deploymentLinks, discipline = 'all' }: {
     model: MemoModelDTO; workspace: string | null; implementationKinds: readonly string[]; logical: boolean;
-    artifactId?: string; canWrite: boolean; onSelect: (id: string) => void; onPeer?: (id: string) => void; deploymentLinks?: (selected: MemoElement) => ReactNode;
+    artifactId?: string; canWrite: boolean; onSelect: (id: string) => void; onPeer?: (id: string) => void; deploymentLinks?: (selected: MemoElement) => ReactNode; discipline?: DisciplineMode;
 }) {
     const registry = indexKinds(model.registries?.kinds ?? []);
     const memberships = model.workspaceMembership?.membership;
@@ -21,16 +22,24 @@ export function ImplementationLinks({ model, workspace, implementationKinds, log
         && (isInScope(element) || !memberships?.[element.id]?.length));
     const items = logical ? components : implementations;
     const selected = items.find(item => item.id === artifactId);
+    const inDiscipline = (kind: string) => {
+        if (discipline === 'all') return true;
+        const mechanical = kindConformsTo(kind, 'MechanicalPart', registry);
+        if (discipline === 'mechanical') return mechanical;
+        if (discipline === 'software') return kindConformsTo(kind, 'SoftwareElement', registry);
+        return !mechanical && kindConformsTo(kind, 'PhysicalElement', registry);
+    };
+    const displayed = items.filter(item => item === selected || inDiscipline(item.kind));
     return <section className="pathway-workspace" aria-label={logical ? 'Implementation links' : 'Implementation items'} style={{ padding: 20 }}>
         <h2>{logical ? 'Implementation links' : 'Software and hardware'}</h2>
         {!logical && <label>Implementation item{' '}
             <select value={selected?.id ?? ''} onChange={event => onSelect(event.target.value)}>
-                <option value="" disabled>{items.length ? 'Choose software or hardware…' : 'No software or hardware in this scope'}</option>
-                {items.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}
+                <option value="" disabled>{displayed.length ? 'Choose an implementation item…' : 'No implementation items in this mode and scope'}</option>
+                {displayed.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}
             </select>
         </label>}
-        {!logical && canWrite && <PathwayPartCreate model={model} partKinds={PART_KINDS.filter(kind => implementationKinds.includes(kind))}
-            addLabel="Add software or hardware" saveLabel="Save implementation item" onCreated={onSelect} />}
+        {!logical && canWrite && <PathwayPartCreate model={model} partKinds={PART_KINDS.filter(kind => inDiscipline(kind) && implementationKinds.some(base => kindConformsTo(kind, base, registry)))}
+            addLabel={discipline === 'all' ? 'Add software or hardware' : `Add ${discipline} item`} saveLabel="Save implementation item" onCreated={onSelect} />}
         {selected && <>
             {!logical && <h3>{selected.name}</h3>}
             <PathwayRelationship model={model} selected={selected} canWrite={canWrite} type="realizedBy"

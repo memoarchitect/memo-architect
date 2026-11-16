@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { indexKinds, kindConformsTo, type MemoElement, type MemoModelDTO, type RelationshipDirection } from '@memoarchitect/tools/browser';
+import type { DisciplineMode } from '../lib/discipline-guides';
 import { pathwayRelationship } from '../lib/pathway-relationship';
 import { PathwayRelationship } from './PathwayRelationship';
 import { PathwayPartCreate } from './PathwayPartCreate';
@@ -111,15 +112,17 @@ function DeploymentCoverage({ model, workspace, items, realizationKinds, onSelec
     </section>;
 }
 
-export function DeploymentWorkbench({ model, workspace, artifactId, canWrite, realizationKinds, onSelect, onModule }: {
+export function DeploymentWorkbench({ model, workspace, artifactId, canWrite, realizationKinds, onSelect, onModule, discipline = 'all' }: {
     model: MemoModelDTO; workspace: string | null; artifactId?: string; canWrite: boolean; realizationKinds: readonly string[];
-    onSelect: (id: string) => void; onModule?: (id: string) => void;
+    onSelect: (id: string) => void; onModule?: (id: string) => void; discipline?: DisciplineMode;
 }) {
     const registry = indexKinds(model.registries?.kinds ?? []);
     const [review, setReview] = useState(false);
     const enabled = categories.filter(({ kind }) => realizationKinds.includes(kind));
     const items = Object.values(model.elements).filter(element => visibleInScope(model, element, workspace));
     const selected = items.find(item => item.id === artifactId && enabled.some(({ kind }) => isDeploymentPart(item, kind, registry)));
+    const visibleCategories = enabled.filter(({ kind }) => selected && isDeploymentPart(selected, kind, registry)
+        || discipline === 'all' || discipline === 'software' || discipline === 'hardware' && kind === NODE);
     const links = selected && { model, workspace, selected, canWrite };
     return <section className="pathway-workspace" aria-label="Deployment and runtime" style={{ padding: 20 }}>
         <h2>Deployment and runtime</h2>
@@ -129,7 +132,7 @@ export function DeploymentWorkbench({ model, workspace, artifactId, canWrite, re
         {review && <DeploymentCoverage model={model} workspace={workspace} items={items} realizationKinds={realizationKinds}
             onSelect={id => { setReview(false); onSelect(id); }} />}
         <div className="pathway-resources">
-            {enabled.map(({ kind, label }) => {
+            {visibleCategories.map(({ kind, label }) => {
                 const choices = items.filter(item => isDeploymentPart(item, kind, registry));
                 return <section className="pathway-related" key={kind}>
                     <label>{label}{' '}
