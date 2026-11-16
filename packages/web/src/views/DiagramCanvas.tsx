@@ -27,7 +27,7 @@ import { IbdRoutingControls } from '../diagram/toolbars/IbdRoutingControls';
 //   - Workflow node types: Decision, Fork/Join
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { confirmDialog } from '../components/AppDialogs';
+import { alertDialog, confirmDialog } from '../components/AppDialogs';
 import { actionDrillSource, childrenOf, definitionSubtree, drillPath, drillTarget, enterLevel } from '../lib/system-navigator';
 import {
     useEffect, useMemo, useState, useCallback, useRef,
@@ -3792,6 +3792,38 @@ function DiagramCanvasInner() {
         console.warn(`[MEMO] Connector endpoint update rejected: ${replacement.error}`);
     }, [model, connectionEndpoint, selectedDiagramId]);
 
+    /**
+     * Delete the relationships these connectors draw from the model's SysML, after asking. True when they were
+     * deleted; a refusal by the writer is shown and leaves the diagram as it was.
+     */
+    const deleteConnectorsFromModel = useCallback(async (relationshipIds: string[]): Promise<boolean> => {
+        if (readOnly || !relationshipIds.length) return false;
+        const count = relationshipIds.length;
+        if (!await confirmDialog({
+            title: count === 1 ? 'Delete this connector from the model?' : `Delete ${count} connectors from the model?`,
+            message: 'The relationship is removed from the SysML source, and from every diagram that shows it.',
+            confirmLabel: 'Delete', danger: true,
+        })) return false;
+        const refused: string[] = [];
+        for (const relationshipId of relationshipIds) {
+            const outcome = await useModelStore.getState().deleteRelationship(relationshipId);
+            if (!outcome.success) refused.push(outcome.error ?? 'The relationship could not be deleted.');
+        }
+        if (refused.length) void alertDialog([...new Set(refused)].join('\n'), 'Connector not deleted');
+        return refused.length < count;
+    }, [readOnly]);
+
+    /**
+     * Delete or Backspace on a selected connector deletes its relationship from the model. Without this the key
+     * only took the connector off the canvas, and it came back with the next refresh.
+     */
+    const beforeDelete = useCallback(async ({ nodes: removedNodes, edges: removedEdges }: { nodes: FlowNode[]; edges: FlowEdge[] }) => {
+        const declared = removedEdges.filter(edge => model?.relationships.some(relationship => relationship.id === edge.id));
+        if (!declared.length) return true;
+        const deleted = await deleteConnectorsFromModel(declared.map(edge => edge.id));
+        return { nodes: removedNodes, edges: deleted ? removedEdges : removedEdges.filter(edge => !declared.includes(edge)) };
+    }, [model, deleteConnectorsFromModel]);
+
     const onReconnectStart = useCallback(() => {
         suppressInspectUntilRef.current = Date.now() + 500;
         setNodeCtx(null);
@@ -5074,6 +5106,7 @@ function DiagramCanvasInner() {
                     onConnectStart={activeRenderer.disableOnCanvasAuthoring || readOnly ? undefined : onConnectStart}
                     onConnectEnd={activeRenderer.disableOnCanvasAuthoring || readOnly ? undefined : (onConnectEnd as any)}
                     onReconnect={readOnly ? undefined : onReconnect}
+                    onBeforeDelete={readOnly ? undefined : beforeDelete}
                     onReconnectStart={readOnly ? undefined : onReconnectStart}
                     onReconnectEnd={readOnly ? undefined : onReconnectEnd}
                     reconnectRadius={10}
@@ -5362,6 +5395,8 @@ function DiagramCanvasInner() {
                     onChangeColor={(c) => handleEdgeColorChange(edgeCtx.edgeId, c)}
                     onToggleLabel={() => handleEdgeLabelToggle(edgeCtx.edgeId)}
                     onDelete={() => setEdges(prev => prev.filter(e => e.id !== edgeCtx.edgeId))}
+                    onDeleteFromModel={!readOnly && model?.relationships.some(relationship => relationship.id === edgeCtx.edgeId)
+                        ? () => { void deleteConnectorsFromModel([edgeCtx.edgeId]); } : undefined}
                     onAutoRoute={edges.find(edge => edge.id === edgeCtx.edgeId)?.type === 'interconnectionEdge'
                         ? () => { void autoRouteConnectors([edgeCtx.edgeId]); } : undefined}
                 />

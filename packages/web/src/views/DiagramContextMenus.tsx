@@ -223,6 +223,8 @@ interface EdgeContextMenuProps {
     onChangeColor: (color: string) => void;
     onToggleLabel: () => void;
     onDelete: () => void;
+    /** Deletes the relationship this connector draws from the model's SysML. Given when the model declares it. */
+    onDeleteFromModel?: () => void;
     /** Routes this connector again automatically, replacing its hand-drawn bends. Given for connectors that have a route. */
     onAutoRoute?: () => void;
 }
@@ -238,7 +240,7 @@ const EDGE_COLORS = [
 
 export function EdgeContextMenu({
     x, y, edgeId, relType, onClose,
-    onChangeStyle, onChangeColor, onToggleLabel, onDelete, onShowProperties, onAutoRoute,
+    onChangeStyle, onChangeColor, onToggleLabel, onDelete, onDeleteFromModel, onShowProperties, onAutoRoute,
 }: EdgeContextMenuProps) {
     return (
         <Menu x={x} y={y} onClose={onClose}>
@@ -286,7 +288,11 @@ export function EdgeContextMenu({
 
             <MenuDivider />
             <MenuItem label="Toggle label" icon="🏷️" onClick={() => { onClose(); onToggleLabel(); }} />
-            <MenuItem label="Delete edge" icon="🗑️" danger onClick={() => { onClose(); onDelete(); }} />
+            {/* A connector the model declares is deleted there. Taking it off the canvas alone would only hide it
+                until the next refresh, which reads as a delete that did not stick. */}
+            {onDeleteFromModel
+                ? <MenuItem label="Delete from model" icon="🗑️" danger onClick={() => { onClose(); onDeleteFromModel(); }} />
+                : <MenuItem label="Delete edge" icon="🗑️" danger onClick={() => { onClose(); onDelete(); }} />}
         </Menu>
     );
 }
