@@ -637,6 +637,7 @@ function DiagramPermalinkRoute() {
  * A saved workspace preference is never cleared by a link that does not name one.
  */
 function ScopeUrlSync() {
+    const preferencesLoaded = useModelStore(s => s.preferencesLoaded);
     const domain = useModelStore(s => s.explorerDomain);
     const setDomain = useModelStore(s => s.setExplorerDomain);
     const workspace = useModelStore(s => s.workspace);
@@ -653,6 +654,7 @@ function ScopeUrlSync() {
         // The address as the browser has it now: the router's `location` can still be the previous page for a
         // render after a push, and replacing that would undo the push.
         const here = window.location;
+        if (!preferencesLoaded && !window.__MEMO_DATA__) return;
         // On the first run the router's location is the link that was opened; the window's address may already
         // have been rewritten by the view sync, which does not carry query parameters it does not own.
         const params = new URLSearchParams(first.current ? location.search : here.search);
@@ -683,7 +685,7 @@ function ScopeUrlSync() {
             navigate({ pathname: here.pathname, search: query ? `?${query}` : '', hash: here.hash }, { replace: true });
         }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [location.pathname, location.search, domain, workspace]);
+    }, [location.pathname, location.search, domain, workspace, preferencesLoaded]);
 
     return null;
 }
@@ -846,6 +848,7 @@ function UrlNavigationSync() {
         if (url && url.split('?')[0] === location.pathname) {
             const written = new URLSearchParams(url.split('?')[1] ?? '');
             const owned = new Set(['element', 'definition', 'viewpoint', 'diagram', 'scope']);
+            if (activeView.type === 'pathway') for (const name of ['view', 'work', 'artifact', 'createCase']) owned.add(name);
             for (const [name, value] of new URLSearchParams(location.search)) {
                 if (!owned.has(name) && !written.has(name)) written.set(name, value);
             }

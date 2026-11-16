@@ -1,6 +1,6 @@
 // ─── Method map ──────────────────────────────────────────────────────────────
 //
-// Pathways' overview, opened from the toolbar's Method button: where a team starts, in any row. Its rows are
+// Opened from the toolbar’s Method map button: where a team starts, in any row. Its rows are
 // the method's (`MethodLayer`): the architecture layers and the assurance disciplines, each as a tab; a third
 // tab is the chosen system's design history. A row lists its steps' progress and opens the step a person would
 // take next; nothing waits for anything, and the map never says a row is blocked. The scope is the tree of
@@ -36,7 +36,6 @@ export function MethodMap() {
     const role = useModelStore(s => s.role);
     const workspace = useModelStore(s => s.workspace);
     const setWorkspace = useModelStore(s => s.setWorkspace);
-    const pathways = useModelStore(s => s.pathways);
     const lastStep = useModelStore(s => s.lastStep);
     const setLastStep = useModelStore(s => s.setLastStep);
     const setActiveView = useModelStore(s => s.setActiveView);
@@ -105,7 +104,7 @@ export function MethodMap() {
                 </div>
                 {problem && <p data-testid="map-problem" style={{ fontSize: FONT.sm, color: '#B42318' }}>{problem}</p>}
 
-                {pathways && next && (
+                {next && (
                     <div data-testid="continue-card" style={{ display: 'flex', alignItems: 'center', gap: 16, border: `1.5px solid ${COLOR.accent}`, background: '#fff', borderRadius: 10, padding: '12px 18px', margin: '0 0 14px', maxWidth: 1100 }}>
                         <div style={{ flex: 1, minWidth: 0 }}>
                             <div style={{ fontSize: 11, color: INK, fontWeight: 600, letterSpacing: '0.06em' }}>{next.step.id === lastStep ? 'CONTINUE WHERE YOU LEFT OFF' : 'A PLACE TO START'}</div>
@@ -144,7 +143,7 @@ export function MethodMap() {
                     {current === HISTORY
                         ? <DesignHistory system={chosen} approvals={approvals} onRelease={() => go('releases')} />
                         : rowsOf(current).map((row, index) => (
-                            <LayerRowView key={row.layer.id} row={row} number={current === axes[0] ? index : undefined} pathways={pathways}
+                            <LayerRowView key={row.layer.id} row={row} number={current === axes[0] ? index : undefined}
                                 continuing={!!next && row.steps.includes(next.step)}
                                 onOpen={() => openRow(row.layer, next && row.steps.includes(next.step) ? next.step : row.steps.find(s => s.state !== 'done') ?? row.steps[0])}
                                 onImport={row.layer.importable && isFeatureEnabled('import') ? () => go('import') : undefined} />
@@ -244,14 +243,14 @@ function QtTab({ id, active, onClick, title, note }: { id: string; active: boole
     );
 }
 
-function LayerRowView({ row, number, pathways, continuing, onOpen, onImport }: {
-    row: LayerRow; number: number | undefined; pathways: boolean; continuing: boolean; onOpen: () => void; onImport?: () => void;
+function LayerRowView({ row, number, continuing, onOpen, onImport }: {
+    row: LayerRow; number: number | undefined; continuing: boolean; onOpen: () => void; onImport?: () => void;
 }) {
     const { layer, steps, done } = row;
     const started = done > 0;
     const views = layer.viewpoints.map(viewpoint => lowerFirst(viewpoint.label));
     return (
-        <div data-testid="map-row" data-row={layer.name} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '12px 16px', borderTop: `1px solid ${COLOR.borderLight}`, background: continuing && pathways ? SOFT_TEAL : '#fff' }}>
+        <div data-testid="map-row" data-row={layer.name} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '12px 16px', borderTop: `1px solid ${COLOR.borderLight}`, background: continuing ? SOFT_TEAL : '#fff' }}>
             <div aria-hidden style={{ width: 34, height: 34, borderRadius: 8, background: TITLE, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 13, flexShrink: 0 }}>
                 {layer.label.charAt(0)}
             </div>
@@ -267,7 +266,7 @@ function LayerRowView({ row, number, pathways, continuing, onOpen, onImport }: {
                 </div>
                 {layer.linkDescription && <div style={{ fontSize: FONT.xs, color: COLOR.muted }}>Links: {layer.linkDescription}</div>}
             </div>
-            {pathways && steps.length > 0 && started && (
+            {steps.length > 0 && started && (
                 <div title={`${done} of ${steps.length} steps done`} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     <div style={{ display: 'flex', gap: 3 }}>
                         {steps.map(step => <span key={step.id} style={{ width: 12, height: 4, borderRadius: 2, background: step.state === 'done' ? '#14b8a6' : '#b8bec6' }} />)}
@@ -277,8 +276,8 @@ function LayerRowView({ row, number, pathways, continuing, onOpen, onImport }: {
             )}
             {onImport && <button data-testid="row-import" onClick={onImport} style={lightButton}>Import…</button>}
             <button data-testid="row-open" onClick={onOpen}
-                style={continuing && pathways ? darkButton : started ? lightButton : startButton}>
-                {continuing && pathways ? 'Continue' : started ? 'Open' : 'Start here'}
+                style={continuing ? darkButton : started ? lightButton : startButton}>
+                {continuing ? 'Continue' : started ? 'Open' : 'Start here'}
             </button>
         </div>
     );

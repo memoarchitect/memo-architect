@@ -35,10 +35,10 @@ let root: Root;
 const settle = () => act(async () => { await new Promise(resolve => setTimeout(resolve, 0)); });
 function Page() { const view = useModelStore(s => s.activeView); const location = useLocation(); return <><span data-testid="location">{location.pathname}{location.search}</span><GuidedLayer layer={view.type === 'pathway' ? view.layer : 'layerWork'} /></>; }
 const render = async () => { container = document.createElement('div'); document.body.append(container); root = createRoot(container); act(() => root.render(<MemoryRouter initialEntries={['/method/layerWork']}><Page /></MemoryRouter>)); await settle(); };
-const buttons = (text: string) => [...container.querySelectorAll('button')].filter(button => button.textContent?.trim() === text);
+const buttons = (text: string) => [...container.querySelectorAll('button')].filter(button => (button.getAttribute('aria-label') ?? button.textContent?.trim()) === text);
 const click = async (text: string) => { act(() => buttons(text)[0].click()); await settle(); };
 const choose = async (label: string, value: string) => { const select = container.querySelector(`select[aria-label="${label}"]`) as HTMLSelectElement; act(() => { select.value = value; select.dispatchEvent(new Event('change', { bubbles: true })); }); await settle(); };
-beforeEach(() => { answer = baseGuide(); window.__MEMO_FLAGS__ = { experimental: true }; useModelStore.setState({ model: model(), guide: answer, workspace: 'host', connected: true, preferencesLoaded: true, pathways: true, lastStep: null, pinned: null, activeView: { type: 'pathway', layer: 'layerWork' }, selectedDiagramId: null }); });
+beforeEach(() => { answer = baseGuide(); window.__MEMO_FLAGS__ = { experimental: true }; useModelStore.setState({ model: model(), guide: answer, workspace: 'host', connected: true, preferencesLoaded: true, lastStep: null, pinned: null, activeView: { type: 'pathway', layer: 'layerWork' }, selectedDiagramId: null }); });
 afterEach(() => { act(() => root?.unmount()); container?.remove(); vi.restoreAllMocks(); });
 function prepareFunctionalWorkbench() {
         const next = model();
@@ -77,7 +77,7 @@ describe('the guided layer workspace', () => {
         expect(container.querySelector('[aria-label="Functional tree"]')!.textContent).not.toContain('Measure here');
         await click('Compute signal');
         expect(container.querySelector('[aria-label="Current functional task"]')!.textContent).toContain('Calculate signal → Controller');
-        await click('Function flows'); await click('Run measurement1 steps');
+        await click('Function flows'); await click('Run measurement');
         expect(container.querySelector('[aria-label="Current functional task"]')!.textContent).toContain('Compute signal');
         expect(useModelStore.getState().activeView).toMatchObject({ type: 'pathway', layer: 'layerWork' });
     });
@@ -102,7 +102,7 @@ describe('the guided layer workspace', () => {
             await click('Create diagram');
             expect(createDiagram).toHaveBeenLastCalledWith(expect.objectContaining({ diagramType: 'afd', elementIds: ['flow', 'step'] }));
             await click('Table');
-            await click('Run measurement1 steps');
+            await click('Run measurement');
             expect(container.querySelector('table')?.textContent).toContain('Compute signal');
         } finally {
             useModelStore.setState({ createDiagram: originalCreate });
@@ -243,7 +243,7 @@ describe('the guided layer workspace', () => {
         try { await render(); await click('New work architecture view'); expect(container.textContent).toContain('The compiler rejected the declaration.'); expect(container.querySelector('[data-testid="editor"]')?.textContent).toBe('first:first:host,fn,scenario'); }
         finally { useModelStore.setState({ createDiagram: previous }); }
     });
-    it('offers a clear route from the dashboard into Pathways', async () => {
+    it('offers a clear route from the dashboard into the Method map', async () => {
         container = document.createElement('div'); document.body.append(container); root = createRoot(container);
         act(() => root.render(<MemoryRouter><PathwaysEntry /></MemoryRouter>));
         await click('Open Method map');
@@ -260,8 +260,8 @@ describe('the guided layer workspace', () => {
         await render(); expect(container.textContent).toContain('Compute signal'); expect(container.textContent).toContain('Waiting for Work two.');
         await click('Add link…'); expect(container.querySelector('[data-testid="relationship-dialog"]')?.textContent).toBe('Compute signal');
     });
-    it('offers free modelling, existing work and the editor when Pathways is switched off', async () => {
-        useModelStore.setState({ pathways: false }); await render();
+    it('offers free modelling, existing work and the editor when local guidance is hidden', async () => {
+        await render(); await click('Hide guidance');
         expect(container.querySelector('[data-testid="guide-rail"]')).toBeNull();
         expect(container.textContent).toContain('Your work'); expect(container.textContent).toContain('Compute signal');
         expect(buttons('+ System function')).toHaveLength(2);

@@ -22,6 +22,22 @@ describe('system context view template', () => {
         expect(layout.nodes.find(n => n.id === 'rec')?.data).toMatchObject({ category: 'system' });
     });
 
+    it('aligns participant cards of different name lengths in equal-size outside columns', () => {
+        const host = element('host', 'System');
+        const people = ['a', 'b'].map((id, index) => element(id, 'User', index ? 'A much longer participant name' : 'Operator'));
+        const devices = ['c', 'd'].map((id, index) => element(id, 'System', index ? 'External recording and monitoring station' : 'Recorder'));
+        const participants = [...people, ...devices];
+        const elements = Object.fromEntries([host, ...participants].map(item => [item.id, item]));
+        const links = participants.map(item => ({ id: item.id, type: 'connect', sourceId: item.id, targetId: host.id }));
+        const sides = new Map([['a', 'left'], ['b', 'left'], ['c', 'right'], ['d', 'right']] as const);
+        const { nodes } = computeContextViewLayout(model(elements, links), undefined, { subjectElement: host.id, participantSides: sides });
+        const cards = nodes.filter(node => node.type === 'contextExternal');
+        expect(cards).toHaveLength(4);
+        expect(new Set(cards.map(node => `${node.style.width} × ${node.style.height}`)).size).toBe(1);
+        expect(cards.find(node => node.id === 'a')?.position.x).toBe(cards.find(node => node.id === 'b')?.position.x);
+        expect(cards.find(node => node.id === 'c')?.position.x).toBe(cards.find(node => node.id === 'd')?.position.x);
+    });
+
     it('puts a person on the left whichever way the exchange points', () => {
         // Placement by data direction sent a clinician to the right as soon as
         // the system told them more than they told it. What something IS beats

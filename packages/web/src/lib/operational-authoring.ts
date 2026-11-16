@@ -3,7 +3,7 @@ import { useModelStore } from '../store/model-store';
 import { sendElementCreate } from '../store/ws-client';
 
 export function operationalHome(model: MemoModelDTO, context: OperationalWriteContext) {
-    const ids = [context.sourceId, context.parentStepId, context.scenarioId, context.workflowId, context.useCaseId, context.subjectId, context.homeId, context.workspace];
+    const ids = [context.sourceId, context.parentStepId, context.scenarioId, context.workflowId, context.useCaseId, context.homeId, context.subjectId, context.workspace];
     return ids.flatMap(id => id && model.elements[id] ? [model.elements[id]] : []).find(element => element.package && element.provenance?.declaration.writable !== false)
         ?? Object.values(model.elements).find(element => element.package && element.provenance?.declaration.writable !== false && element.file);
 }

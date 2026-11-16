@@ -103,8 +103,15 @@ export function viewToPath(view: ActiveView): string | null {
             return query ? `/interfaces?${query}` : '/interfaces';
         }
         // A row and an optional authored view can be bookmarked together.
-        case 'pathway':
-            return `/method/${encodeURIComponent(view.layer)}${view.diagramId ? `?view=${encodeURIComponent(view.diagramId)}` : ''}`;
+        case 'pathway': {
+            const params = new URLSearchParams();
+            if (view.diagramId) params.set('view', view.diagramId);
+            if (view.work) params.set('work', view.work);
+            if (view.artifactId) params.set('artifact', view.artifactId);
+            if (view.createCase) params.set('createCase', 'true');
+            const query = params.toString();
+            return `/method/${encodeURIComponent(view.layer)}${query ? `?${query}` : ''}`;
+        }
         // The tab rides in the path, so each settings page can be linked to.
         case 'settings':
             return view.section ? `/settings/${encodeURIComponent(view.section)}` : '/settings';
@@ -171,8 +178,15 @@ export function pathToView(pathname: string, search = ''): ActiveView | null {
     const segments = path.split('/').filter(Boolean);
 
     if (segments[0] === 'method' && segments.length === 2) {
-        const diagramId = new URLSearchParams(search).get('view') ?? undefined;
-        return { type: 'pathway', layer: decodeURIComponent(segments[1]), ...(diagramId ? { diagramId } : {}) };
+        const params = new URLSearchParams(search);
+        const diagramId = params.get('view');
+        const work = params.get('work');
+        const artifactId = params.get('artifact');
+        return { type: 'pathway', layer: decodeURIComponent(segments[1]),
+            ...(diagramId ? { diagramId } : {}),
+            ...(work === 'clinical' || work === 'system' ? { work } : {}),
+            ...(artifactId ? { artifactId } : {}),
+            ...(params.get('createCase') === 'true' ? { createCase: true } : {}) };
     }
 
     // /documents/:docId — but /documents and /documents/legacy are static and matched above.

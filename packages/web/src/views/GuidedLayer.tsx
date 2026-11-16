@@ -1,9 +1,10 @@
+import { ContextWorkbench } from './ContextWorkbench';
 import { OperationalWorkbench } from './OperationalWorkbench';
 import { FunctionalWorkbench } from './FunctionalWorkbench';
 import { LayerElementBrowser } from './LayerElementBrowser';
-import { functionalDisplayIds, functionalScope, functionalStructure } from '@memoarchitect/tools/browser';
+import { functionalDisplayIds, functionalScope, functionalStructure, functionalScopes, operationalConforms, operationalWorkLevel, functionalCatalog, functionalFlowsInScope } from '@memoarchitect/tools/browser';
 import { createNativeFunction } from '../lib/functional-authoring';
-import { lazy, Suspense, useEffect, useMemo, useState, type CSSProperties } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useMemo, useState, type CSSProperties } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useModelStore } from '../store/model-store';
 import { useGuideEvaluation } from '../lib/use-guide';
@@ -15,10 +16,11 @@ import { AddRelationshipDialog } from '../components/AddRelationshipDialog';
 import { askText } from '../components/AppDialogs';
 import { COLOR, FONT } from '../styles/tokens';
 import { viewToPath } from '../view-routes';
-import { elementUrl } from '../router';
+import { diagramUrl, elementUrl } from '../router';
 import { PaletteKindsContext } from './DiagramPalette';
 import { DiagramDisplayScope } from '../diagram/display-scope';
 
+const DiagramCanvas = lazy(() => import('./DiagramCanvas').then(module => ({ default: module.DiagramCanvas })));
 const DiagramEditor = lazy(() => import('./DiagramEditor').then(module => ({ default: module.DiagramEditor })));
 const button: CSSProperties = { border: `1px solid ${COLOR.border}`, borderRadius: 6, background: '#fff', color: COLOR.primary, padding: '7px 10px', cursor: 'pointer', font: 'inherit', fontSize: FONT.sm };
 const link: CSSProperties = { border: 0, padding: '4px 0', background: 'transparent', textAlign: 'left', color: '#0f766e', cursor: 'pointer', font: 'inherit', fontSize: FONT.sm };
@@ -32,7 +34,6 @@ export function GuidedLayer({ layer }: { layer: string }) {
     const guide = useModelStore(s => s.guide);
     const workspace = useModelStore(s => s.workspace);
     const setWorkspace = useModelStore(s => s.setWorkspace);
-    const pathways = useModelStore(s => s.pathways);
     const lastStep = useModelStore(s => s.lastStep);
     const setLastStep = useModelStore(s => s.setLastStep);
     const activeView = useModelStore(s => s.activeView);
@@ -46,17 +47,37 @@ export function GuidedLayer({ layer }: { layer: string }) {
     const connected = useModelStore(s => s.connected);
     const problem = useGuideEvaluation();
     const [railOpen, setRailOpen] = useState(true);
+    useEffect(() => setRailOpen(true), [layer]);
     const [viewpointsOpen, setViewpointsOpen] = useState(true);
     const [browserTab, setBrowserTab] = useState<'elements' | 'views'>('elements');
     const [creating, setCreating] = useState(false);
     const [notice, setNotice] = useState<string | null>(null);
     const [linkFrom, setLinkFrom] = useState<string | null>(null);
     const row = guide?.layers.find(candidate => candidate.name === layer);
+    const contextWorkbench = row?.name === 'layerContext';
+    const operationalLayer = guide?.layers.find(candidate => candidate.workbench === 'operational');
     const taskWorkbench = row?.workbench === 'functional' || row?.workbench === 'operational';
     const steps = useMemo(() => guide && row ? stepsOfLayer(guide, row) : [], [guide, row]);
     const step = currentStep(steps, lastStep);
-    const chosen = model?.workspaceMembership?.workspaces.find(candidate => candidate.root === workspace);
-    const scope = model && chosen ? scopePath(scopeTree(model), chosen.root).map(node => node.name).join(' › ') : workspace ? 'Loading selected system…' : 'Whole model';
+    const options = useMemo(() => workspaceOptions(model?.workspaceMembership), [model?.workspaceMembership]);
+    const chosen = options.find(candidate => candidate.root === workspace);
+    const operationalEntry = activeView.type === 'pathway' && activeView.layer === layer ? activeView : undefined;
+    const operationalKey = JSON.stringify([row?.id, operationalEntry?.work, operationalEntry?.artifactId, operationalEntry?.createCase]);
+    const [levelSelection, setLevelSelection] = useState<{ key: string; level: 'clinical' | 'system' }>();
+    const onOperationalLevel = useCallback((level: 'clinical' | 'system') => {
+        setLevelSelection(previous => previous?.key === operationalKey && previous.level === level ? previous : { key: operationalKey, level });
+    }, [operationalKey]);
+    const operationalMode = levelSelection?.key === operationalKey ? levelSelection.level
+        : operationalEntry?.work ?? row?.tasks?.[0]?.level;
+    const operationalWorkbench = row?.workbench === 'operational';
+    const requiresSystem = contextWorkbench || (operationalWorkbench && operationalMode === 'system');
+    const showScope = !operationalWorkbench || requiresSystem;
+    const defaultSystemScope = requiresSystem && !chosen ? options[0] : undefined;
+    useEffect(() => {
+        if (defaultSystemScope) setWorkspace(defaultSystemScope.root);
+    }, [defaultSystemScope, setWorkspace]);
+    const scope = model && chosen ? scopePath(scopeTree(model), chosen.root).map(node => node.name).join(' › ') || chosen.name
+        : requiresSystem ? defaultSystemScope?.name ?? 'Choose a system boundary' : workspace ? 'Loading selected system…' : 'Whole model';
     const inScope = useMemo(() => { const ids = idsInWorkspace(model?.workspaceMembership, workspace); return model && workspace && ids ? functionalDisplayIds(model, workspace, ids) : ids; }, [model, workspace]);
     const views = useMemo(() => model && row ? layerViews(model, row).filter(({ diagram }) => !inScope
         || diagram.elementIds?.some(id => inScope.has(id) || id === workspace)) : [], [model, row, inScope, workspace]);
@@ -66,7 +87,49 @@ export function GuidedLayer({ layer }: { layer: string }) {
     const openView = uniqueViews.find(view => view.diagram.id === requested)
         ?? uniqueViews.find(view => view.viewpoint.name === step?.guideViewpoint)
         ?? uniqueViews.find(view => preferredKind && view.diagram.viewKind === preferredKind) ?? uniqueViews[0];
+    // A project may attach its authored context diagram to a custom viewpoint.
+    const [boundaryChoice, setBoundaryChoice] = useState<string>();
+    const contextDiagrams = contextWorkbench ? model?.diagrams?.filter(diagram => diagram.diagramType === 'context') : undefined;
+    const diagramBoundary = (diagram: NonNullable<typeof contextDiagrams>[number]) => {
+        const ids = [diagram.properties?.subjectElement, ...(diagram.elementIds ?? [])];
+        return ids.find(id => id && model && (operationalConforms(model, id, 'SystemOfSystems') || operationalConforms(model, id, 'System')));
+    };
+    const requestedArtifact = activeView.type === 'pathway' && activeView.layer === layer ? activeView.artifactId : undefined;
+    const boundaryId = chosen?.root ?? boundaryChoice ?? requestedArtifact
+        ?? (contextDiagrams?.length ? diagramBoundary(contextDiagrams[0]) : undefined);
+    // An authored product context can orient a reader working on a child system.
+    // Keep its subject explicit and prefer a diagram authored for the selected system.
+    const contextAncestors = new Map<string, number>();
+    if (contextWorkbench && model && boundaryId) {
+        const definitions = model.workspaceMembership?.definitionOf ?? {};
+        const paths = scopePath(scopeTree(model), boundaryId);
+        paths.slice(0, -1).reverse().forEach((node, index) => contextAncestors.set(node.root, index + 1));
+        for (const element of Object.values(model.elements)) {
+            if (element.id !== boundaryId && definitions[element.id] !== boundaryId) continue;
+            const seen = new Set([element.id]);
+            let parent = element.owner;
+            for (let distance = 1; parent && !seen.has(parent); distance++) {
+                seen.add(parent);
+                for (const id of [parent, definitions[parent]]) {
+                    if (id) contextAncestors.set(id, Math.min(contextAncestors.get(id) ?? Infinity, distance));
+                }
+                parent = model.elements[parent]?.owner;
+            }
+        }
+    }
+    const matchingContext = contextDiagrams?.flatMap(diagram => {
+        const id = diagramBoundary(diagram);
+        if (!id) return [];
+        const definition = model?.workspaceMembership?.definitionOf[id] ?? id;
+        const distance = id === boundaryId || definition === boundaryId ? 0
+            : Math.min(contextAncestors.get(id) ?? Infinity, contextAncestors.get(definition) ?? Infinity);
+        return Number.isFinite(distance) ? [{ diagram, distance, subject: model?.elements[id]?.name }] : [];
+    }).sort((a, b) => a.distance - b.distance);
+    const contextView = matchingContext?.find(({ diagram }) => diagram.id === requested) ?? matchingContext?.[0];
+    const contextDiagram = contextView?.diagram;
+    const displayedDiagram = contextWorkbench ? contextDiagram : openView?.diagram;
     const paletteKinds = guide && row ? kindsOfLayer(guide, row) : [];
+    const contextPalette = [...new Set([...paletteKinds, 'System', 'SystemOfSystems'])];
     const layerElements = model ? elementsOfKinds(model, paletteKinds, workspace) : [];
     const functionScope = model && workspace ? functionalScope(model, workspace) : undefined;
     const functionRoot = model && workspace ? functionalStructure(model, workspace).root : undefined;
@@ -78,7 +141,7 @@ export function GuidedLayer({ layer }: { layer: string }) {
         setActiveView(view); navigate(viewToPath(view)!);
     };
     // Source follows the editor prop; the visual canvas follows this shared selection.
-    useEffect(() => { if (!taskWorkbench) selectDiagram(openView?.diagram.id ?? null); }, [openView?.diagram.id, taskWorkbench, selectDiagram]);
+    useEffect(() => { if (!taskWorkbench) selectDiagram(displayedDiagram?.id ?? null); }, [displayedDiagram?.id, taskWorkbench, selectDiagram]);
     useEffect(() => { setNotice(null); setLinkFrom(null); }, [layer, workspace]);
     const openElement = (id: string) => {
         if (!model?.elements[id]) return;
@@ -89,23 +152,51 @@ export function GuidedLayer({ layer }: { layer: string }) {
         if (following) setLastStep(following.id);
     };
     const newView = async (viewpoint: Viewpoint) => {
-        if (!chosen || !model?.elements[chosen.root]) { setNotice('Choose a system above before creating a view.'); return; }
+        const subject = model?.elements[(contextWorkbench ? boundaryId : chosen?.root) ?? ''];
+        if (!subject) { setNotice('Choose a system above before creating a view.'); return; }
         if (!canWrite || creating) return;
         setCreating(true); setNotice(null);
         const targetWorkspace = workspace;
-        const baseName = `${chosen.name} — ${viewpoint.label}`;
+        const baseName = `${subject.name} — ${viewpoint.label}`;
         let name = baseName;
         for (let suffix = 2; model.diagrams?.some(diagram => diagram.name === name); suffix++) name = `${baseName} ${suffix}`;
         let reason: string | undefined;
         try {
             const id = await createDiagram({ name, viewpointId: viewpoint.id,
-                viewKind: viewpoint.viewKind ?? 'general', diagramType: diagramTypeFor(viewpoint.viewKind),
-                elementIds: [chosen.root], elementKinds: paletteKinds, properties: { autoPopulate: 'false' }, activate: false, onError: message => { reason = message; } });
+                viewKind: viewpoint.viewKind ?? 'general', diagramType: contextWorkbench ? 'context' : diagramTypeFor(viewpoint.viewKind),
+                elementIds: [subject.id], elementKinds: contextWorkbench ? contextPalette : paletteKinds, properties: { autoPopulate: 'false' }, activate: false, onError: message => { reason = message; } });
             if (!id) { setNotice(reason ?? 'The view could not be created. Check Problems for the compiler diagnostics.'); return; }
             const current = useModelStore.getState();
             if (current.activeView.type === 'pathway' && current.activeView.layer === layer && current.workspace === targetWorkspace) goToRow(layer, id);
         } catch (error) { setNotice(error instanceof Error ? error.message : String(error)); }
         finally { setCreating(false); }
+    };
+    const goToOperational = (work: 'clinical' | 'system', artifactId?: string, createCase?: boolean) => {
+        if (!operationalLayer) return;
+        useModelStore.getState().inspectElement(null);
+        const view = { type: 'pathway' as const, layer: operationalLayer.name, work, artifactId, createCase };
+        const path = viewToPath(view)!;
+        const memberships = artifactId ? model?.workspaceMembership?.membership[artifactId] : undefined;
+        const scope = memberships?.length && (!workspace || !memberships.includes(workspace)) ? memberships[0] : workspace;
+        if (scope && scope !== workspace) setWorkspace(scope);
+        setActiveView(view);
+        navigate(scope ? `${path}&workspace=${encodeURIComponent(scope)}` : path);
+    };
+    const goToFunctional = (artifactId?: string) => {
+        const functional = guide?.layers.find(candidate => candidate.workbench === 'functional');
+        if (!functional) return;
+        useModelStore.getState().inspectElement(null);
+        const view = { type: 'pathway' as const, layer: functional.name, artifactId };
+        const path = viewToPath(view)!;
+        let scope = workspace;
+        if (model && artifactId && (!scope || ![...functionalCatalog(model, scope), ...functionalFlowsInScope(model, scope)]
+            .some(item => item.id === artifactId))) {
+            const roots = functionalScopes(model).roots.get(artifactId);
+            scope = roots?.values().next().value ?? model.workspaceMembership?.membership[artifactId]?.[0] ?? null;
+        }
+        if (scope !== workspace) setWorkspace(scope);
+        setActiveView(view);
+        navigate(scope ? `${path}${path.includes('?') ? '&' : '?'}workspace=${encodeURIComponent(scope)}` : path);
     };
     const addElement = async (kind: string) => {
         const name = await askText(`Name the ${kindLabel(kind).toLowerCase()}:`);
@@ -122,16 +213,45 @@ export function GuidedLayer({ layer }: { layer: string }) {
             <label style={{ fontSize: FONT.sm }}>Layer{' '}<select aria-label="Layer" style={button} value={layer} onChange={event => goToRow(event.target.value)}>
                 {axesOf(guide).map(axis => <optgroup key={axis} label={words(axis)}>{guide?.layers.filter(candidate => candidate.axis === axis).map(candidate => <option key={candidate.id} value={candidate.name}>{candidate.label}</option>)}</optgroup>)}
             </select></label>
-            <label style={{ fontSize: FONT.sm }}>Working on{' '}<select aria-label="Working scope" disabled={!model?.workspaceMembership} style={{ ...button, maxWidth: 300 }} value={workspace ?? ''} onChange={event => setWorkspace(event.target.value || null)}>
-                <option value="">Whole model</option>{workspace && !chosen && <option value={workspace}>Selected system (loading…)</option>}{workspaceOptions(model?.workspaceMembership).map(option => <option key={option.root} value={option.root}>{option.name}</option>)}
+            {showScope && <><label style={{ fontSize: FONT.sm }}>Working on{' '}<select aria-label="Working scope" disabled={!model?.workspaceMembership} style={{ ...button, maxWidth: 300 }} value={workspace ?? ''} onChange={event => setWorkspace(event.target.value || null)}>
+                {requiresSystem ? <>
+                    {!chosen && <option value={workspace ?? ''}>{defaultSystemScope ? 'Selecting system…' : 'Choose a system boundary'}</option>}
+                    {(['sos', 'system'] as const).map(kind => options.some(option => option.scope === kind) &&
+                        <optgroup key={kind} label={kind === 'sos' ? 'Systems of systems' : 'Systems'}>
+                            {options.filter(option => option.scope === kind).map(option => <option key={option.root} value={option.root}>{option.name}</option>)}
+                        </optgroup>)}
+                </> : <>
+                    <option value="">Whole model</option>
+                    {workspace && !chosen && <option value={workspace}>Selected system (loading…)</option>}
+                    {options.map(option => <option key={option.root} value={option.root}>{option.name}</option>)}
+                </>}
             </select></label>
-            <span data-testid="layer-scope" style={{ fontSize: FONT.xs, color: COLOR.muted }}>{scope}</span><span style={{ flex: 1 }} />
-            {!taskWorkbench && pathways && <button type="button" style={button} aria-expanded={railOpen} onClick={() => setRailOpen(value => !value)}>{railOpen ? 'Hide guidance' : 'Show guidance'}</button>}
-            {!taskWorkbench && <button type="button" style={button} aria-expanded={viewpointsOpen} onClick={() => setViewpointsOpen(value => !value)}>{viewpointsOpen ? 'Hide layer browser' : 'Show layer browser'}</button>}
+            <span data-testid="layer-scope" style={{ fontSize: FONT.xs, color: COLOR.muted }}>{scope}</span></>}<span style={{ flex: 1 }} />
+            {!contextWorkbench && !taskWorkbench && steps.length > 0 && <button type="button" style={button} aria-expanded={railOpen} onClick={() => setRailOpen(value => !value)}>{railOpen ? 'Hide guidance' : 'Show guidance'}</button>}
+            {!contextWorkbench && !taskWorkbench && <button type="button" style={button} aria-expanded={viewpointsOpen} onClick={() => setViewpointsOpen(value => !value)}>{viewpointsOpen ? 'Hide layer browser' : 'Show layer browser'}</button>}
         </header>
         {problem && <p role="alert" style={{ margin: 12, color: '#B42318' }}>{problem}</p>}{notice && <p role="status" style={{ margin: 12 }}>{notice}</p>}
-        {!guide || !model || (workspace && !chosen) ? <p style={{ padding: 20 }}>Reading the method…</p> : !row ? <p style={{ padding: 20 }}>This layer is not part of the selected method. Choose another layer above.</p> : row.workbench === 'operational' ? <OperationalWorkbench key={row.id} model={model} row={row} workspace={workspace} canWrite={canWrite} /> : row.workbench === 'functional' ? <FunctionalWorkbench key={row.id} model={model} row={row} workspace={workspace} canWrite={canWrite} /> : <div style={{ flex: 1, display: 'flex', overflow: 'hidden', minHeight: 0 }}>
-            {pathways && railOpen && <aside aria-label="Layer guidance" data-testid="guide-rail" style={{ ...panel, width: 270, borderRight: `1px solid ${COLOR.border}` }}>
+        {!guide || !model || (workspace && !chosen) ? <p style={{ padding: 20 }}>Reading the method…</p> : !row ? <p style={{ padding: 20 }}>This layer is not part of the selected method. Choose another layer above.</p> : contextWorkbench ? <div style={{ flex: 1, overflow: 'auto', minHeight: 0 }}>
+            <ContextWorkbench key={workspace ?? ''} model={model} workspace={workspace} canWrite={canWrite} guided
+                boundaryId={boundaryId} onBoundary={setBoundaryChoice}
+                diagram={contextDiagram} diagramSubject={contextView?.distance ? contextView.subject : undefined}
+                diagramHref={contextDiagram ? `${diagramUrl(contextDiagram.diagramType ?? 'context', contextDiagram.id)}${workspace ? `?workspace=${encodeURIComponent(workspace)}` : ''}` : undefined}
+                onOperational={operationalLayer ? goToOperational : undefined}
+                onView={!contextDiagram && canWrite && boundaryId && row.viewpoints[0] && !creating ? () => void newView(row.viewpoints[0]) : undefined}
+                canvas={contextDiagram ? <Suspense fallback={<p role="status">Opening context diagram…</p>}>
+                    <DiagramCanvas key={contextDiagram.id} />
+                </Suspense> : undefined} />
+        </div> : row.workbench === 'operational' ? <OperationalWorkbench key={operationalKey} model={model} row={row}
+            workspace={defaultSystemScope?.root ?? workspace} canWrite={canWrite} entry={operationalEntry} onLevelChange={onOperationalLevel}
+            onFunctional={goToFunctional} onContext={guide.layers.some(candidate => candidate.name === 'layerContext') ? systemId => {
+                useModelStore.getState().inspectElement(null);
+                setWorkspace(systemId);
+                const view = { type: 'pathway' as const, layer: 'layerContext' };
+                setActiveView(view);
+                navigate(`${viewToPath(view)}?workspace=${encodeURIComponent(systemId)}`);
+            } : undefined} /> : row.workbench === 'functional' ? <FunctionalWorkbench key={`${row.id}:${requestedArtifact ?? ''}`} model={model} row={row} workspace={workspace} canWrite={canWrite}
+            artifactId={requestedArtifact} onFunctional={goToFunctional} onOperational={operationalLayer ? id => { const level = operationalWorkLevel(model, id); if (level) goToOperational(level, id); } : undefined} /> : <div style={{ flex: 1, display: 'flex', overflow: 'hidden', minHeight: 0 }}>
+            {steps.length > 0 && railOpen && <aside aria-label="Layer guidance" data-testid="guide-rail" style={{ ...panel, width: 270, borderRight: `1px solid ${COLOR.border}` }}>
                 <h1 style={{ fontSize: 20, margin: '0 0 8px' }}>{row.label}</h1><p style={{ fontSize: FONT.sm, color: COLOR.muted }}>{row.purpose}</p>
                 {starting && <section aria-label="Start here" style={{ padding: 12, background: '#eef8f5', borderRadius: 8, marginBottom: 16 }}>
                     <h2 style={{ fontSize: FONT.md, margin: '0 0 8px' }}>Start here</h2>
@@ -146,9 +266,9 @@ export function GuidedLayer({ layer }: { layer: string }) {
                     </>}
                 </li>)}</ol>
             </aside>}
-            {!pathways && <nav aria-label="Method layers" style={{ ...panel, width: 190, borderRight: `1px solid ${COLOR.border}` }}>{axesOf(guide).map(axis => <section key={axis}><h2 style={{ fontSize: FONT.sm }}>{words(axis)}</h2>{guide.layers.filter(candidate => candidate.axis === axis).map(candidate => <button type="button" key={candidate.id} aria-current={candidate.name === layer ? 'page' : undefined} style={{ ...link, display: 'block', fontWeight: candidate.name === layer ? 700 : 400 }} onClick={() => goToRow(candidate.name)}>{candidate.label}</button>)}</section>)}</nav>}
+            {(!railOpen || steps.length === 0) && <nav aria-label="Method layers" style={{ ...panel, width: 190, borderRight: `1px solid ${COLOR.border}` }}>{axesOf(guide).map(axis => <section key={axis}><h2 style={{ fontSize: FONT.sm }}>{words(axis)}</h2>{guide.layers.filter(candidate => candidate.axis === axis).map(candidate => <button type="button" key={candidate.id} aria-current={candidate.name === layer ? 'page' : undefined} style={{ ...link, display: 'block', fontWeight: candidate.name === layer ? 700 : 400 }} onClick={() => goToRow(candidate.name)}>{candidate.label}</button>)}</section>)}</nav>}
             <div style={{ flex: 1, minWidth: 0, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'auto' }}>
-                {!pathways && <section aria-label="Your work" style={{ padding: 18 }}><h1 style={{ fontSize: 20, marginTop: 0 }}>{row.label}</h1><p>{row.purpose}</p><h2 style={{ fontSize: 18 }}>Your work</h2>
+                {(!railOpen || steps.length === 0) && <section aria-label="Your work" style={{ padding: 18 }}><h1 style={{ fontSize: 20, marginTop: 0 }}>{row.label}</h1><p>{row.purpose}</p><h2 style={{ fontSize: 18 }}>Your work</h2>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12 }}>{steps.map(item => <article key={item.id} style={{ background: '#fff', border: `1px solid ${COLOR.border}`, borderRadius: 8, padding: 14 }}>
                         <h3 style={{ fontSize: FONT.md, marginTop: 0 }}>{item.label ?? words(item.name)}</h3><p style={{ fontSize: FONT.sm }}>{item.objective}</p>
                         <div style={{ display: 'grid', maxHeight: 150, overflow: 'auto' }}>{elementsOfKinds(model, item.outputKinds, workspace).map(element => elementButton(element.id))}</div>

@@ -1,8 +1,9 @@
 import { includedUseCases, operationalChildren, type MemoModelDTO } from '@memoarchitect/tools/browser';
 
 /** Only the selected goal's include closure and explicitly bound actor/subject context. */
-export function useCaseMembers(model: MemoModelDTO, id: string): string[] {
-    const cases = new Set<string>(); const queue = [id];
+export function useCaseMembers(model: MemoModelDTO, ids: string | readonly string[]): string[] {
+    const cases = new Set<string>();
+    const queue = typeof ids === 'string' ? [ids] : [...ids];
     while (queue.length) { const at = queue.pop()!; if (cases.has(at)) continue; cases.add(at); queue.push(...includedUseCases(model, at).map(child => child.id)); }
     const members = new Set(cases);
     for (const edge of model.relationships) {

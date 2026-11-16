@@ -362,15 +362,25 @@ export function assignLanes(
     model: MemoModelDTO,
     grouping: ActionFlowLaneGrouping = 'allocation',
     displayLevel: ActionFlowDisplayLevel = 'all',
+    usePerformers = false,
 ): { laneOf: Map<string, string>; lanes: LaneInfo[] } {
     const laneOf = new Map<string, string>();
     const lanes: LaneInfo[] = [];
     const seen = new Map<string, LaneInfo>();
+    const performers = new Map<string, Set<string>>();
+    if (usePerformers) for (const edge of model.relationships) {
+        if (edge.type !== 'performs' || !model.elements[edge.sourceId] || model.elements[edge.sourceId].construct === 'action') continue;
+        const sources = performers.get(edge.targetId) ?? new Set<string>();
+        sources.add(edge.sourceId);
+        performers.set(edge.targetId, sources);
+    }
     for (const el of actions) {
         // Fork/join bars sit between lanes; they never define one of their own.
         if (isControlNode(el, model.registries)) continue;
-        const allocatedLane = el.allocatedTo
-            ? displayElementAtLevel(el.allocatedTo, model, displayLevel).id
+        const actors = performers.get(el.id);
+        const responsibility = actors?.size === 1 ? actors.values().next().value : el.allocatedTo;
+        const allocatedLane = responsibility
+            ? displayElementAtLevel(responsibility, model, displayLevel).id
             : UNALLOCATED_LANE;
         const stage = el.attributes['stage'] || el.attributes['phase'] || UNSTAGED_LANE;
         const nested = grouping === 'allocation-stage';
@@ -569,6 +579,8 @@ export interface ActionFlowViewOptions {
     viewpointFilter?: (el: MemoElement) => boolean;
     /** Band the layout into responsibility/stage lanes, including a single resolved lane. */
     swimlanes?: boolean;
+    /** Use a unique authored performer before an allocation in Operational previews. */
+    usePerformers?: boolean;
     /** Group/highlight actions by performer/component or modeled stage. */
     laneGrouping?: ActionFlowLaneGrouping;
     laneStyle?: ActionFlowLaneStyle;
@@ -690,7 +702,7 @@ export async function computeActionFlowViewLayout(
     if (actions.length === 0) return { nodes: [], edges: [] };
 
     const actionIds = new Set(actions.map(a => a.id));
-    const { laneOf, lanes } = assignLanes(actions, model, options?.laneGrouping, options?.displayLevel);
+    const { laneOf, lanes } = assignLanes(actions, model, options?.laneGrouping, options?.displayLevel, options?.usePerformers);
     const direction = options?.direction ?? 'horizontal';
     // A selected display level can legitimately roll every responsibility up
     // to one common system. Keep that single lane visible instead of dropping

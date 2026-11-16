@@ -21,6 +21,12 @@ const icon = (paths: ReactNode) => (
 );
 
 export const ControlIcon = {
+    goal: icon(<><circle cx="8" cy="8" r="5.4" /><circle cx="8" cy="8" r="2" /></>),
+    workflow: icon(<><path d="M8 3v4m-4 0h8M4 7v3m8-3v3" /><rect x="2.5" y="10" width="3" height="3" rx=".4" /><rect x="10.5" y="10" width="3" height="3" rx=".4" /></>),
+    scenario: icon(<><rect x="2.5" y="2.5" width="11" height="11" rx="2" /><path d="m6.5 5.2 4 2.8-4 2.8z" /></>),
+    person: icon(<><circle cx="8" cy="5" r="2.2" /><path d="M3.3 13v-1.2a3 3 0 0 1 3-3h3.4a3 3 0 0 1 3 3V13" /></>),
+    system: icon(<><rect x="2.5" y="3" width="11" height="7.5" rx="1.2" /><path d="M8 10.5V13M5.5 13h5" /></>),
+    location: icon(<><path d="M12 6.5c0 2.4-4 6.5-4 6.5s-4-4.1-4-6.5a4 4 0 1 1 8 0Z" /><circle cx="8" cy="6.5" r="1.2" /></>),
     check: icon(<path d="M3 8.5l3.2 3.2L13 4.8" />),
     plus: icon(<path d="M8 3v10M3 8h10" />),
     build: icon(<><rect x="2.5" y="2.5" width="4.5" height="4.5" rx="0.8" /><rect x="9" y="2.5" width="4.5" height="4.5" rx="0.8" /><rect x="2.5" y="9" width="4.5" height="4.5" rx="0.8" /><rect x="9" y="9" width="4.5" height="4.5" rx="0.8" /></>),

@@ -12,8 +12,6 @@ export function WorkbenchToolbar() {
     const explorerDomain = useModelStore(s => s.explorerDomain);
     const setExplorerDomain = useModelStore(s => s.setExplorerDomain);
     const metadata = model?.metadata;
-    const pathways = useModelStore(s => s.pathways);
-    const setPathways = useModelStore(s => s.setPathways);
 
     function openMethodMap() {
         setActiveMode('diagram');
@@ -64,24 +62,14 @@ export function WorkbenchToolbar() {
             <div className="flex-1" />
 
             {isFeatureEnabled('guide') && (
-                <>
-                    {/* Pathways guides each layer step by step; off, the same pages are free modelling. Saved for this person. */}
-                    <label data-testid="pathways-switch" title="Pathways: guided modelling, step by step in each layer. Saved for you only." style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', color: 'rgba(255,255,255,0.85)', fontSize: 13, fontWeight: 600 }}>
-                        <input type="checkbox" role="switch" aria-label="Pathways" checked={pathways} onChange={event => setPathways(event.target.checked)} style={{ position: 'absolute', opacity: 0, width: 0, height: 0 }} />
-                        <span aria-hidden style={{ width: 30, height: 17, borderRadius: 9, background: pathways ? '#2DD4A8' : 'rgba(255,255,255,0.25)', position: 'relative', transition: 'background 150ms' }}>
-                            <span style={{ position: 'absolute', top: 2, left: pathways ? 15 : 2, width: 13, height: 13, borderRadius: '50%', background: '#fff', transition: 'left 150ms' }} />
-                        </span>
-                        Pathways
-                    </label>
-                    <button
-                        data-testid="open-method-map"
-                        onClick={openMethodMap}
-                        title="The method map: every layer and discipline, and where to start"
-                        style={{ background: 'rgba(45,212,168,0.12)', border: '1px solid rgba(45,212,168,0.35)', color: '#2DD4A8', borderRadius: 6, padding: '4px 10px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
-                    >
-                        Method map
-                    </button>
-                </>
+                <button
+                    data-testid="open-method-map"
+                    onClick={openMethodMap}
+                    title="The method map: every layer and discipline, and where to start"
+                    style={{ background: 'rgba(45,212,168,0.12)', border: '1px solid rgba(45,212,168,0.35)', color: '#2DD4A8', borderRadius: 6, padding: '4px 10px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
+                >
+                    Method map
+                </button>
             )}
 
             {(metadata?.modelName || metadata?.gitUser) && (

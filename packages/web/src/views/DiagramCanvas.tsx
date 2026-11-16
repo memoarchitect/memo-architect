@@ -1156,7 +1156,7 @@ function DiagramCanvasInner() {
     const [snapEnabled, setSnapEnabled] = useState(true);
     const [gridVisible, setGridVisible] = useState(true);
     // Action Flow template (KK-4): allocation lanes are on by default.
-    const [swimlanesOn, setSwimlanesOn] = useState(!actionSubject);
+    const [swimlanesOn, setSwimlanesOn] = useState(!actionSubject || !!embed?.previewDiagram);
     const [actionFlowDirection, setActionFlowDirection] = useState<'horizontal' | 'vertical'>('horizontal');
     const [walking, setWalking] = useState(false);
     const [cardDismissedFor, setCardDismissedFor] = useState<string | null>(null);
@@ -1167,6 +1167,7 @@ function DiagramCanvasInner() {
         try { localStorage.setItem('memo.diagram.neighbourCard', String(neighbourCardOn)); } catch { /* storage disabled */ }
     }, [neighbourCardOn]);
     const [actionFlowLegendOpen, setActionFlowLegendOpen] = useState(() => {
+        if (embed?.previewDiagram) return false;
         try { return localStorage.getItem('memo.diagram.legend.open') !== 'false'; } catch { return true; }
     });
     useEffect(() => {
@@ -1311,7 +1312,7 @@ function DiagramCanvasInner() {
     // Layout debounce timer
 
     // Get the selected diagram
-    const selectedDiagram = getDiagram(model, selectedDiagramId);
+    const selectedDiagram = embed?.previewDiagram ?? getDiagram(model, selectedDiagramId);
     const diagramMeta = selectedDiagram ? DIAGRAM_TYPE_META[selectedDiagram.diagramType] : null;
     const currentLayout = selectedDiagramId ? diagramLayouts[selectedDiagramId] : undefined;
     // Per-view renderer profile: a view opts into the dedicated IBD canvas via
@@ -1885,7 +1886,7 @@ function DiagramCanvasInner() {
         // The view's own hint sets how connectors start, and a choice made in the toolbar is written back to it.
         setUseCaseEdgeStyle(useCaseViewOptions(selectedDiagram?.properties).edgeStyle ?? 'straight');
         setHiddenUseCaseActorIds(new Set());
-        setSwimlanesOn(!actionSubject);
+        setSwimlanesOn(!actionSubject || !!embed?.previewDiagram);
         // The diagram the page opened on keeps what its address asked for; any other starts from the defaults.
         if (openingDiagramRef.current === undefined && selectedDiagramId) openingDiagramRef.current = selectedDiagramId;
         if (selectedDiagramId && selectedDiagramId !== openingDiagramRef.current) {
@@ -2016,7 +2017,7 @@ function DiagramCanvasInner() {
     const actionFlowLaneCounts = useMemo((): Record<ActionFlowLaneGrouping, number> => {
         if (!model || viewKind !== 'actionflow') return { allocation: 0, stage: 0, 'allocation-stage': 0 };
         const actions = collectActionFlowActions(model, viewpointFilter, expandedActionNodes, focusedActionId ?? undefined);
-        const count = (grouping: ActionFlowLaneGrouping) => assignLanes(actions, model, grouping, actionFlowDisplayLevel).lanes.length;
+        const count = (grouping: ActionFlowLaneGrouping) => assignLanes(actions, model, grouping, actionFlowDisplayLevel, !!embed?.previewDiagram).lanes.length;
         return { allocation: count('allocation'), stage: count('stage'), 'allocation-stage': count('allocation-stage') };
     }, [model, viewKind, viewpointFilter, expandedActionNodes, focusedActionId, actionFlowDisplayLevel]);
 
@@ -3315,7 +3316,9 @@ function DiagramCanvasInner() {
                     // are resolved. The template itself selects only actors linked
                     // to its visible use cases, so do not drop actors here.
                     viewpointFilter: useCaseSubject || selectedDiagram?.properties?.autoPopulate === 'false' ? viewpointFilter : undefined,
-                    ...useCaseSubjectOptions(model, useCaseSubject, selectedDiagram?.name, selectedDiagram?.elementIds),
+                    ...(selectedDiagram?.properties?.layoutHint === 'use-case:catalog'
+                        ? { systemName: selectedDiagram.name }
+                        : useCaseSubjectOptions(model, useCaseSubject, selectedDiagram?.name, selectedDiagram?.elementIds)),
                     ...(selectedDiagram ? useCaseViewOptions(selectedDiagram.properties) : {}),
                     level: useCaseDisplayLevel, edgeStyle: useCaseEdgeStyle, hiddenActorIds: hiddenUseCaseActorIds,
                 },
@@ -3370,6 +3373,7 @@ function DiagramCanvasInner() {
                 actionflow: {
                     viewpointFilter,
                     swimlanes: swimlanesOn,
+                    usePerformers: !!embed?.previewDiagram,
                     laneGrouping: actionFlowLaneGrouping,
                     laneStyle: actionFlowLaneStyle,
                     displayLevel: actionFlowDisplayLevel,
@@ -4876,7 +4880,7 @@ function DiagramCanvasInner() {
 
                 {/* Drill-in breadcrumb: always visible when focused on
                     a nested action, independent of toolbar collapsed state. */}
-                {actionPath.length > 0 && !parentViewId && actionFlowMode === 'flow' && (
+                {!embed?.previewDiagram && actionPath.length > 0 && !parentViewId && actionFlowMode === 'flow' && (
                     <div
                         className="absolute top-3 left-3 z-10 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs"
                         style={{
@@ -5220,9 +5224,11 @@ function DiagramCanvasInner() {
                     edgeTypes={edgeTypes}
                     onNodesChange={readOnly ? undefined : onNodesChangeWithResize}
                     onEdgesChange={readOnly ? undefined : onEdgesChange}
-                    onNodeClick={readOnly ? undefined : onNodeClick}
+                    onNodeClick={embed?.onExplore ? (_, node) => embed.onExplore?.({ type: 'element', id: node.id })
+                        : readOnly ? undefined : onNodeClick}
                     onNodeDoubleClick={readOnly ? undefined : onNodeDoubleClick}
-                    onEdgeClick={readOnly ? undefined : onEdgeClick}
+                    onEdgeClick={embed?.onExplore ? (_, edge) => embed.onExplore?.({ type: 'relationship', id: edge.id })
+                        : readOnly ? undefined : onEdgeClick}
                     onEdgeDoubleClick={readOnly ? undefined : onEdgeDoubleClick}
                     onPaneClick={readOnly ? undefined : onPaneClick}
                     onNodeDragStart={readOnly ? undefined : onNodeDragStart}

@@ -32,6 +32,7 @@ export class ErrorBoundary extends Component<Props, State> {
     render() {
         const { error } = this.state;
         if (!error) return this.props.children;
+        const failedImport = /failed to fetch dynamically imported module|importing a module script failed|error loading dynamically imported module|unable to preload css/i.test(error.message);
         return (
             <div role="alert" className="flex-1 flex items-center justify-center p-6" style={{ background: '#F7F7F5' }}>
                 <div style={{ maxWidth: 520, color: '#1a1a1a' }}>
@@ -40,13 +41,17 @@ export class ErrorBoundary extends Component<Props, State> {
                         {error.message}
                     </pre>
                     <div className="text-xs mt-2" style={{ color: '#6B7280' }}>
-                        The rest of the app still works. The browser console has the full error.
+                        {failedImport ? 'Reload this page to fetch the current app files.'
+                            : 'The rest of the app still works. The browser console has the full error.'}
                     </div>
                     <button
                         type="button"
                         className="text-xs mt-3 px-3 py-1 rounded border"
                         style={{ borderColor: '#D1D5DB', background: '#FFFFFF' }}
-                        onClick={() => this.setState({ error: null })}
+                        onClick={() => {
+                            if (failedImport) window.location.reload();
+                            else this.setState({ error: null });
+                        }}
                     >
                         Try again
                     </button>

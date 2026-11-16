@@ -45,7 +45,10 @@ export function restoreActiveView(): ActiveView {
         if (value?.type === 'diagram' && typeof value.diagramId === 'string') return value;
         if (value?.type === 'guide') return { type: 'guide' };
         if (value?.type === 'pathway' && typeof value.layer === 'string' && value.layer.trim()) {
-            return { type: 'pathway', layer: value.layer, ...(typeof value.diagramId === 'string' ? { diagramId: value.diagramId } : {}) };
+            return { type: 'pathway', layer: value.layer, ...(typeof value.diagramId === 'string' ? { diagramId: value.diagramId } : {}),
+                ...(value.work === 'clinical' || value.work === 'system' ? { work: value.work } : {}),
+                ...(typeof value.artifactId === 'string' ? { artifactId: value.artifactId } : {}),
+                ...(value.createCase === true ? { createCase: true } : {}) };
         }
     } catch { /* unavailable storage or stale value */ }
     return { type: 'welcome' };
@@ -167,7 +170,7 @@ export type ActiveView =
     | { type: 'dashboards' }          // custom dashboards: list
     | { type: 'custom-dashboard'; dashboardId: string; scope?: DashboardScope } // one markdown dashboard
     | { type: 'review-dashboard' }    // N1: first-review "money shot" view (#132)
-    | { type: 'pathway'; layer: string; diagramId?: string }
+    | { type: 'pathway'; layer: string; diagramId?: string; work?: 'clinical' | 'system'; artifactId?: string; createCase?: boolean }
     | { type: 'guide' }               // the method map (Pathways): the method's rows, and where to start
     | { type: 'import' }
     | { type: 'analysis' }
@@ -568,9 +571,6 @@ export interface ModelState {
     workspace: string | null;
     /** The server's copy arrived (on connect, or after a save). */
     applyUserPreferences: (preferences: UserPreferencesDTO) => void;
-    /** Pathways, guided modelling: on unless this person switched it off. Saved with their choices. */
-    pathways: boolean;
-    setPathways: (on: boolean) => void;
     /** The method step this person last opened, by its qualified name, or null: where they continue. */
     lastStep: string | null;
     setLastStep: (step: string | null) => void;
@@ -652,11 +652,10 @@ const RECENT_LIMIT = 10;
 /** The choices one person keeps for this model, as they are saved. */
 export function preferencesOf(state: {
     role: string | null; workspace: string | null; explorerSplit: string; features: string[]; packageFolders: boolean;
-    pathways: boolean; lastStep: string | null; favorites: FavoriteDTO[]; recentViews: string[]; recentlyVisited: string[];
+    lastStep: string | null; favorites: FavoriteDTO[]; recentViews: string[]; recentlyVisited: string[];
 }): UserPreferencesDTO {
     return {
         ...(state.packageFolders ? {} : { packageFolders: false }),
-        ...(state.pathways ? {} : { pathways: false }),
         ...(state.lastStep ? { lastStep: state.lastStep } : {}),
         ...(state.features.length > 0 ? { features: state.features } : {}),
         ...(state.role ? { role: state.role } : {}),
@@ -793,11 +792,6 @@ export const useModelStore = create<ModelState>((set, get) => ({
         set({ packageFolders });
         saveChoices(get());
     },
-    pathways: true,
-    setPathways: (pathways) => {
-        set({ pathways });
-        saveChoices(get());
-    },
     lastStep: null,
     setLastStep: (lastStep) => {
         if (get().lastStep === lastStep) return;
@@ -827,7 +821,7 @@ export const useModelStore = create<ModelState>((set, get) => ({
             recentViews: preferences.recentViews ?? [],
             recentlyVisited: preferences.recentElements ?? [],
             preferencesLoaded: true,
-            pathways: preferences.pathways !== false, lastStep: preferences.lastStep ?? null,
+            lastStep: preferences.lastStep ?? null,
         });
     },
     setFeatureEnabled: (id, enabled) => {

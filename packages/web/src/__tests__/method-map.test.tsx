@@ -121,7 +121,7 @@ beforeEach(() => {
     answer = guide();
     useModelStore.setState({
         model: model() as never,
-        guide: null, preferencesLoaded: true, role: null, workspace: 'c::Arm', connected: true, pathways: true, lastStep: null,
+        guide: null, preferencesLoaded: true, role: null, workspace: 'c::Arm', connected: true, lastStep: null,
     });
 });
 afterEach(() => { act(() => root?.unmount()); container?.remove(); root = null; container = null; });
@@ -208,7 +208,7 @@ describe('the method map page', () => {
         expect(choice.getAttribute('aria-expanded')).toBe('true');
     });
 
-    it('continues at the next step, remembers the step opened, and hides the guidance with Pathways off', async () => {
+    it('continues at the next step and remembers the step opened', async () => {
         const view = render();
         await settle();
         expect(view.querySelector('[data-testid="continue-card"]')!.textContent).toContain('Logical · step 2 of 2: Connect the components');
@@ -217,9 +217,7 @@ describe('the method map page', () => {
         expect(useModelStore.getState().lastStep).toBe('m::connect');
         expect(useModelStore.getState().activeView).toEqual({ type: 'pathway', layer: 'Logical' });
         expect(saved.at(-1)).toMatchObject({ lastStep: 'm::connect', workspace: 'c::Arm' });
-        act(() => useModelStore.getState().setPathways(false));
-        expect(view.querySelector('[data-testid="continue-card"]')).toBeNull();
-        expect(saved.at(-1)).toMatchObject({ pathways: false });
+
     });
 
     it('opens a row even when the method declares no steps in it', async () => {
