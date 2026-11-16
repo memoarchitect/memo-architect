@@ -27,7 +27,10 @@ import { IbdRoutingControls } from '../diagram/toolbars/IbdRoutingControls';
 //   - Workflow node types: Decision, Fork/Join
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { alertDialog, confirmDialog } from '../components/AppDialogs';
+import { alertDialog, confirmDialog, promptDialog } from '../components/AppDialogs';
+import { awaitSavedElement } from '../store/await-element';
+import { ConnectPortsDialog, type ConnectPortsRequest, type PortChoice } from './ConnectPortsDialog';
+import { childKindOptions, declaredNameFor } from './templates/table-authoring';
 import { actionDrillSource, childrenOf, definitionSubtree, drillPath, drillTarget, enterLevel } from '../lib/system-navigator';
 import {
     useEffect, useMemo, useState, useCallback, useRef,
@@ -299,6 +302,22 @@ function captureEdgeLayout(edge: FlowEdge, previous?: DiagramLayout['edges'][str
             sourceT: edge.data.sourceT as number, targetT: edge.data.targetT as number,
         } : {}),
     };
+}
+
+/**
+ * The kind a new part or port of `parent` is declared as: what its other parts or ports already are, else the first
+ * the ontology allows. It is changed afterwards in the properties panel like any other attribute.
+ */
+function likeliestChildKind(model: MemoModelDTO, parent: MemoElement, what: 'part' | 'port') {
+    const registries = model.registries;
+    if (!registries) return undefined;
+    const siblings = Object.values(model.elements).filter(element => element.construct === what && (element.owner === parent.id
+        || element.id.startsWith(`${parent.id}::`) && !element.id.slice(parent.id.length + 2).includes('::')));
+    if (what === 'part') return childKindOptions(parent, siblings, registries, 'hierarchy')[0];
+    const ports = registries.kinds.filter(candidate => !candidate.isAbstract
+        && candidate.construct.replace(/\s*def$/, '').trim() === 'port');
+    return ports.find(candidate => siblings.some(port => port.kind === candidate.name))
+        ?? [...ports].sort((a, b) => a.label.localeCompare(b.label))[0];
 }
 
 /** What a drawn connector's route consists of, carried over when the diagram is redrawn after a model refresh. */
@@ -1250,6 +1269,8 @@ function DiagramCanvasInner() {
         sourceElement: MemoElement; targetElement: MemoElement;
         /** The parameter each drawn end is, when the edge was drawn between two action-flow pins. */
         sourceFeature?: string; targetFeature?: string;
+        /** Offer the connectors the ontology declares (its interface and flow definitions), for "Connect to…". */
+        connectors?: boolean;
     } | null>(null);
 
     // Context menu state
@@ -3866,6 +3887,7 @@ function DiagramCanvasInner() {
             // Nothing was drawn, so nothing needs undoing — the canvas is
             // already in its prior state.
             console.warn(`[MEMO] Relationship rejected: ${outcome.error}`);
+            void alertDialog(outcome.error ?? 'The relationship could not be created.', 'Not connected');
             return;
         }
 
@@ -4161,10 +4183,90 @@ function DiagramCanvasInner() {
     // ─── Context menu handlers ─────────────────────────────────────────────────
 
     const handleNodeContextMenu = useCallback(
-        (_: React.MouseEvent, _node: FlowNode) => {
-            // ReactFlow fires this — we use our own via DiagramInteractiveNode
-        }, []
+        (event: React.MouseEvent, node: FlowNode) => {
+            // The generic nodes open their own menu through DiagramInteractiveNode. An interconnection part has no
+            // such wiring, so its menu opens here.
+            if (node.type !== 'interconnectionNode' || !model?.elements[node.id]) return;
+            event.preventDefault();
+            setNodeCtx({ x: event.clientX, y: event.clientY, nodeId: node.id, nodeKind: model.elements[node.id].kind });
+        }, [model]
     );
+
+    /**
+     * Declare a new part inside a part, or a new port on it, in the model's SysML, and give back its id once the
+     * rebuilt model holds it. Undefined when it could not be declared, which is reported.
+     */
+    const declareInPart = useCallback(async (parentId: string, what: 'part' | 'port', label: string): Promise<string | undefined> => {
+        const current = useModelStore.getState().model;
+        const parent = current?.elements[parentId];
+        if (readOnly || !current || !parent) return undefined;
+        const kind = likeliestChildKind(current, parent, what);
+        if (!kind) { void alertDialog(`The ontology offers no ${what} kind that ${parent.name} can hold.`, `No ${what} added`); return undefined; }
+        const shortName = declaredNameFor(label, name => Boolean(current.elements[`${parentId}::${name}`]));
+        if (!shortName) { void alertDialog(`"${label}" has no letters or digits to name the ${what} from.`, `No ${what} added`); return undefined; }
+        const id = useModelStore.getState().createModelElement({
+            id: `${parentId}::${shortName}`, shortName, name: label, kind: kind.name, construct: what, layer: kind.layer,
+            doc: '', attributes: {}, file: parent.file ?? '', package: parentId,
+            ...(what === 'port' ? { owner: parentId } : {}),
+        } as Omit<MemoElement, 'id'> & { id: string; package?: string });
+        try {
+            const saved = await awaitSavedElement(id);
+            // A view listing its elements explicitly does not gain a new one by itself.
+            const diagram = useModelStore.getState().model?.diagrams?.find(candidate => candidate.id === selectedDiagramId);
+            if (selectedDiagramId && diagram?.elementIds && !diagram.elementIds.includes(saved)) {
+                useModelStore.getState().addElementToDiagram(selectedDiagramId, saved);
+            }
+            return saved;
+        } catch (error) {
+            void alertDialog(error instanceof Error ? error.message : String(error), `The ${what} was not added`);
+            return undefined;
+        }
+    }, [readOnly, selectedDiagramId]);
+
+    /**
+     * "Add part…" and "Add port…" on a part's menu. An explicit command with a name to type, not a gesture on the
+     * canvas: nothing is written by dragging or clicking.
+     */
+    const addToPart = useCallback(async (parentId: string, what: 'part' | 'port') => {
+        const current = useModelStore.getState().model;
+        const parent = current?.elements[parentId];
+        if (readOnly || !current || !parent) return;
+        const kind = likeliestChildKind(current, parent, what);
+        if (!kind) { void alertDialog(`The ontology offers no ${what} kind that ${parent.name} can hold.`, `No ${what} added`); return; }
+        const label = (await promptDialog({
+            title: `Add ${what} to ${parent.name}`, label: 'Name', confirmLabel: 'Add',
+            message: `Declared as ${kind.label} in ${parent.file || 'the model'}. Its kind can be changed in the properties panel.`
+                + (what === 'port' ? ' A port is drawn once something is connected to it: use "Connect to…".' : ''),
+        }))?.trim();
+        if (label) await declareInPart(parentId, what, label);
+    }, [readOnly, declareInPart]);
+
+    // What joins two ports is whatever the ontology declares as an interface or a flow definition. Read from the
+    // registry's own `sysmlConstruct`, so a project's or an extension's connector is offered like a built-in one.
+    const connectorTypeNames = useMemo(() => (model?.registries?.relationships ?? [])
+        .filter(definition => !definition.isAbstract
+            && (definition.sysmlConstruct === 'interface def' || definition.sysmlConstruct === 'flow def'))
+        .map(definition => definition.name), [model?.registries]);
+
+    /** The part "Connect to…" was chosen on, while its dialog is open. */
+    const [connectFrom, setConnectFrom] = useState<string | null>(null);
+    const portsOfPart = useCallback((partId: string): MemoElement[] =>
+        Object.values(model?.elements ?? {}).filter(element => element.construct === 'port' && element.owner === partId)
+            .sort((a, b) => a.name.localeCompare(b.name)), [model]);
+
+    /** Declares any port the dialog asked for, then opens the relationship picker between the two ports. */
+    const connectParts = useCallback(async (fromPartId: string, request: ConnectPortsRequest) => {
+        setConnectFrom(null);
+        const resolve = async (partId: string, choice: PortChoice) =>
+            'portId' in choice ? choice.portId : declareInPart(partId, 'port', choice.newPortName);
+        const sourceId = await resolve(fromPartId, request.from);
+        const targetId = sourceId && await resolve(request.toPartId, request.to);
+        const elements = useModelStore.getState().model?.elements;
+        const sourceElement = sourceId ? elements?.[sourceId] : undefined;
+        const targetElement = targetId ? elements?.[targetId] : undefined;
+        if (!sourceElement || !targetElement) return;
+        setRelPicker({ x: window.innerWidth / 2 - 130, y: window.innerHeight / 2 - 160, sourceElement, targetElement, connectors: true });
+    }, [declareInPart]);
 
     const handleEdgeContextMenu = useCallback((e: React.MouseEvent, edge: FlowEdge) => {
         e.preventDefault();
@@ -5309,6 +5411,18 @@ function DiagramCanvasInner() {
                 />
             )}
 
+            {connectFrom && model?.elements[connectFrom] && (
+                <ConnectPortsDialog
+                    part={model.elements[connectFrom]}
+                    parts={nodes.filter(node => node.type === 'interconnectionNode' && !node.hidden && node.id !== connectFrom)
+                        .map(node => model.elements[node.id]).filter((element): element is MemoElement => element?.construct === 'part')
+                        .sort((a, b) => a.name.localeCompare(b.name))}
+                    portsOf={portsOfPart}
+                    onConnect={request => { void connectParts(connectFrom, request); }}
+                    onCancel={() => setConnectFrom(null)}
+                />
+            )}
+
             {relPicker && (
                 <RelationshipPicker
                     x={relPicker.x}
@@ -5316,7 +5430,7 @@ function DiagramCanvasInner() {
                     sourceElement={relPicker.sourceElement}
                     targetElement={relPicker.targetElement}
                     registries={registries}
-                    allowedTypes={selectedDiagram?.relationshipTypes}
+                    allowedTypes={relPicker.connectors ? connectorTypeNames : selectedDiagram?.relationshipTypes}
                     onSelect={confirmRelationship}
                     onCancel={() => setRelPicker(null)}
                 />
@@ -5337,9 +5451,16 @@ function DiagramCanvasInner() {
                     onChangeColor={(color) => handleNodeColorChange(nodeCtx.nodeId, color)}
                     onRemoveFromDiagram={() => handleRemoveFromDiagram(nodeCtx.nodeId)}
                     onDeleteFromModel={() => {
-                        // For now: remove from diagram only. Full model delete requires server support.
-                        handleRemoveFromDiagram(nodeCtx.nodeId);
+                        void useModelStore.getState().deleteModelElement(nodeCtx.nodeId).then(outcome => {
+                            if (!outcome.success) void alertDialog(outcome.error ?? 'The element could not be deleted.', 'Not deleted');
+                        });
                     }}
+                    onAddPart={!readOnly && viewKind === 'interconnection' && model?.elements[nodeCtx.nodeId]?.construct === 'part'
+                        ? () => { void addToPart(nodeCtx.nodeId, 'part'); } : undefined}
+                    onAddPort={!readOnly && viewKind === 'interconnection' && model?.elements[nodeCtx.nodeId]?.construct === 'part'
+                        ? () => { void addToPart(nodeCtx.nodeId, 'port'); } : undefined}
+                    onConnectTo={!readOnly && viewKind === 'interconnection' && model?.elements[nodeCtx.nodeId]?.construct === 'part'
+                        ? () => setConnectFrom(nodeCtx.nodeId) : undefined}
                     onShowProperties={() => {
                         selectElement(nodeCtx.nodeId);
                     }}

@@ -84,6 +84,12 @@ interface NodeContextMenuProps {
     onChangeColor: (color: string) => void;
     onRemoveFromDiagram: () => void;
     onDeleteFromModel: () => void;
+    /** Declares a new part inside this one in the model's SysML. Given where the part can hold one. */
+    onAddPart?: () => void;
+    /** Declares a new port on this part in the model's SysML. */
+    onAddPort?: () => void;
+    /** Connects this part to another one: choose the ports, then the relationship. */
+    onConnectTo?: () => void;
     onLinkRisk?: () => void;
     onLinkRequirement?: () => void;
     // #12 additions
@@ -109,6 +115,7 @@ const PRESET_COLORS = [
 export function NodeContextMenu({
     x, y, nodeId, nodeKind, onClose,
     onEditName, onChangeColor, onRemoveFromDiagram, onDeleteFromModel,
+    onAddPart, onAddPort, onConnectTo,
     onLinkRisk, onLinkRequirement,
     onShowProperties, onFocusElement, onShowInCatalog, onShowRelMatrix, onOpenSource,
     onViewKindInOntology,
@@ -144,6 +151,9 @@ export function NodeContextMenu({
                 <MenuDivider />
             )}
             <MenuItem label="Edit name" icon="✏️" onClick={() => { onClose(); onEditName(); }} />
+            {onAddPart && <MenuItem label="Add part…" icon="▭" onClick={() => { onClose(); onAddPart(); }} />}
+            {onAddPort && <MenuItem label="Add port…" icon="◻" onClick={() => { onClose(); onAddPort(); }} />}
+            {onConnectTo && <MenuItem label="Connect to…" icon="⇄" onClick={() => { onClose(); onConnectTo(); }} />}
 
             {/* Color submenu */}
             <div className="relative">
