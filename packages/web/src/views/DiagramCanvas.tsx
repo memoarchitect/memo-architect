@@ -55,7 +55,7 @@ import '@xyflow/react/dist/style.css';
 type RFAny = any;
 
 import type { MemoElement, MemoModelDTO, DiagramLayout, ViewKind } from '@memoarchitect/tools/browser';
-import { computeImpact, edgeAttachment } from '@memoarchitect/tools/browser';
+import { computeImpact } from '@memoarchitect/tools/browser';
 import { useModelStore, getDiagram, getRegistries } from '../store/model-store';
 import { requestRelationshipUpdate, saveViewDisplay, sendElementCreate, sendDiagramLayoutUpdate as sendDiagramLayoutUpdateToServer, sendElementUpdate } from '../store/ws-client';
 import { useDiagramEmbed } from '../diagram/diagram-embed-context';
@@ -81,7 +81,7 @@ import {
 import {
     PORT_DIR_COLORS, IBD_FLOW_COLORS, portIdFromHandle, parsePortSide, portAnchorOffset,
     INTERCONNECTION_PORT_SIZE, PORT_LABEL_OFFSET, NESTED_PITCH, NESTED_PIN_INSET, NESTED_HOUSING_DEPTH,
-    type PortDisplay, type PortSide, type PortInfo,
+    savedEdgeStillAttached, type PortDisplay, type PortSide, type PortInfo,
 } from './templates/interconnection-view';
 import { assignLanes, collectActionFlowActions, commonDisplayLevels, findFloatingActions, LANE_OUTER_MARGIN, laneBoxRect, parameterOfHandle, type ActionFlowDisplayLevel, type ActionFlowLaneGrouping, type ActionFlowLaneStyle, type ActionFlowNesting } from './templates/actionflow-view';
 import { isStateElement } from './templates/statetransition-view';
@@ -3102,17 +3102,7 @@ function DiagramCanvasInner() {
             const preparedEdges = rendererEdges.map(edge => {
                 const savedEdge = savedLayout?.edges?.[edge.id];
                 const semanticRelationship = model.relationships.find(relationship => relationship.id === edge.id);
-                const currentEnds = { source: edge.source, target: edge.target,
-                    sourcePortId: edge.data?.sourcePortId as string | undefined, targetPortId: edge.data?.targetPortId as string | undefined };
-                // A layout written before the token carried the four ids; one written since carries the token.
-                const attachmentMatches = savedEdge?.attachment !== undefined
-                    ? savedEdge.attachment === edgeAttachment(currentEnds)
-                    : !savedEdge?.source || (
-                        savedEdge.source === currentEnds.source
-                        && savedEdge.target === currentEnds.target
-                        && savedEdge.sourcePortId === currentEnds.sourcePortId
-                        && savedEdge.targetPortId === currentEnds.targetPortId
-                    );
+                const attachmentMatches = savedEdgeStillAttached(savedEdge, edge);
                 const savedPoints = attachmentMatches ? savedEdge?.points : undefined;
                 const savedRouting = savedEdge as (typeof savedEdge & {
                     manualRoute?: boolean; routingType?: string; routingOverride?: IbdRoutingType; labelPoint?: {x:number;y:number}; sourceOffset?: object; targetOffset?: object;
@@ -3282,6 +3272,8 @@ function DiagramCanvasInner() {
                     labelVisibility: edgeLabelVisibility,
                     forcedPortSize: activeRenderer.forcedPortSize,
                     portWalls,
+                    // What the view saved is what `apply` draws, so the template need not arrange or route it again.
+                    saved: selectedDiagramId ? useModelStore.getState().diagramLayouts[selectedDiagramId] : undefined,
                     // The legend is declared in the view's SysML. It used to be
                     // read from the layout companion, which put a statement
                     // about what colour MEANS in the file that records where

@@ -24,16 +24,16 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import type { NotationLayoutNode as Node, NotationLayoutEdge as Edge } from '../../diagram/notation-scene';
-import type { MemoElement, MemoModelDTO, MemoRelationship } from '@memoarchitect/tools/browser';
+import type { DiagramLayout, MemoElement, MemoModelDTO, MemoRelationship } from '@memoarchitect/tools/browser';
 import { LAYER_COLORS } from '../../constants';
 import { EDGE, FONT } from '../../styles/tokens';
 import {
     CONNECTOR_LABEL_HEIGHT, connectorLabelWidth, placeConnectorLabels,
     resolveGraphLayout, routeOrthogonalEdges,
-    type LayoutResult, type OrthogonalRouteRequest,
+    type LayoutResult, type OrthogonalRouteRequest, type ResolvedGraphLayout,
 } from '../layout';
 import { buildCompositionTree, COMPOSITION_REL_TYPES } from './composition-tree';
-import { toModelType } from '@memoarchitect/tools/browser';
+import { edgeAttachment, toModelType } from '@memoarchitect/tools/browser';
 
 /**
  * Inner-handle id suffix. A boundary port renders two coincident handle pairs:
@@ -648,6 +648,27 @@ export function applyPortOrder(
 
 // ─── Options ─────────────────────────────────────────────────────────────────
 
+/**
+ * Whether a saved connector still joins the ends it was saved for. A layout
+ * written before the attachment token carried the four ids; one written since
+ * carries the token. A route whose ends changed is routed again, not reused.
+ */
+export function savedEdgeStillAttached(
+    saved: DiagramLayout['edges'][string] | undefined,
+    edge: { source: string; target: string; data?: Record<string, unknown> },
+): boolean {
+    const ends = { source: edge.source, target: edge.target,
+        sourcePortId: edge.data?.sourcePortId as string | undefined, targetPortId: edge.data?.targetPortId as string | undefined };
+    return saved?.attachment !== undefined
+        ? saved.attachment === edgeAttachment(ends)
+        : !saved?.source || (
+            saved.source === ends.source
+            && saved.target === ends.target
+            && saved.sourcePortId === ends.sourcePortId
+            && saved.targetPortId === ends.targetPortId
+        );
+}
+
 export interface InterconnectionOptions {
     viewpointFilter?: (el: MemoElement) => boolean;
     /** Relationship types declared by the view; when given, only these are drawn */
@@ -681,6 +702,13 @@ export interface InterconnectionOptions {
      * nothing about fall back to their direction (in → left, out → right).
      */
     portWalls?: ReadonlyMap<string, PortSide>;
+    /**
+     * The geometry the view has saved. A pass whose boxes and ports the view
+     * places entirely is not arranged again, and a connector it saved a route
+     * for is not routed again: the canvas puts all of them back where the view
+     * says, so arranging and routing them first is work no one sees.
+     */
+    saved?: Pick<DiagramLayout, 'nodes' | 'edges'>;
     /** A declared enum's literal colours, keyed by the element attribute value. */
     /**
      * The colour a legend gives an element, or undefined when it says nothing.
@@ -1000,6 +1028,25 @@ export async function computeInterconnectionLayout(
         return { width, height, childPos: new Map(), portPos };
     };
 
+    /**
+     * Where the view put each of `ids`, all children of `parentId`, or undefined
+     * unless it saved a box and every port for each one in that frame.
+     */
+    const savedPlacement = (ids: readonly string[], parentId: string | undefined) => {
+        const saved = options?.saved?.nodes;
+        if (!saved) return undefined;
+        const placed = new Map<string, { x: number; y: number }>();
+        for (const id of ids) {
+            const entry = saved[id];
+            if (!entry || !Number.isFinite(entry.x) || !Number.isFinite(entry.y) || !entry.width || !entry.height) return undefined;
+            if (entry.parent !== undefined && (entry.parent || undefined) !== parentId) return undefined;
+            const ports = showPorts ? portsByOwner.get(id) ?? [] : [];
+            if (ports.some(portId => !Number.isFinite(entry.ports?.[portId]?.x) || !Number.isFinite(entry.ports?.[portId]?.y))) return undefined;
+            placed.set(id, { x: entry.x, y: entry.y });
+        }
+        return placed;
+    };
+
     // ── Recursive container layout ──
     const layouts = new Map<string, PartLayout>();
     /** ELK's crossing-minimised y per own-port, captured during a container pass. */
@@ -1089,7 +1136,13 @@ export async function computeInterconnectionLayout(
             };
             const kidPorts = (id: string): { id: string; side: PortSide }[] =>
                 (portsByOwner.get(id) ?? []).map(portId => ({ id: portId, side: portSideOf(portId) }));
-            const resolved = await resolveGraphLayout({
+            const savedKids = savedPlacement(elkKids, partId);
+            const resolved: Pick<ResolvedGraphLayout, 'children' | 'graphPortY'> = savedKids ? {
+                children: elkKids.map(id => ({
+                    id, width: kidLayouts.get(id)!.width, height: kidLayouts.get(id)!.height,
+                    x: savedKids.get(id)!.x - g.left, y: savedKids.get(id)!.y - HEADER_BAND,
+                })),
+            } : await resolveGraphLayout({
                 id: `container-${partId}`,
                 nodes: elkKids.map(id => ({
                     id,
@@ -1311,8 +1364,11 @@ export async function computeInterconnectionLayout(
     // ── Position roots (context frame + external systems) with one ELK pass so
     // cross-boundary connectors run around the frame, not through it ──
     const rootPos = new Map<string, { x: number; y: number }>();
+    const savedRoots = roots.length > 1 ? savedPlacement(roots, undefined) : undefined;
     if (roots.length === 1) {
         rootPos.set(roots[0], { x: 0, y: 0 });
+    } else if (savedRoots) {
+        for (const [id, at] of savedRoots) rootPos.set(id, at);
     } else {
         const rootOf = (id: string): string | undefined => {
             let cur: string | undefined = liftToPart(id);
@@ -1689,7 +1745,16 @@ export async function computeInterconnectionLayout(
     // exchanges.  Claiming local corridors first keeps the readable wiring
     // near its parts; long flows then use distinct outer channels instead of
     // cutting through the middle of the board.
-    const routes = routeOrthogonalEdges(edgeDrafts.map(d => d.route), obstacles, 28, 'short-first');
+    // A saved route belongs to the saved arrangement, so it is reused only when the boxes were placed from it too.
+    const savedRoutes = new Map<string, Array<{ x: number; y: number }>>();
+    const arrangedAsSaved = nodes.every(node => savedPlacement([node.id], node.parentId));
+    if (arrangedAsSaved) for (const { edge } of edgeDrafts) {
+        const saved = options?.saved?.edges?.[edge.id];
+        if (saved?.points && saved.points.length >= 2 && savedEdgeStillAttached(saved, edge)) savedRoutes.set(edge.id, saved.points);
+    }
+    const routes = edgeDrafts.every(d => savedRoutes.has(d.edge.id))
+        ? savedRoutes
+        : routeOrthogonalEdges(edgeDrafts.map(d => d.route), obstacles, 28, 'short-first', { fixedRoutes: savedRoutes });
     // Labelled connectors (typed flow items) share one placement pass so two
     // flows through the same corridor don't stack their labels.
     const labelPoints = placeConnectorLabels(
