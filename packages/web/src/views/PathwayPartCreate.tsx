@@ -5,10 +5,8 @@ import { useModelStore } from '../store/model-store';
 import { sendElementCreate } from '../store/ws-client';
 import { declaredNameFor } from './templates/table-authoring';
 
-const PART_KINDS = ['SoftwareSystem', 'SoftwareModule', 'SoftwareComponent', 'HardwareAssembly', 'HardwareComponent'];
-
-export function ImplementationCreate({ model, implementationKinds, onCreated }: {
-    model: MemoModelDTO; implementationKinds: readonly string[]; onCreated: (id: string) => void;
+export function PathwayPartCreate({ model, partKinds, addLabel, saveLabel, onCreated }: {
+    model: MemoModelDTO; partKinds: readonly string[]; addLabel: string; saveLabel: string; onCreated: (id: string) => void;
 }) {
     const [open, setOpen] = useState(false);
     const [name, setName] = useState('');
@@ -16,14 +14,13 @@ export function ImplementationCreate({ model, implementationKinds, onCreated }: 
     const [destination, setDestination] = useState('');
     const [busy, setBusy] = useState(false);
     const [error, setError] = useState('');
-    const kinds = model.registries?.kinds.filter(kind => PART_KINDS.includes(kind.name)
-        && implementationKinds.includes(kind.name) && !kind.isAbstract) ?? [];
+    const kinds = model.registries?.kinds.filter(kind => partKinds.includes(kind.name) && !kind.isAbstract) ?? [];
     const sources = new Map(Object.values(model.elements)
         .filter(element => element.package && element.file.endsWith('.sysml')
             && model.sourceHashes?.[element.file] && element.provenance?.declaration.writable !== false)
         .map(element => [JSON.stringify([element.package, element.file]), element]));
     const source = sources.get(destination);
-    const kind = kinds.find(item => item.name === kindName);
+    const kind = kinds.length === 1 ? kinds[0] : kinds.find(item => item.name === kindName);
     const save = async (event: FormEvent) => {
         event.preventDefault();
         if (busy || !source?.package || !kind || !name.trim()) return;
@@ -50,18 +47,18 @@ export function ImplementationCreate({ model, implementationKinds, onCreated }: 
     };
 
     if (!kinds.length || !sources.size) return null;
-    if (!open) return <button type="button" className="pathway-button" onClick={() => setOpen(true)}>Add software or hardware</button>;
-    return <form className="pathway-context-link-form" onSubmit={event => void save(event)} aria-label="Add software or hardware">
+    if (!open) return <button type="button" className="pathway-button" onClick={() => setOpen(true)}>{addLabel}</button>;
+    return <form className="pathway-context-link-form" onSubmit={event => void save(event)} aria-label={addLabel}>
         <label>Name <input required value={name} onChange={event => setName(event.target.value)} /></label>
-        <label>Kind <select required value={kindName} onChange={event => setKindName(event.target.value)}>
+        {kinds.length > 1 && <label>Kind <select required value={kindName} onChange={event => setKindName(event.target.value)}>
             <option value="">Choose a kind…</option>
             {kinds.map(item => <option key={item.name} value={item.name}>{item.label ?? item.name}</option>)}
-        </select></label>
+        </select></label>}
         <label>Save in <select required value={destination} onChange={event => setDestination(event.target.value)}>
             <option value="">Choose a source package…</option>
             {[...sources].map(([key, item]) => <option key={key} value={key}>{item.package} · {item.file}</option>)}
         </select></label>
-        <button className="pathway-button pathway-button--primary" disabled={busy || !source || !kind || !name.trim()}>Save implementation item</button>
+        <button className="pathway-button pathway-button--primary" disabled={busy || !source || !kind || !name.trim()}>{saveLabel}</button>
         <button type="button" className="pathway-button" disabled={busy} onClick={() => { setOpen(false); setError(''); }}>Cancel</button>
         {error && <p role="alert">{error}</p>}
     </form>;

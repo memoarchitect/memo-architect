@@ -1,16 +1,15 @@
-import { useState, type FormEvent } from 'react';
-import { compatibleRelationshipTargets, indexKinds, kindConformsTo, type MemoElement, type MemoModelDTO } from '@memoarchitect/tools/browser';
-import { useModelStore } from '../store/model-store';
-import { ImplementationCreate } from './ImplementationCreate';
+import type { ReactNode } from 'react';
+import { indexKinds, kindConformsTo, type MemoElement, type MemoModelDTO } from '@memoarchitect/tools/browser';
+import { PathwayPartCreate } from './PathwayPartCreate';
+import { PathwayAllocation } from './PathwayAllocation';
 import './pathway-workbench.css';
 
-export function ImplementationLinks({ model, workspace, implementationKinds, logical, artifactId, canWrite, onSelect, onPeer }: {
+const PART_KINDS = ['SoftwareSystem', 'SoftwareModule', 'SoftwareComponent', 'HardwareAssembly', 'HardwareComponent'];
+
+export function ImplementationLinks({ model, workspace, implementationKinds, logical, artifactId, canWrite, onSelect, onPeer, deploymentLinks }: {
     model: MemoModelDTO; workspace: string | null; implementationKinds: readonly string[]; logical: boolean;
-    artifactId?: string; canWrite: boolean; onSelect: (id: string) => void; onPeer?: (id: string) => void;
+    artifactId?: string; canWrite: boolean; onSelect: (id: string) => void; onPeer?: (id: string) => void; deploymentLinks?: (selected: MemoElement) => ReactNode;
 }) {
-    const [candidateId, setCandidateId] = useState('');
-    const [busy, setBusy] = useState(false);
-    const [notice, setNotice] = useState<{ message: string; error: boolean }>();
     const registry = indexKinds(model.registries?.kinds ?? []);
     const memberships = model.workspaceMembership?.membership;
     const isInScope = (element: MemoElement) => !workspace || memberships?.[element.id]?.includes(workspace);
@@ -22,35 +21,6 @@ export function ImplementationLinks({ model, workspace, implementationKinds, log
         && (isInScope(element) || !memberships?.[element.id]?.length));
     const items = logical ? components : implementations;
     const selected = items.find(item => item.id === artifactId);
-    const edges = model.relationships.filter(edge => edge.type === 'realizedBy' && (logical ? edge.sourceId : edge.targetId) === selected?.id);
-    const linked = [...new Set(edges.map(edge => logical ? edge.targetId : edge.sourceId))].flatMap(id => model.elements[id] ? [model.elements[id]] : []);
-    const definition = model.registries?.relationships.find(item => item.name === 'realizedBy' && !item.isAbstract);
-    const allowed = new Set((logical ? implementations : components).map(item => item.id));
-    const linkedIds = new Set(linked.map(item => item.id));
-    const direction = logical ? 'outgoing' : 'incoming';
-    const peers = selected && definition && model.registries
-        ? compatibleRelationshipTargets(selected, definition, direction, model, model.registries).map(item => item.element)
-            .filter(item => allowed.has(item.id) && !linkedIds.has(item.id))
-        : [];
-    const candidate = peers.find(peer => peer.id === candidateId);
-    const source = logical ? selected : candidate;
-    const target = logical ? candidate : selected;
-    const destination = source?.provenance?.declaration.writable === false ? undefined : source?.file;
-    const submit = async (event: FormEvent) => {
-        event.preventDefault();
-        if (!canWrite || busy || !source || !target || !destination) return;
-        setBusy(true);
-        setNotice(undefined);
-        try {
-            const result = await useModelStore.getState().createRelationship({
-                type: 'realizedBy', sourceId: source.id, targetId: target.id, owningFile: destination,
-                direction,
-            });
-            setNotice({ message: result.success ? 'Link saved.' : result.error ?? 'The link could not be saved.', error: !result.success });
-            if (result.success) setCandidateId('');
-        } finally { setBusy(false); }
-    };
-
     return <section className="pathway-workspace" aria-label={logical ? 'Implementation links' : 'Implementation items'} style={{ padding: 20 }}>
         <h2>{logical ? 'Implementation links' : 'Software and hardware'}</h2>
         {!logical && <label>Implementation item{' '}
@@ -59,29 +29,18 @@ export function ImplementationLinks({ model, workspace, implementationKinds, log
                 {items.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}
             </select>
         </label>}
-        {!logical && canWrite && <ImplementationCreate model={model} implementationKinds={implementationKinds} onCreated={onSelect} />}
-        {selected && <div className="pathway-related">
+        {!logical && canWrite && <PathwayPartCreate model={model} partKinds={PART_KINDS.filter(kind => implementationKinds.includes(kind))}
+            addLabel="Add software or hardware" saveLabel="Save implementation item" onCreated={onSelect} />}
+        {selected && <>
             {!logical && <h3>{selected.name}</h3>}
-            <h4>{logical ? 'Realized by' : 'Logical components realized'}</h4>
-            <p>{linked.length ? 'Linked' : !definition ? 'Check unavailable for this profile' : peers.length ? 'Ready to link' : 'Link later'}</p>
-            {linked.map(item => onPeer && (logical ? isImplementation(item) : !!memberships?.[item.id]?.length)
-                ? <button type="button" className="pathway-resource" key={item.id} onClick={() => onPeer(item.id)}>{item.name}</button>
-                : <p key={item.id}>{item.name}</p>)}
-            {canWrite && peers.length > 0 && <form className="pathway-context-link-form" onSubmit={event => void submit(event)}>
-                <label>{logical ? 'Implementation target' : 'Logical component'}{' '}
-                    <select required value={candidateId} onChange={event => { setCandidateId(event.target.value); setNotice(undefined); }}>
-                        <option value="">Choose an existing item…</option>
-                        {peers.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}
-                    </select>
-                </label>{' '}
-                <button className="pathway-button pathway-button--primary" disabled={busy || !destination}>
-                    {logical ? 'Link implementation target' : 'Link logical component'}
-                </button>
-                {destination ? <p>Save the allocation in <code>{destination}</code>.</p>
-                    : source && <p>The logical component has no writable source file.</p>}
-            </form>}
+            <PathwayAllocation model={model} selected={selected} canWrite={canWrite} type="realizedBy"
+                direction={logical ? 'outgoing' : 'incoming'} heading={logical ? 'Realized by' : 'Logical components realized'}
+                peerLabel={logical ? 'Implementation target' : 'Logical component'}
+                linkLabel={logical ? 'Link implementation target' : 'Link logical component'}
+                peerAllowed={item => (logical ? implementations : components).some(peer => peer.id === item.id)}
+                onPeer={onPeer} canOpenPeer={item => logical ? isImplementation(item) : !!memberships?.[item.id]?.length} />
+            {!logical && deploymentLinks?.(selected)}
             <details><summary>Source</summary><code>{selected.file}</code></details>
-        </div>}
-        {notice && <p role={notice.error ? 'alert' : 'status'}>{notice.message}</p>}
+        </>}
     </section>;
 }
