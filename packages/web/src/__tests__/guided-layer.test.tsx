@@ -82,6 +82,21 @@ describe('the guided layer workspace', () => {
         expect(useModelStore.getState().activeView).toMatchObject({ type: 'pathway', layer: 'layerWork' });
     });
 
+    it('opens exact scoped endpoints from Functional and Logical', async () => {
+        prepareFunctionalWorkbench();
+        answer.layers.push({ ...answer.layers[0], id: 'logical', name: 'layerLogical', label: 'Logical', workbench: undefined, tasks: [] });
+        await render();
+        await click('Compute signal');
+        await click('Calculate signal');
+        const logical = container.querySelector('[aria-label="Selected responsibility"]')!;
+        expect(logical.textContent).toContain('Allocated to Controller');
+        expect(logical.textContent).toContain('Linked');
+        expect(container.querySelector('[data-testid="location"]')?.textContent).toBe('/method/layerLogical?artifact=implementation&workspace=host');
+        await click('Compute signal');
+        expect(container.querySelector('[aria-label="Current functional task"] h2')?.textContent).toBe('Compute signal');
+        expect(container.querySelector('[data-testid="location"]')?.textContent).toBe('/method/layerWork?artifact=fn&workspace=host');
+    });
+
     it('switches between function BDDs, flow activity diagrams and the step table', async () => {
         prepareFunctionalWorkbench();
         const originalCreate = useModelStore.getState().createDiagram;

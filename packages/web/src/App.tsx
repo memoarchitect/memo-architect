@@ -843,6 +843,13 @@ function UrlNavigationSync() {
             adoptedPermalink.current = location.pathname;
         }
 
+        // Guided workbenches can push a scoped link directly. React Router's
+        // location may still describe the origin during this store update.
+        if (activeView.type === 'pathway' && url && location.pathname !== window.location.pathname) {
+            const current = pathToView(window.location.pathname, window.location.search);
+            if (current?.type === 'pathway' && viewToPath(current) === url) return;
+        }
+
         // Parameters a page keeps in its own address (?focus=, ?domain=) are not this sync's to drop when it rewrites
         // the same path. The ones it does own are written from the view, so they are not carried.
         if (url && url.split('?')[0] === location.pathname) {

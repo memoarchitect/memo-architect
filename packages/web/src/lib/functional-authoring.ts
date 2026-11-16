@@ -12,13 +12,27 @@ export function componentFunctionWorkspace(model: MemoModelDTO, componentId: str
     return systems.length === 1 ? systems[0].root : undefined;
 }
 
+/** Allocation is declared inside the featuring definition, or beside the function. */
+export function componentAllocationSource(model: MemoModelDTO, componentId: string) {
+    const seen = new Set<string>();
+    let element = model.elements[componentId];
+    while (element) {
+        const owner = element.owner ?? element.parentAction;
+        if (!owner || seen.has(owner)) break;
+        seen.add(owner);
+        element = model.elements[owner];
+        if (element?.isDefinition) return element;
+    }
+    return undefined;
+}
+
 /** The server chooses the declared name and returns the compiler's canonical identity. */
 export async function createNativeFunction(workspace: string, componentId?: string) {
     const state = useModelStore.getState();
     if (!state.model || !state.connected || state.pinned) return;
     const home = functionalStructure(state.model, workspace).home;
     if (!home) return;
-    const component = componentId ? state.model.elements[componentId] : undefined;
+    const component = componentId ? componentAllocationSource(state.model, componentId) ?? home : undefined;
     const componentSourceHash = component ? state.model.sourceHashes?.[component.file] : undefined;
     const name = componentId ? await askText('Name the component function:') : '';
     if (name === null || (componentId && !name.trim())) return;
@@ -44,7 +58,7 @@ export async function writeFunctionalWork(context: FunctionalWriteContext, name 
     const homeId = context.flowId ?? context.componentFunctionId ?? context.parentFunctionId;
     const home = homeId ? state.model.elements[homeId] : structure.home;
     if (!home) throw new Error('Choose a system with a writable function source.');
-    const component = context.componentId ? state.model.elements[context.componentId] : undefined;
+    const component = context.componentId ? componentAllocationSource(state.model, context.componentId) ?? home : undefined;
     const result = await sendElementCreate({ id: '', name, kind: context.operation === 'flow' ? 'FunctionalFlow' : 'SystemFunction', construct: 'action', file: home.file,
         functionContext: { ...context, ...(component ? { componentSourceHash: state.model.sourceHashes?.[component.file] } : {}) } });
     if (!result.success) throw new Error(result.error ?? 'The change could not be saved.');
