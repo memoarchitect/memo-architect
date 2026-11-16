@@ -58,6 +58,23 @@ describe('an interconnection view drawn before', () => {
             .toEqual(first.edges.map(e => (e.data as { points: unknown }).points));
     });
 
+    it('leaves the board unplanned when the caller routes the connectors itself', async () => {
+        forgetLayoutAnswers();
+        const planning = vi.fn();
+        const planned = await computeInterconnectionLayout(twoBoards(), { beforeComputing: planning });
+        forgetLayoutAnswers();
+        const beforeComputing = vi.fn();
+        const direct = await computeInterconnectionLayout(twoBoards(), { routes: 'direct', beforeComputing });
+        // Both arrange the two boards; only the planned one goes on to route them.
+        expect(planning).toHaveBeenCalledTimes(2);
+        expect(beforeComputing).toHaveBeenCalledTimes(1);
+        const ends = (edges: typeof direct.edges) => edges.map(e => {
+            const points = (e.data as { points: Array<{ x: number; y: number }> }).points;
+            return [points[0], points[points.length - 1]];
+        });
+        expect(ends(direct.edges)).toEqual(ends(planned.edges));
+    });
+
     it('computes again when a connector is added', async () => {
         forgetLayoutAnswers();
         await computeInterconnectionLayout(twoBoards());

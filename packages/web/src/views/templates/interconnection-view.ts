@@ -29,7 +29,7 @@ import { LAYER_COLORS } from '../../constants';
 import { EDGE, FONT } from '../../styles/tokens';
 import {
     CONNECTOR_LABEL_HEIGHT, connectorLabelWidth, placeConnectorLabels,
-    resolveGraphLayout, routeOrthogonalEdges,
+    resolveGraphLayout, routeDirectOrthogonalEdges, routeOrthogonalEdges,
     type LayoutResult, type OrthogonalRouteRequest, type ResolvedGraphLayout,
 } from '../layout';
 import { answerOfAsync } from '../../diagram/layout-answers';
@@ -710,6 +710,13 @@ export interface InterconnectionOptions {
      * says, so arranging and routing them first is work no one sees.
      */
     saved?: Pick<DiagramLayout, 'nodes' | 'edges'>;
+    /**
+     * `direct` when the caller routes the connectors itself once it has placed
+     * its own geometry, as the canvas does. A connector the view saved no route
+     * for then gets a plain path here, and the board is planned once, by the
+     * caller, not twice.
+     */
+    routes?: 'planned' | 'direct';
     /**
      * Called before the first arrangement or routing that has to be computed,
      * and awaited. A diagram whose answers are all held never calls it, so its
@@ -1767,6 +1774,8 @@ export async function computeInterconnectionLayout(
     const requests = edgeDrafts.map(d => d.route);
     const routes = edgeDrafts.every(d => savedRoutes.has(d.edge.id))
         ? savedRoutes
+        : options?.routes === 'direct'
+            ? new Map([...routeDirectOrthogonalEdges(requests.filter(request => !savedRoutes.has(request.id))), ...savedRoutes])
         : await answerOfAsync('route', { requests, obstacles, fixed: savedRoutes },
             () => routeOrthogonalEdges(requests, obstacles, 28, 'short-first', { fixedRoutes: savedRoutes }), answers);
     // Labelled connectors (typed flow items) share one placement pass so two

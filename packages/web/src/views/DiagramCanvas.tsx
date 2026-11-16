@@ -300,6 +300,10 @@ function captureEdgeLayout(edge: FlowEdge, previous?: DiagramLayout['edges'][str
     };
 }
 
+/** What a drawn connector's route consists of, carried over when the diagram is redrawn after a model refresh. */
+const DRAWN_ROUTE_FIELDS = ['points', 'labelPoint', 'sourceSide', 'targetSide', 'sourceOffset', 'targetOffset',
+    'routingType', 'manualRoute', 'manualLanding', 'sourceT', 'targetT'] as const;
+
 interface MovementRouting {
     before: MovementGeometry;
     replaceManual?: (edgeIds: string[]) => boolean;
@@ -3052,6 +3056,8 @@ function DiagramCanvasInner() {
         // An interconnection view reads its arrangement and routes back when it was drawn before, so it shows
         // progress only once a step has to be computed. The other views compute on every pass and show it at once.
         const readsBack = viewKind === 'interconnection';
+        const refreshing = readsBack && modelRefresh && nodesRef.current.length > 0
+            && laidOutDiagramRef.current === (selectedDiagramId ?? null);
         let progressShown = false;
         const showProgress = () => {
             if (cancelled || progressShown) return;
@@ -3113,6 +3119,10 @@ function DiagramCanvasInner() {
             // the ends it was computed for. It is kept, not routed again, which is most of what opening a diagram cost.
             // Layouts written before the token have no such guarantee and are routed as they always were.
             const restoredIds = new Set<string>();
+            // A model refresh redraws the diagram already on screen. Its connectors keep the routes they are drawn
+            // with, and only those whose ends moved, or that something now blocks, are routed again.
+            const drawnBefore = refreshing ? captureMovementGeometry(nodesRef.current, edgesRef.current) : undefined;
+            const drawnEdges = new Map(refreshing ? edgesRef.current.map(edge => [edge.id, edge.data]) : []);
             const preparedEdges = rendererEdges.map(edge => {
                 const savedEdge = savedLayout?.edges?.[edge.id];
                 const semanticRelationship = model.relationships.find(relationship => relationship.id === edge.id);
@@ -3161,6 +3171,10 @@ function DiagramCanvasInner() {
                             }
                             : {}),
                         ...(restored ? { points: savedPoints } : {}),
+                        ...(!ownsPoints && !restored && (drawnEdges.get(edge.id)?.points as unknown[] | undefined)?.length
+                            ? Object.fromEntries(DRAWN_ROUTE_FIELDS.flatMap(field =>
+                                drawnEdges.get(edge.id)![field] === undefined ? [] : [[field, drawnEdges.get(edge.id)![field]]]))
+                            : {}),
                         flowAnimation: flowAnimationEnabled,
                         onRouteStart: readOnly ? undefined : beginEdgeRouteMove,
                         onRouteCancel: readOnly ? undefined : cancelEdgeRouteMove,
@@ -3204,8 +3218,8 @@ function DiagramCanvasInner() {
                 return typeof saved?.manualRoute === 'boolean' && (edge.data as Record<string, unknown>).points === saved.points;
             }).map(edge => edge.id), ...restoredIds]);
             const toEdges = reroutePositionedEdges(positioned, preparedEdges, activeRendererRef.current.routeQuality,
-                activeRendererRef.current.forcedPortSize, routingRef.current.type, false, undefined, fixedEdgeIds,
-                { beforeComputing: showProgress });
+                activeRendererRef.current.forcedPortSize, routingRef.current.type, false,
+                drawnBefore ? { before: drawnBefore } : undefined, fixedEdgeIds, { beforeComputing: showProgress });
             cancelLayoutAnimation();
             const sameDiagram = laidOutDiagramRef.current === (selectedDiagramId ?? null);
             laidOutDiagramRef.current = selectedDiagramId ?? null;
@@ -3290,6 +3304,9 @@ function DiagramCanvasInner() {
                     // What the view saved is what `apply` draws, so the template need not arrange or route it again.
                     saved: selectedDiagramId ? useModelStore.getState().diagramLayouts[selectedDiagramId] : undefined,
                     beforeComputing: showProgress,
+                    // `apply` routes every connector the view saved no route for, against the geometry it draws.
+                    // In manual routing the template's routes are the ones kept, so there it still plans them.
+                    routes: routingRef.current.mode === 'manual' ? 'planned' : 'direct',
                     // The legend is declared in the view's SysML. It used to be
                     // read from the layout companion, which put a statement
                     // about what colour MEANS in the file that records where

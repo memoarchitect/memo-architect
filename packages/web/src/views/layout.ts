@@ -465,7 +465,21 @@ export function resolvedLayoutScore(layout: ResolvedGraphLayout, edges: Resolver
     // centres. Only the port-aware candidate knows where its ports landed, and
     // scoring it against its own tighter anchors while its rivals are measured
     // box-to-box would pick it for the measurement, not for the layout.
-    const routed = routeOrthogonalEdges(usable.map(edge => {
+    //
+    // Every connector between the same two boxes has the same anchors here, so
+    // it is the same path. Each pair of boxes is routed once and counted for
+    // as many connectors as it carries: routing three hundred copies of one
+    // line costs three hundred times as much and measures the spread the
+    // router gives the copies, which is not a property of the arrangement.
+    const carried = new Map<string, { edge: ResolverEdge; count: number }>();
+    for (const edge of usable) {
+        const pair = JSON.stringify([edge.source, edge.target]);
+        const known = carried.get(pair);
+        if (known) known.count++;
+        else carried.set(pair, { edge, count: 1 });
+    }
+    const countOf = new Map([...carried.values()].map(({ edge, count }) => [edge.id, count]));
+    const routed = routeOrthogonalEdges([...carried.values()].map(({ edge }) => {
         const source = byId.get(edge.source)!;
         const target = byId.get(edge.target)!;
         return {
@@ -481,18 +495,19 @@ export function resolvedLayoutScore(layout: ResolvedGraphLayout, edges: Resolver
     let routedLength = 0;
     let routedBends = 0;
     let routedCrossings = 0;
-    const routedSegments: Array<{ edgeId: string; a: RoutePoint; b: RoutePoint }> = [];
+    const routedSegments: Array<{ edgeId: string; count: number; a: RoutePoint; b: RoutePoint }> = [];
     for (const [edgeId, points] of routed) {
-        routedBends += Math.max(0, points.length - 2);
+        const count = countOf.get(edgeId) ?? 1;
+        routedBends += Math.max(0, points.length - 2) * count;
         for (let i = 1; i < points.length; i++) {
-            routedLength += Math.abs(points[i].x - points[i - 1].x) + Math.abs(points[i].y - points[i - 1].y);
-            routedSegments.push({ edgeId, a: points[i - 1], b: points[i] });
+            routedLength += (Math.abs(points[i].x - points[i - 1].x) + Math.abs(points[i].y - points[i - 1].y)) * count;
+            routedSegments.push({ edgeId, count, a: points[i - 1], b: points[i] });
         }
     }
     for (let i = 0; i < routedSegments.length; i++) for (let j = i + 1; j < routedSegments.length; j++) {
         const a = routedSegments[i], b = routedSegments[j];
         if (a.edgeId === b.edgeId) continue;
-        if (sameSegment(a.a, a.b, b.a, b.b) || segmentsCrossOrthogonally(a.a, a.b, b.a, b.b)) routedCrossings++;
+        if (sameSegment(a.a, a.b, b.a, b.b) || segmentsCrossOrthogonally(a.a, a.b, b.a, b.b)) routedCrossings += a.count * b.count;
     }
     return compactnessScore(layout.width, layout.height, targetAspect)
         + edgeLength * 18
