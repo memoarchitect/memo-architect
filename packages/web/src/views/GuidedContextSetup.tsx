@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
+import { PathwayPartCreate } from './PathwayPartCreate';
 import { ScopedContextDiagram } from './ScopedContextDiagram';
 import type { DiagramEmbed } from '../diagram/diagram-embed-context';
 import { operationalCatalog, type MemoModelDTO } from '@memoarchitect/tools/browser';
@@ -12,8 +13,10 @@ import { useModelStore, type RelationshipCreateInput } from '../store/model-stor
 type Element = MemoModelDTO['elements'][string];
 type Relationship = MemoModelDTO['relationships'][number];
 type Category = 'actor' | 'system' | 'setting' | 'environment';
-const headings = { actor: 'Actors', system: 'External systems', setting: 'Environments' };
+const headings = { actor: 'Actors', system: 'External systems', setting: 'Use contexts' };
 const labels = { actor: 'actor', system: 'external system', setting: 'use context', environment: 'environment' };
+
+const creationKinds = { actor: ['MemoActor', 'User'], system: ['System'], setting: ['UseContext'], environment: ['UseEnvironment'] };
 
 export function GuidedContextSetup({ model, system, canWrite, diagram, diagramSubject, diagramHref, onCreateDiagram, onClinical, onSystemGoals }: {
     model: MemoModelDTO; system: Element; canWrite: boolean;
@@ -23,6 +26,7 @@ export function GuidedContextSetup({ model, system, canWrite, diagram, diagramSu
     const [view, setView] = useState<'diagram' | 'table'>('diagram');
     const [selection, setSelection] = useState<Parameters<NonNullable<DiagramEmbed['onExplore']>>[0]>();
     const [picker, setPicker] = useState<{ category: Category; settingId?: string }>();
+    const [removing, setRemoving] = useState<Category>();
     const [candidateId, setCandidateId] = useState('');
     const [boundaryId, setBoundaryId] = useState('');
     const [busy, setBusy] = useState(false);
@@ -59,6 +63,7 @@ export function GuidedContextSetup({ model, system, canWrite, diagram, diagramSu
         setBoundaryId(targets.length === 1 ? targets[0].id : linkedTargets.length === 1 ? linkedTargets[0] : '');
         setCandidateId('');
         setNotice(undefined);
+        setRemoving(undefined);
         setPicker({ category, settingId });
     };
     const readyToWrite = () => {
@@ -92,7 +97,7 @@ export function GuidedContextSetup({ model, system, canWrite, diagram, diagramSu
         try {
             if (!await confirmDialog({ title: `Remove ${name}?`, message: 'This removes the link. The element stays in the model.',
                 confirmLabel: 'Remove link', danger: true }) || !readyToWrite()) return;
-            await save(() => useModelStore.getState().deleteRelationship(edge.id), 'Link removed.');
+            if (await save(() => useModelStore.getState().deleteRelationship(edge.id), 'Link removed.')) setRemoving(undefined);
         } finally { setBusy(false); }
     };
     const removeButton = (edge: Relationship, name: string) => canWrite && <button type="button"
@@ -132,6 +137,8 @@ export function GuidedContextSetup({ model, system, canWrite, diagram, diagramSu
         </div>
     </form>;
 
+    const removalRows = removing === 'environment' ? settingIds.flatMap(forSetting)
+        : sections.find(section => section.category === removing)?.rows ?? [];
     const table = <div className="pathway-context-setup">
         {sections.map(({ category, icon, rows, empty }) => <section className="pathway-context-group" key={category} aria-label={headings[category]}>
             <header>
@@ -181,20 +188,24 @@ export function GuidedContextSetup({ model, system, canWrite, diagram, diagramSu
     return <div className="pathway-context-studio">
         <aside className="pathway-context-studio-panel pathway-context-palette" aria-label="Context summary">
             <h2>Context summary</h2>
-            {sections.map(({ category, icon, rows }) => <button type="button" key={category}
-                className={`pathway-context-tool pathway-context-tool--${category}`}
-                aria-label={canWrite ? `Add ${labels[category]}` : `View ${headings[category]}`}
-                disabled={busy} aria-pressed={picker?.category === category}
-                onClick={() => canWrite ? openPicker(category) : setView('table')}>
-                <span aria-hidden="true">{icon}</span>
-                <strong>{canWrite ? labels[category][0].toUpperCase() + labels[category].slice(1) : headings[category]}</strong>
-                <small>{new Set(rows.map(edge => edge.sourceId)).size}</small>
-            </button>)}
-            {canWrite && settings.length > 0 && <button type="button" className="pathway-context-tool pathway-context-tool--setting"
-                disabled={busy} aria-pressed={picker?.category === 'environment'}
-                onClick={() => openPicker('environment', settings[0].sourceId)}>
-                <span aria-hidden="true">{ControlIcon.location}</span><strong>Environment</strong>
-            </button>}
+            {[...sections, ...(settings.length ? [{
+                category: 'environment' as const, icon: ControlIcon.location, rows: settingIds.flatMap(forSetting),
+            }] : [])].map(({ category, icon, rows }) => {
+                const count = new Set(rows.map(edge => category === 'environment' ? edge.targetId : edge.sourceId)).size;
+                return <div key={category} className={`pathway-context-tool pathway-context-tool--${category === 'environment' ? 'setting' : category}`}>
+                    <span aria-hidden="true">{icon}</span>
+                    <strong>{labels[category][0].toUpperCase() + labels[category].slice(1)}</strong>
+                    <small>{count}</small>
+                    {canWrite && <div className="pathway-context-tile-actions">
+                        <button type="button" aria-label={`Add ${labels[category]}`} title={`Add ${labels[category]}`}
+                            disabled={busy} aria-pressed={picker?.category === category}
+                            onClick={() => openPicker(category, category === 'environment' ? settingIds[0] : undefined)}>+</button>
+                        <button type="button" aria-label={`Remove ${labels[category]} link`} title={`Remove ${labels[category]} link`}
+                            disabled={busy || !rows.length} aria-pressed={removing === category}
+                            onClick={() => { setPicker(undefined); setNotice(undefined); setRemoving(category); }}>−</button>
+                    </div>}
+                </div>;
+            })}
         </aside>
         <section className="pathway-context-studio-panel pathway-context-stage" aria-label="Context workspace">
             <header>
@@ -222,6 +233,20 @@ export function GuidedContextSetup({ model, system, canWrite, diagram, diagramSu
             {picker ? <>
                 <h2>Add {labels[picker.category]}</h2>
                 {form}
+                <PathwayPartCreate key={picker.category} model={model} partKinds={creationKinds[picker.category]}
+                    addLabel={`Create new ${labels[picker.category]}`} saveLabel={`Save ${labels[picker.category]}`}
+                    onCreated={setCandidateId} />
+            </> : removing ? <>
+                <h2>Remove {labels[removing]} link</h2>
+                <ul className="pathway-context-removal-list">{removalRows.map(edge => {
+                    const item = model.elements[removing === 'environment' ? edge.targetId : edge.sourceId];
+                    const other = model.elements[removing === 'environment' ? edge.sourceId : edge.targetId];
+                    return <li className="pathway-context-row" key={edge.id}>
+                        <span>{nameOf(item)}{removalRows.length > 1 && other ? ` · ${other.id}` : ''}</span>
+                        {removeButton(edge, nameOf(item))}
+                    </li>;
+                })}</ul>
+                <button type="button" className="pathway-button" disabled={busy} onClick={() => setRemoving(undefined)}>Cancel</button>
             </> : <>
                 <h2>{selectedEdge ? 'Interaction' : selectedElement ? 'Element' : 'Selected system'}</h2>
                 <div className="pathway-context-properties-summary">

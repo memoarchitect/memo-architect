@@ -780,14 +780,42 @@
     color: var(--tool-ink);
     font: inherit;
     font-size: 13px;
+}
+
+.pathway-context-tile-actions {
+    grid-column: 2 / -1;
+    display: flex;
+    justify-content: flex-end;
+    gap: 6px;
+}
+
+.pathway-context-tile-actions button {
+    width: 28px;
+    height: 28px;
+    border: 1px solid var(--tool-line);
+    border-radius: 6px;
+    background: white;
+    color: inherit;
+    font-size: 18px;
+    line-height: 1;
     cursor: pointer;
+}
+
+.pathway-context-tile-actions button:disabled {
+    opacity: 0.45;
+    cursor: default;
+}
+
+.pathway-context-removal-list {
+    list-style: none;
+    padding: 0;
 }
 
 .pathway-context-tool--actor { --tool-fill: #edf3ff; --tool-line: #dce7fc; --tool-ink: #284e89; }
 .pathway-context-tool--system { --tool-fill: #ecf6ef; --tool-line: #d8eadf; --tool-ink: #286342; }
 .pathway-context-tool--setting { --tool-fill: #fbf4e8; --tool-line: #f0e4c9; --tool-ink: #79571d; }
 
-.pathway-context-tool[aria-pressed="true"] {
+.pathway-context-tile-actions button[aria-pressed="true"] {
     outline: 2px solid currentColor;
     outline-offset: -2px;
 }
