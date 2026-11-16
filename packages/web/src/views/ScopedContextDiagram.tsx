@@ -1,8 +1,9 @@
 import { useMemo } from 'react';
-import { Background, Controls, ReactFlow, type Edge, type Node } from '@xyflow/react';
+import { Background, Controls, ReactFlow, useReactFlow, type Edge, type Node } from '@xyflow/react';
 import type { MemoModelDTO } from '@memoarchitect/tools/browser';
 import type { DiagramEmbed } from '../diagram/diagram-embed-context';
 import { ContextBoundaryNode, ContextExternalNode, ContextSystemNode } from './ContextNodes';
+import { DiagramViewControls } from './DiagramViewControls';
 import { UseCaseEdge } from './UseCaseEdge';
 import { computeContextViewLayout } from './templates/context-view';
 import '@xyflow/react/dist/style.css';
@@ -10,6 +11,14 @@ import '@xyflow/react/dist/style.css';
 const nodeTypes = { contextBoundary: ContextBoundaryNode, contextExternal: ContextExternalNode, contextSystem: ContextSystemNode };
 const edgeTypes = { useCaseEdge: UseCaseEdge };
 type Element = MemoModelDTO['elements'][string];
+const fitOptions = { padding: 0.16, maxZoom: 1.15 };
+
+function ContextViewControls() {
+    const { fitView } = useReactFlow();
+    return <Controls position="bottom-right" showFitView={false} showInteractive={false} style={{ zIndex: 6 }}>
+        <DiagramViewControls onFit={() => { void fitView({ ...fitOptions, duration: 250 }); }} />
+    </Controls>;
+}
 
 export function ScopedContextDiagram({ model, system, links, systems, label, onExplore }: {
     model: MemoModelDTO;
@@ -48,7 +57,7 @@ export function ScopedContextDiagram({ model, system, links, systems, label, onE
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
         fitView
-        fitViewOptions={{ padding: 0.16, maxZoom: 1.15 }}
+        fitViewOptions={fitOptions}
         minZoom={0.15}
         maxZoom={2}
         nodesDraggable={false}
@@ -60,6 +69,6 @@ export function ScopedContextDiagram({ model, system, links, systems, label, onE
         onEdgeClick={(_, edge) => onExplore({ type: 'relationship', id: edge.id })}
     >
         <Background gap={20} />
-        <Controls showInteractive={false} />
+        <ContextViewControls />
     </ReactFlow>;
 }

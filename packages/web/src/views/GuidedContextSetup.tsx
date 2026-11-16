@@ -179,8 +179,8 @@ export function GuidedContextSetup({ model, system, canWrite, diagram, diagramSu
     const editableLinks = new Set([...interactions, ...settings, ...settings.flatMap(edge => forSetting(edge.sourceId))].map(edge => edge.id));
 
     return <div className="pathway-context-studio">
-        <aside className="pathway-context-studio-panel pathway-context-palette" aria-label="Context tools">
-            <h2>{canWrite ? 'Add to context' : 'Context categories'}</h2>
+        <aside className="pathway-context-studio-panel pathway-context-palette" aria-label="Context summary">
+            <h2>Context summary</h2>
             {sections.map(({ category, icon, rows }) => <button type="button" key={category}
                 className={`pathway-context-tool pathway-context-tool--${category}`}
                 aria-label={canWrite ? `Add ${labels[category]}` : `View ${headings[category]}`}
