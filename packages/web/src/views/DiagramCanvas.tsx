@@ -1,5 +1,7 @@
-import { affectedMovementRoutes, routeEntersBody } from '../diagram/ibd-movement-routing';
-import { answerOf, type AnswerOptions } from '../diagram/layout-answers';
+import { affectedMovementRoutes } from '../diagram/ibd-movement-routing';
+import { answerOf, heldAnswer, holdAnswer, type AnswerOptions } from '../diagram/layout-answers';
+import { planOffThread } from '../diagram/route-off-thread';
+import { routeClearOfPorts, type RouteQuality } from '../diagram/route-planning';
 import { nearestFreePosition } from '../diagram/nearest-free-position';
 import { spaceParts, spacePorts, type SpacingPart, type SpacingSide } from '../diagram/ibd-spacing';
 import { placementRouteConflicts } from '../diagram/ibd-placement-score';
@@ -257,7 +259,6 @@ interface UndoCommand {
  * obstacle-avoiding planner that separates connectors into lanes, which costs
  * far more and therefore only runs when the user asks for it.
  */
-type RouteQuality = 'direct' | 'tidy';
 
 /** A frame is drawn from the inside, so its ports present their opposite face. */
 const OPPOSITE_SIDE: Record<PortSide, PortSide> = {
@@ -304,6 +305,16 @@ function captureEdgeLayout(edge: FlowEdge, previous?: DiagramLayout['edges'][str
 const DRAWN_ROUTE_FIELDS = ['points', 'labelPoint', 'sourceSide', 'targetSide', 'sourceOffset', 'targetOffset',
     'routingType', 'manualRoute', 'manualLanding', 'sourceT', 'targetT'] as const;
 
+/** What planning a board's connectors takes: the input of `routeClearOfPorts`, and the key its answer is held under. */
+interface BoardPlan {
+    planned: OrthogonalRouteRequest[];
+    obstacles: RouteObstacle[];
+    partObstacles: RouteObstacle[];
+    quality: RouteQuality;
+    fixedRoutes: Map<string, Array<{ x: number; y: number }>>;
+}
+const BOARD_PLAN = 'reroute';
+
 interface MovementRouting {
     before: MovementGeometry;
     replaceManual?: (edgeIds: string[]) => boolean;
@@ -326,30 +337,6 @@ async function rerouteAfterMove(nodes: FlowNode[], edges: FlowEdge[], before: Mo
         { before, replaceManual: () => true }) : null;
 }
 
-/**
- * Route around parts grown over their ports. Where that closes a gap a connector
- * needs, the router falls back to a line through a part; such connectors are
- * routed again around the bare parts, which beats crossing one.
- */
-function routeClearOfPorts(
-    requests: OrthogonalRouteRequest[], clearOfPorts: RouteObstacle[], parts: RouteObstacle[],
-    quality: RouteQuality, fixedRoutes: Map<string, Array<{ x: number; y: number }>>,
-): Map<string, Array<{ x: number; y: number }>> {
-    const options = quality === 'tidy' ? {} : { refineRounds: 0 };
-    const routes = routeOrthogonalEdges(requests, clearOfPorts, 18, 'long-first', { ...options, fixedRoutes });
-    const blocked = requests.filter(request => {
-        if (fixedRoutes.has(request.id)) return false;
-        const points = routes.get(request.id), allowed = new Set([...(request.sourceAncestorIds ?? []), ...(request.targetAncestorIds ?? [])]);
-        return points && parts.some(part => !allowed.has(part.id) && routeEntersBody(points, part));
-    });
-    if (!blocked.length) return routes;
-    const kept = new Map(fixedRoutes);
-    for (const [id, points] of routes) if (!blocked.some(request => request.id === id)) kept.set(id, points);
-    const retried = routeOrthogonalEdges(requests, parts, 18, 'long-first', { ...options, fixedRoutes: kept });
-    for (const request of blocked) { const points = retried.get(request.id); if (points) routes.set(request.id, points); }
-    return routes;
-}
-
 /** How long a diagram edit waits in memory before it is written to the view file. */
 const LAYOUT_SAVE_DELAY_MS = 8000;
 
@@ -365,8 +352,12 @@ function reroutePositionedEdges(
     endpointsOnly = false,
     movement?: MovementRouting,
     fixedEdgeIds?: Set<string>,
-    /** Given when a diagram is opened: the routes are read back if this board was routed before. Never on an edit. */
-    answers?: AnswerOptions,
+    /**
+     * Given when a diagram is opened: the routes are read back if this board was routed before. Never on an edit.
+     * With `later`, a board that was not routed before is not planned here: its plan is handed to `later`, the edges
+     * come back as given, and the caller plans it off the page's thread, holds the answer and calls again.
+     */
+    answers?: AnswerOptions & { later?: (plan: BoardPlan) => void },
 ): FlowEdge[] {
     const byId = new Map(nodes.map(n => [n.id, n]));
     const absolute = new Map<string, { x: number; y: number }>();
@@ -519,9 +510,14 @@ function reroutePositionedEdges(
     const automaticRequests = requests.filter(request => !fixedRoutes.has(request.id));
     const routerRequests = automaticRequests.filter(request => avoidsParts(typeOf(request.id)));
     const planned = requests.filter(request => fixedRoutes.has(request.id) || avoidsParts(typeOf(request.id)));
+    const board: BoardPlan = { planned, obstacles, partObstacles, quality, fixedRoutes };
     const plan = () => routeClearOfPorts(planned, obstacles, partObstacles, quality, fixedRoutes);
+    if (routerRequests.length && answers?.later && heldAnswer(BOARD_PLAN, board) === undefined) {
+        answers.later(board);
+        return edges;
+    }
     const routes = !routerRequests.length ? new Map<string, Array<{ x: number; y: number }>>()
-        : answers ? answerOf('reroute', { planned, obstacles, partObstacles, quality, fixedRoutes }, plan, answers)
+        : answers ? answerOf(BOARD_PLAN, board, plan, answers)
             : plan();
     const direct = automaticRequests.filter(request => !avoidsParts(typeOf(request.id)));
     for (const request of direct) {
@@ -3065,7 +3061,7 @@ function DiagramCanvasInner() {
             setIsLayouting(true);
             return nextPaint();
         };
-        const apply = (
+        const apply = async (
             { nodes: n, edges: e }: { nodes: NotationLayoutNode[]; edges: NotationLayoutEdge[] },
             interactive = true,
         ) => {
@@ -3217,9 +3213,21 @@ function DiagramCanvasInner() {
                 const saved = savedLayout?.edges?.[edge.id] as {manualRoute?:boolean;points?:unknown} | undefined;
                 return typeof saved?.manualRoute === 'boolean' && (edge.data as Record<string, unknown>).points === saved.points;
             }).map(edge => edge.id), ...restoredIds]);
-            const toEdges = reroutePositionedEdges(positioned, preparedEdges, activeRendererRef.current.routeQuality,
-                activeRendererRef.current.forcedPortSize, routingRef.current.type, false,
-                drawnBefore ? { before: drawnBefore } : undefined, fixedEdgeIds, { beforeComputing: showProgress });
+            const route = (later?: (plan: BoardPlan) => void) => reroutePositionedEdges(positioned, preparedEdges,
+                activeRendererRef.current.routeQuality, activeRendererRef.current.forcedPortSize, routingRef.current.type,
+                false, drawnBefore ? { before: drawnBefore } : undefined, fixedEdgeIds, { beforeComputing: showProgress, later });
+            // A board that was not routed before is planned in the routing worker, and the diagram on screen stays as
+            // it is until the plan arrives. One that was is read back here and drawn at once.
+            let unplanned: BoardPlan | undefined;
+            let toEdges = readsBack ? route(plan => { unplanned = plan; }) : route();
+            if (unplanned) {
+                const board: BoardPlan = unplanned;
+                await showProgress();
+                holdAnswer(BOARD_PLAN, board, await planOffThread('clearOfPorts',
+                    board.planned, board.obstacles, board.partObstacles, board.quality, board.fixedRoutes));
+                if (cancelled) return;
+                toEdges = route();
+            }
             cancelLayoutAnimation();
             const sameDiagram = laidOutDiagramRef.current === (selectedDiagramId ?? null);
             laidOutDiagramRef.current = selectedDiagramId ?? null;
@@ -3376,7 +3384,7 @@ function DiagramCanvasInner() {
             // Sync templates apply immediately (no spinner flash); async ones
             // run bounded with the progress surface.
             if (result instanceof Promise) run(provider.descriptor.label, result, provider.descriptor.interactive);
-            else apply(result, provider.descriptor.interactive);
+            else void apply(result, provider.descriptor.interactive).catch(fail(provider.descriptor.label));
         };
 
         const timer = window.setTimeout(() => {

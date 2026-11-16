@@ -13,6 +13,7 @@ import {
     type OrthogonalRouteRequest, type RouteObstacle, type RoutePoint,
 } from './orthogonal-router';
 import { runLayoutProvider } from '../diagram/layout-providers';
+import { planOffThread } from '../diagram/route-off-thread';
 import { arrangeSiblings, balancedGridColumns, SIBLING_GUTTER } from './templates/layout-rules';
 
 // Re-exported: it moved to `templates/layout-rules` with the other pure
@@ -428,8 +429,12 @@ function segmentsCross(a: ResolverChild, b: ResolverChild, c: ResolverChild, d: 
     return orient(p, q, r) * orient(p, q, s) < 0 && orient(r, s, p) * orient(r, s, q) < 0;
 }
 
-/** Score actual geometry, including connector length and pairwise crossings. */
-export function resolvedLayoutScore(layout: ResolvedGraphLayout, edges: ResolverEdge[], targetAspect = 1.5): number {
+/**
+ * The first half of scoring an arrangement: everything read straight off the
+ * geometry, and the routing requests whose paths the second half measures. The
+ * routing sits between the halves so it can run on the page or in the worker.
+ */
+function arrangementScore(layout: ResolvedGraphLayout, edges: ResolverEdge[], targetAspect: number) {
     const byId = new Map(layout.children.map(n => [n.id, n]));
     let edgeLength = 0;
     let crossings = 0;
@@ -479,7 +484,7 @@ export function resolvedLayoutScore(layout: ResolvedGraphLayout, edges: Resolver
         else carried.set(pair, { edge, count: 1 });
     }
     const countOf = new Map([...carried.values()].map(({ edge, count }) => [edge.id, count]));
-    const routed = routeOrthogonalEdges([...carried.values()].map(({ edge }) => {
+    const requests: OrthogonalRouteRequest[] = [...carried.values()].map(({ edge }) => {
         const source = byId.get(edge.source)!;
         const target = byId.get(edge.target)!;
         return {
@@ -491,33 +496,48 @@ export function resolvedLayoutScore(layout: ResolvedGraphLayout, edges: Resolver
             sourceSide: 'right' as const,
             targetSide: 'left' as const,
         };
-    }), layout.children);
-    let routedLength = 0;
-    let routedBends = 0;
-    let routedCrossings = 0;
-    const routedSegments: Array<{ edgeId: string; count: number; a: RoutePoint; b: RoutePoint }> = [];
-    for (const [edgeId, points] of routed) {
-        const count = countOf.get(edgeId) ?? 1;
-        routedBends += Math.max(0, points.length - 2) * count;
-        for (let i = 1; i < points.length; i++) {
-            routedLength += (Math.abs(points[i].x - points[i - 1].x) + Math.abs(points[i].y - points[i - 1].y)) * count;
-            routedSegments.push({ edgeId, count, a: points[i - 1], b: points[i] });
+    });
+    const finish = (routed: ReadonlyMap<string, RoutePoint[]>): number => {
+        let routedLength = 0;
+        let routedBends = 0;
+        let routedCrossings = 0;
+        const routedSegments: Array<{ edgeId: string; count: number; a: RoutePoint; b: RoutePoint }> = [];
+        for (const [edgeId, points] of routed) {
+            const count = countOf.get(edgeId) ?? 1;
+            routedBends += Math.max(0, points.length - 2) * count;
+            for (let i = 1; i < points.length; i++) {
+                routedLength += (Math.abs(points[i].x - points[i - 1].x) + Math.abs(points[i].y - points[i - 1].y)) * count;
+                routedSegments.push({ edgeId, count, a: points[i - 1], b: points[i] });
+            }
         }
-    }
-    for (let i = 0; i < routedSegments.length; i++) for (let j = i + 1; j < routedSegments.length; j++) {
-        const a = routedSegments[i], b = routedSegments[j];
-        if (a.edgeId === b.edgeId) continue;
-        if (sameSegment(a.a, a.b, b.a, b.b) || segmentsCrossOrthogonally(a.a, a.b, b.a, b.b)) routedCrossings += a.count * b.count;
-    }
-    return compactnessScore(layout.width, layout.height, targetAspect)
-        + edgeLength * 18
-        + directionPenalty
-        + bendPenalty
-        + crossings * Math.max(layout.width * layout.height * 0.35, 50_000)
-        + routedLength * 6
-        + routedBends * 4_000
-        + routedCrossings * Math.max(layout.width * layout.height * 0.45, 70_000)
-        + portBlocked * Math.max(layout.width * layout.height * 0.45, 70_000);
+        for (let i = 0; i < routedSegments.length; i++) for (let j = i + 1; j < routedSegments.length; j++) {
+            const a = routedSegments[i], b = routedSegments[j];
+            if (a.edgeId === b.edgeId) continue;
+            if (sameSegment(a.a, a.b, b.a, b.b) || segmentsCrossOrthogonally(a.a, a.b, b.a, b.b)) routedCrossings += a.count * b.count;
+        }
+        return compactnessScore(layout.width, layout.height, targetAspect)
+            + edgeLength * 18
+            + directionPenalty
+            + bendPenalty
+            + crossings * Math.max(layout.width * layout.height * 0.35, 50_000)
+            + routedLength * 6
+            + routedBends * 4_000
+            + routedCrossings * Math.max(layout.width * layout.height * 0.45, 70_000)
+            + portBlocked * Math.max(layout.width * layout.height * 0.45, 70_000);
+    };
+    return { requests, finish };
+}
+
+/** Score actual geometry, including connector length and pairwise crossings. */
+export function resolvedLayoutScore(layout: ResolvedGraphLayout, edges: ResolverEdge[], targetAspect = 1.5): number {
+    const { requests, finish } = arrangementScore(layout, edges, targetAspect);
+    return finish(routeOrthogonalEdges(requests, layout.children));
+}
+
+/** `resolvedLayoutScore` with the routing done off the page's thread. */
+async function resolvedLayoutScoreOffThread(layout: ResolvedGraphLayout, edges: ResolverEdge[], targetAspect = 1.5): Promise<number> {
+    const { requests, finish } = arrangementScore(layout, edges, targetAspect);
+    return finish(await planOffThread('route', requests, layout.children));
 }
 
 /** Connector ends whose port sits on a wall that does not face the box at the other end. */
@@ -773,8 +793,8 @@ export async function resolveGraphLayout(options: {
             // worker is unavailable or a graph exposes an unsupported option.
         }
     }
-    const candidateScore = (candidate: ResolvedGraphLayout) => {
-        const baseScore = resolvedLayoutScore(candidate, edges, targetAspect);
+    const candidateScore = async (candidate: ResolvedGraphLayout) => {
+        const baseScore = await resolvedLayoutScoreOffThread(candidate, edges, targetAspect);
         if (!options.preferBalancedLayout) return baseScore;
 
         // Routing rightly rewards straight horizontal edges, but that can
@@ -791,9 +811,9 @@ export async function resolveGraphLayout(options: {
     // box size, so it is not a weight. It holds only while the arrangement stays a readable width: on a large board
     // putting every port in front of its partner unrolls the whole board into one strip, which is worse than the
     // detours it saves, so there the score decides as before.
-    const ranked = candidates.map(candidate => ({
-        candidate, blocked: backFacingPorts(candidate, edges), score: candidateScore(candidate),
-    }));
+    const ranked = await Promise.all(candidates.map(async candidate => ({
+        candidate, blocked: backFacingPorts(candidate, edges), score: await candidateScore(candidate),
+    })));
     const byScore = ranked.reduce((best, next) => (next.score < best.score ? next : best));
     const readable = ranked.filter(r => r.candidate.width <= Math.max(READABLE_BOARD_WIDTH, byScore.candidate.width));
     return readable.reduce((best, next) =>

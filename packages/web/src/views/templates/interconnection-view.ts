@@ -29,10 +29,11 @@ import { LAYER_COLORS } from '../../constants';
 import { EDGE, FONT } from '../../styles/tokens';
 import {
     CONNECTOR_LABEL_HEIGHT, connectorLabelWidth, placeConnectorLabels,
-    resolveGraphLayout, routeDirectOrthogonalEdges, routeOrthogonalEdges,
+    resolveGraphLayout, routeDirectOrthogonalEdges,
     type LayoutResult, type OrthogonalRouteRequest, type ResolvedGraphLayout,
 } from '../layout';
 import { answerOfAsync } from '../../diagram/layout-answers';
+import { planOffThread } from '../../diagram/route-off-thread';
 import { buildCompositionTree, COMPOSITION_REL_TYPES } from './composition-tree';
 import { edgeAttachment, toModelType } from '@memoarchitect/tools/browser';
 
@@ -1777,7 +1778,7 @@ export async function computeInterconnectionLayout(
         : options?.routes === 'direct'
             ? new Map([...routeDirectOrthogonalEdges(requests.filter(request => !savedRoutes.has(request.id))), ...savedRoutes])
         : await answerOfAsync('route', { requests, obstacles, fixed: savedRoutes },
-            () => routeOrthogonalEdges(requests, obstacles, 28, 'short-first', { fixedRoutes: savedRoutes }), answers);
+            () => planOffThread('route', requests, obstacles, 28, 'short-first', { fixedRoutes: savedRoutes }), answers);
     // Labelled connectors (typed flow items) share one placement pass so two
     // flows through the same corridor don't stack their labels.
     const labelPoints = placeConnectorLabels(

@@ -154,6 +154,19 @@ export async function answerOfAsync<T>(
     return decode(text) as T;
 }
 
+/** The held answer to `step` for `input`, or undefined when it has not been computed. */
+export function heldAnswer<T>(step: string, input: unknown): T | undefined {
+    const held = read(keyOf(step, input));
+    return held === undefined ? undefined : decode(held) as T;
+}
+
+/** Holds an answer that was computed elsewhere, such as in a worker, and gives back what a later read will. */
+export function holdAnswer<T>(step: string, input: unknown, answer: T): T {
+    const text = encode(answer);
+    write(keyOf(step, input), text);
+    return decode(text) as T;
+}
+
 /** Drops every held answer. For tests, and for a caller that wants a diagram computed afresh. */
 export function forgetLayoutAnswers(): void {
     memory.clear();

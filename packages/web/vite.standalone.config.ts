@@ -129,6 +129,10 @@ export default defineConfig({
             './elk-worker-factory': fileURLToPath(
                 new URL('./src/diagram/providers/elk-worker-factory.standalone.ts', import.meta.url),
             ),
+            // The routing worker is a second asset for the same reason.
+            './route-worker-factory': fileURLToPath(
+                new URL('./src/diagram/route-worker-factory.standalone.ts', import.meta.url),
+            ),
         },
     },
     build: {
