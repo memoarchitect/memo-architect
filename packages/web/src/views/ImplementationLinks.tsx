@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { indexKinds, kindConformsTo, type MemoElement, type MemoModelDTO } from '@memoarchitect/tools/browser';
 import { PathwayPartCreate } from './PathwayPartCreate';
-import { PathwayAllocation } from './PathwayAllocation';
+import { PathwayRelationship } from './PathwayRelationship';
 import './pathway-workbench.css';
 
 const PART_KINDS = ['SoftwareSystem', 'SoftwareModule', 'SoftwareComponent', 'HardwareAssembly', 'HardwareComponent'];
@@ -33,7 +33,7 @@ export function ImplementationLinks({ model, workspace, implementationKinds, log
             addLabel="Add software or hardware" saveLabel="Save implementation item" onCreated={onSelect} />}
         {selected && <>
             {!logical && <h3>{selected.name}</h3>}
-            <PathwayAllocation model={model} selected={selected} canWrite={canWrite} type="realizedBy"
+            <PathwayRelationship model={model} selected={selected} canWrite={canWrite} type="realizedBy"
                 direction={logical ? 'outgoing' : 'incoming'} heading={logical ? 'Realized by' : 'Logical components realized'}
                 peerLabel={logical ? 'Implementation target' : 'Logical component'}
                 linkLabel={logical ? 'Link implementation target' : 'Link logical component'}

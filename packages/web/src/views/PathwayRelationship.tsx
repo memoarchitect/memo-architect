@@ -2,11 +2,11 @@ import { useState, type FormEvent } from 'react';
 import { compatibleRelationshipTargets, type MemoElement, type MemoModelDTO, type RelationshipDirection } from '@memoarchitect/tools/browser';
 import { useModelStore } from '../store/model-store';
 
-export function PathwayAllocation({ model, selected, canWrite, type, direction, heading, peerLabel, linkLabel, peerAllowed, onPeer, canOpenPeer }: {
+export function PathwayRelationship({ model, selected, canWrite, type, direction, heading, peerLabel, linkLabel, peerAllowed, onPeer, canOpenPeer, placementNoun = 'allocation' }: {
     model: MemoModelDTO; selected: MemoElement; canWrite: boolean;
     type: string; direction: RelationshipDirection; heading: string; peerLabel: string; linkLabel: string;
     peerAllowed: (element: MemoElement) => boolean; onPeer?: (id: string) => void;
-    canOpenPeer?: (element: MemoElement) => boolean;
+    canOpenPeer?: (element: MemoElement) => boolean; placementNoun?: 'allocation' | 'link';
 }) {
     const [candidateId, setCandidateId] = useState('');
     const [busy, setBusy] = useState(false);
@@ -53,8 +53,8 @@ export function PathwayAllocation({ model, selected, canWrite, type, direction, 
                 </select>
             </label>{' '}
             <button className="pathway-button pathway-button--primary" disabled={busy || !candidate || !destination}>{linkLabel}</button>
-            {candidate && (destination ? <p>Save the allocation in <code>{destination}</code>.</p>
-                : <p>The allocation source has no writable file.</p>)}
+            {candidate && (destination ? <p>Save the {placementNoun} in <code>{destination}</code>.</p>
+                : <p>The relationship source has no writable file.</p>)}
         </form>}
         {notice && <p role={notice.error ? 'alert' : 'status'}>{notice.message}</p>}
     </section>;

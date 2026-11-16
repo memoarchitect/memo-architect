@@ -311,9 +311,9 @@ export function GuidedLayer({ layer }: { layer: string }) {
                     deploymentLinks={realizationLayer && kindsOfLayer(guide, realizationLayer).includes('SoftwareDeploymentUnit') ? selected =>
                         <DeploymentLinks model={model} workspace={workspace} selected={selected} canWrite={canWrite}
                             direction="outgoing" onPeer={goToDeployment} /> : undefined} />}
-                {layer === 'layerRealization' && paletteKinds.includes('SoftwareDeploymentUnit') &&
+                {layer === 'layerRealization' && paletteKinds.some(kind => ['SoftwareDeploymentUnit', 'ProcessingNode', 'RuntimeEnvironment'].includes(kind)) &&
                     <DeploymentWorkbench key={`${workspace ?? ''}:${requestedArtifact ?? ''}`} model={model} workspace={workspace}
-                        artifactId={requestedArtifact} canWrite={canWrite} onSelect={goToDeployment}
+                        artifactId={requestedArtifact} canWrite={canWrite} realizationKinds={paletteKinds} onSelect={goToDeployment}
                         onModule={implementationLayer ? goToImplementation : undefined} />}
                 {admitsSystemFunctions && chosen && <section aria-label="Parent function" style={{ padding: '8px 12px', background: '#eef8f5', fontSize: FONT.sm }}>Parent function: {functionRoot ? elementButton(functionRoot.id) : <button style={button} disabled={!canWrite} onClick={() => void createNativeFunction(chosen.root)}>Set up parent function</button>}</section>}
                 <div role="tablist" aria-label="Views in this layer" style={{ display: 'flex', flexWrap: 'wrap', gap: 4, padding: '8px 12px', borderBottom: `1px solid ${COLOR.border}`, background: '#fff' }}>{uniqueViews.map(({ diagram }) => <button type="button" key={diagram.id} role="tab" aria-selected={diagram.id === openView?.diagram.id} style={{ ...button, background: diagram.id === openView?.diagram.id ? '#e8f8f3' : '#fff' }} onClick={() => goToRow(layer, diagram.id)}>{diagram.name}</button>)}</div>
