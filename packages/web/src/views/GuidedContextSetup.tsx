@@ -80,16 +80,30 @@ export function GuidedContextSetup({ model, system, canWrite, diagram, diagramSu
             return outcome.success;
         } finally { setBusy(false); }
     };
+    const linkContext = async (id: string, created = false) => {
+        if (!picker) return;
+        const current = useModelStore.getState();
+        if (!current.connected || current.pinned || !current.model?.elements[id]) return;
+        const request: RelationshipCreateInput | undefined = picker.settingId
+            ? { type: 'situatedIn', direction: 'outgoing', sourceId: picker.settingId, targetId: id }
+            : targets.some(target => target.id === boundaryId)
+                ? { type: picker.category === 'setting' ? 'appliesInContext' : 'interactsInContext',
+                    direction: 'incoming', sourceId: id, targetId: boundaryId }
+                : undefined;
+        if (!request) return;
+        if (await save(async () => {
+            const result = await useModelStore.getState().createRelationship(request);
+            return !result.success && created ? { ...result, error: `Created the item. Linking failed. ${result.error ?? 'Use Add link to retry.'}` } : result;
+        }, created ? 'Item created and linked.' : 'Link added.')) {
+            setPicker(active => active === picker ? undefined : active);
+        } else if (created) {
+            setCandidateId(id);
+        }
+    };
     const add = async (event: FormEvent) => {
         event.preventDefault();
         if (!picker || busy || !readyToWrite() || !choices.some(item => item.id === candidateId)) return;
-        const request: RelationshipCreateInput | undefined = picker.settingId
-            ? { type: 'situatedIn', direction: 'outgoing', sourceId: picker.settingId, targetId: candidateId }
-            : targets.some(target => target.id === boundaryId)
-                ? { type: picker.category === 'setting' ? 'appliesInContext' : 'interactsInContext',
-                    direction: 'incoming', sourceId: candidateId, targetId: boundaryId }
-                : undefined;
-        if (request && await save(() => useModelStore.getState().createRelationship(request), 'Link added.')) setPicker(undefined);
+        await linkContext(candidateId);
     };
     const remove = async (edge: Relationship, name: string) => {
         if (busy || !readyToWrite()) return;
@@ -109,7 +123,7 @@ export function GuidedContextSetup({ model, system, canWrite, diagram, diagramSu
         { category: 'system' as const, icon: ControlIcon.system, rows: interactions.filter(edge => systemIds.has(edge.sourceId)), empty: 'No external systems linked.' },
         { category: 'setting' as const, icon: ControlIcon.location, rows: settings, empty: 'No use context linked.' },
     ];
-    const form = picker && <form className="pathway-context-link-form" onSubmit={add} aria-label={`Add ${labels[picker.category]}`}>
+    const form = picker && <div className="pathway-context-link-form">
         {picker.category === 'environment' && settingIds.length > 1 && <label>Use context
             <select required value={picker.settingId} onChange={event => {
                 setPicker({ category: 'environment', settingId: event.target.value });
@@ -118,12 +132,6 @@ export function GuidedContextSetup({ model, system, canWrite, diagram, diagramSu
                 {settingIds.map(id => <option key={id} value={id}>{nameOf(model.elements[id])}</option>)}
             </select>
         </label>}
-        <label>{`Choose an existing ${labels[picker.category]}`}
-            <select required value={candidateId} onChange={event => setCandidateId(event.target.value)}>
-                <option value="">{choices.length ? 'Select from the model' : 'No available entries'}</option>
-                {choices.map(item => <option key={item.id} value={item.id}>{nameOf(item)}{item.package ? ` · ${item.package}` : ''}</option>)}
-            </select>
-        </label>
         {!picker.settingId && targets.length > 1 && <label>System occurrence
             <select required value={boundaryId} onChange={event => setBoundaryId(event.target.value)}>
                 <option value="">Choose where this system is used</option>
@@ -131,11 +139,17 @@ export function GuidedContextSetup({ model, system, canWrite, diagram, diagramSu
             </select>
         </label>}
         {!picker.settingId && !targets.length && <p>Create an occurrence of this system before linking its context.</p>}
-        <div className="pathway-context-actions">
+        {choices.length > 0 && <form onSubmit={add} aria-label={`Add ${labels[picker.category]}`}>
+            <label>{`Choose an existing ${labels[picker.category]}`}
+                <select required value={candidateId} onChange={event => setCandidateId(event.target.value)}>
+                    <option value="">Select from the model</option>
+                    {choices.map(item => <option key={item.id} value={item.id}>{nameOf(item)}{item.package ? ` · ${item.package}` : ''}</option>)}
+                </select>
+            </label>
             <button className="pathway-button pathway-button--primary" disabled={busy || !candidateId || (!picker.settingId && !boundaryId)}>Add link</button>
             <button type="button" className="pathway-button" disabled={busy} onClick={() => setPicker(undefined)}>Cancel</button>
-        </div>
-    </form>;
+        </form>}
+    </div>;
 
     const removalRows = removing === 'environment' ? settingIds.flatMap(forSetting)
         : sections.find(section => section.category === removing)?.rows ?? [];
@@ -234,8 +248,10 @@ export function GuidedContextSetup({ model, system, canWrite, diagram, diagramSu
                 <h2>Add {labels[picker.category]}</h2>
                 {form}
                 <PathwayPartCreate key={picker.category} model={model} partKinds={creationKinds[picker.category]}
-                    addLabel={`Create new ${labels[picker.category]}`} saveLabel={`Save ${labels[picker.category]}`}
-                    onCreated={setCandidateId} />
+                    initiallyOpen={!choices.length} disabled={busy || (!picker.settingId && !boundaryId)}
+                    preferredFile={picker.settingId ? model.elements[picker.settingId]?.file : (model.elements[boundaryId]?.file ?? system.file)}
+                    addLabel={`Create new ${labels[picker.category]}`} saveLabel="Create and link"
+                    onCreated={id => linkContext(id, true)} onCancel={() => { if (!choices.length) setPicker(undefined); }} />
             </> : removing ? <>
                 <h2>Remove {labels[removing]} link</h2>
                 <ul className="pathway-context-removal-list">{removalRows.map(edge => {
