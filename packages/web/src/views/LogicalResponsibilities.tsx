@@ -1,12 +1,12 @@
-import { useState, type FormEvent } from 'react';
+import { useState, type FormEvent, type ReactNode } from 'react';
 import { functionalCatalog, functionalStructure, indexKinds, kindConformsTo, type MemoModelDTO } from '@memoarchitect/tools/browser';
 import { componentAllocationSource, writeFunctionalWork } from '../lib/functional-authoring';
 import { useModelStore } from '../store/model-store';
 import './pathway-workbench.css';
 
-export function LogicalResponsibilities({ model, workspace, artifactId, canWrite, onSelect, onFunctional }: {
+export function LogicalResponsibilities({ model, workspace, artifactId, canWrite, onSelect, onFunctional, implementationLinks }: {
     model: MemoModelDTO; workspace: string; artifactId?: string; canWrite: boolean;
-    onSelect: (id: string) => void; onFunctional?: (id: string) => void;
+    onSelect: (id: string) => void; onFunctional?: (id: string) => void; implementationLinks?: (componentId: string) => ReactNode;
 }) {
     const [name, setName] = useState('');
     const [functionId, setFunctionId] = useState('');
@@ -87,6 +87,7 @@ export function LogicalResponsibilities({ model, workspace, artifactId, canWrite
             </form>}
             <details><summary>Source</summary><code>{responsibility.file}</code></details>
         </section>}
+        {component && implementationLinks?.(component.id)}
         {error && <p role="alert">{error}</p>}
     </section>;
 }

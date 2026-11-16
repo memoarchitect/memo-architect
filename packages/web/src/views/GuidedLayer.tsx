@@ -2,6 +2,7 @@ import { ContextWorkbench } from './ContextWorkbench';
 import { OperationalWorkbench } from './OperationalWorkbench';
 import { FunctionalWorkbench } from './FunctionalWorkbench';
 import { LogicalResponsibilities } from './LogicalResponsibilities';
+import { ImplementationLinks } from './ImplementationLinks';
 import { LayerElementBrowser } from './LayerElementBrowser';
 import { functionalDisplayIds, functionalScope, functionalStructure, functionalScopes, operationalConforms, operationalWorkLevel, functionalCatalog, functionalFlowsInScope } from '@memoarchitect/tools/browser';
 import { createNativeFunction } from '../lib/functional-authoring';
@@ -199,20 +200,22 @@ export function GuidedLayer({ layer }: { layer: string }) {
         setActiveView(view);
         navigate(scope ? `${path}${path.includes('?') ? '&' : '?'}workspace=${encodeURIComponent(scope)}` : path);
     };
-    const goToLogical = (artifactId: string) => {
-        const view = { type: 'pathway' as const, layer: 'layerLogical', artifactId };
+    const goToStructuralArtifact = (layerName: 'layerLogical' | 'layerImplementation', artifactId: string) => {
+        const view = { type: 'pathway' as const, layer: layerName, artifactId };
         const path = viewToPath(view)!;
         useModelStore.getState().inspectElement(null);
         let scope = workspace;
-        if (model && (!scope || !functionalCatalog(model, scope, 'ComponentFunction').some(item => item.id === artifactId))
-            && model.elements[artifactId]) {
-            const functionScope = functionalScopes(model).roots.get(artifactId);
-            scope = functionScope?.values().next().value ?? scope;
+        if (model) {
+            const memberships = functionalScopes(model).roots.get(artifactId) ?? new Set(model.workspaceMembership?.membership[artifactId]);
+            if (!scope || !memberships.has(scope)) scope = memberships.values().next().value ?? scope;
         }
         if (scope !== workspace) setWorkspace(scope);
         setActiveView(view);
         navigate(scope ? `${path}&workspace=${encodeURIComponent(scope)}` : path);
     };
+    const goToLogical = (id: string) => goToStructuralArtifact('layerLogical', id);
+    const goToImplementation = (id: string) => goToStructuralArtifact('layerImplementation', id);
+    const implementationLayer = guide?.layers.find(candidate => candidate.name === 'layerImplementation');
     const addElement = async (kind: string) => {
         const name = await askText(`Name the ${kindLabel(kind).toLowerCase()}:`);
         if (name?.trim()) useModelStore.getState().addElement(kind, name.trim(), (workspace ? model?.elements[workspace]?.package : undefined) ?? '');
@@ -293,8 +296,15 @@ export function GuidedLayer({ layer }: { layer: string }) {
                 </section>}
                 {layer === 'layerLogical' && (chosen ? <LogicalResponsibilities key={`${chosen.root}:${requestedArtifact ?? ''}`} model={model}
                     workspace={chosen.root} artifactId={requestedArtifact} canWrite={canWrite} onSelect={goToLogical}
-                    onFunctional={guide.layers.some(candidate => candidate.workbench === 'functional') ? goToFunctional : undefined} />
+                    onFunctional={guide.layers.some(candidate => candidate.workbench === 'functional') ? goToFunctional : undefined}
+                    implementationLinks={implementationLayer ? componentId => <ImplementationLinks key={componentId} logical model={model} workspace={chosen.root}
+                        implementationKinds={kindsOfLayer(guide, implementationLayer)} artifactId={componentId} canWrite={canWrite}
+                        onSelect={goToLogical} onPeer={goToImplementation} /> : undefined} />
                     : <p style={{ padding: 20 }}>Choose a system to work on component responsibilities.</p>)}
+                {layer === 'layerImplementation' && implementationLayer && <ImplementationLinks key={`${workspace ?? ''}:${requestedArtifact ?? ''}`}
+                    logical={false} model={model} workspace={workspace} implementationKinds={kindsOfLayer(guide, implementationLayer)}
+                    artifactId={requestedArtifact} canWrite={canWrite} onSelect={goToImplementation}
+                    onPeer={guide.layers.some(candidate => candidate.name === 'layerLogical') ? goToLogical : undefined} />}
                 {admitsSystemFunctions && chosen && <section aria-label="Parent function" style={{ padding: '8px 12px', background: '#eef8f5', fontSize: FONT.sm }}>Parent function: {functionRoot ? elementButton(functionRoot.id) : <button style={button} disabled={!canWrite} onClick={() => void createNativeFunction(chosen.root)}>Set up parent function</button>}</section>}
                 <div role="tablist" aria-label="Views in this layer" style={{ display: 'flex', flexWrap: 'wrap', gap: 4, padding: '8px 12px', borderBottom: `1px solid ${COLOR.border}`, background: '#fff' }}>{uniqueViews.map(({ diagram }) => <button type="button" key={diagram.id} role="tab" aria-selected={diagram.id === openView?.diagram.id} style={{ ...button, background: diagram.id === openView?.diagram.id ? '#e8f8f3' : '#fff' }} onClick={() => goToRow(layer, diagram.id)}>{diagram.name}</button>)}</div>
                 {openView ? <section aria-label={openView.diagram.name} style={{ display: 'flex', flex: 1, minHeight: 450, flexDirection: 'column' }}>{selectedDiagramId === openView.diagram.id && <Suspense fallback={<p style={{ padding: 18 }}>Opening view…</p>}><PaletteKindsContext.Provider value={paletteKinds}><DiagramDisplayScope.Provider value={workspace}><DiagramEditor key={`${openView.diagram.id}:${workspace ?? 'whole'}`} diagramId={openView.diagram.id} /></DiagramDisplayScope.Provider></PaletteKindsContext.Provider></Suspense>}</section> : <section style={{ padding: 24 }}>
