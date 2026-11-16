@@ -671,11 +671,17 @@ function ScopeUrlSync() {
         const domainLed = fromHistory || (urlDomain !== null && urlDomain !== lastUrl.current.domain);
         const workspaceLed = urlWorkspace !== null && (fromHistory || urlWorkspace !== lastUrl.current.workspace);
         lastUrl.current = { domain: urlDomain, workspace: urlWorkspace };
-        if (domainLed && urlDomain !== domain) { setDomain(urlDomain); return; }
-        if (workspaceLed && urlWorkspace !== workspace) { setWorkspace(urlWorkspace); return; }
+        // Strict Mode can replay this effect with the render that preceded an
+        // adoption. Read the live scope before writing it back to the address.
+        const { explorerDomain: currentDomain, workspace: currentWorkspace } = useModelStore.getState();
+        const adoptDomain = domainLed && urlDomain !== currentDomain;
+        const adoptWorkspace = workspaceLed && urlWorkspace !== currentWorkspace;
+        if (adoptDomain) setDomain(urlDomain);
+        if (adoptWorkspace) setWorkspace(urlWorkspace);
+        if (adoptDomain || adoptWorkspace) return;
 
         let changed = false;
-        for (const [name, value] of [['domain', domain], ['workspace', workspace]] as const) {
+        for (const [name, value] of [['domain', currentDomain], ['workspace', currentWorkspace]] as const) {
             if ((params.get(name) ?? null) === (value ?? null)) continue;
             if (value) params.set(name, value); else params.delete(name);
             changed = true;
