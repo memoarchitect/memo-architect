@@ -1,17 +1,36 @@
 import { fileURLToPath } from 'node:url';
 import { defineConfig, searchForWorkspaceRoot } from 'vite';
 import { createRequire } from 'node:module';
-import { dirname } from 'node:path';
-import { realpathSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { readFileSync, readdirSync, realpathSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 const require = createRequire(import.meta.url);
 import react from '@vitejs/plugin-react';
+
+/**
+ * A hash of every source file that can change how a diagram is arranged or routed. It changes when that code does
+ * and not otherwise, so restarting the dev server or rebuilding unchanged code keeps the stored answers.
+ */
+function layoutCodeStamp(): string {
+    const hash = createHash('sha256');
+    const visit = (directory: string) => {
+        for (const entry of readdirSync(directory, { withFileTypes: true }).sort((a, b) => a.name.localeCompare(b.name))) {
+            const path = join(directory, entry.name);
+            if (entry.isDirectory()) { if (entry.name !== '__tests__') visit(path); }
+            else if (/\.tsx?$/.test(entry.name)) hash.update(entry.name).update(readFileSync(path));
+        }
+    };
+    for (const folder of ['src/views', 'src/diagram']) visit(fileURLToPath(new URL(folder, import.meta.url)));
+    hash.update(readFileSync(fileURLToPath(new URL('../../package.json', import.meta.url))));
+    return hash.digest('hex').slice(0, 16);
+}
 
 export default defineConfig({
     root: fileURLToPath(new URL('.', import.meta.url)),
     plugins: [react()],
-    // Identifies this build to the layout answers kept in the browser: a new build may arrange or route differently,
-    // so answers stored by another one are dropped (`diagram/layout-answers.ts`).
-    define: { __LAYOUT_BUILD__: JSON.stringify(new Date().toISOString()) },
+    // Identifies the layout code to the layout answers kept in the browser (`diagram/layout-answers.ts`): code that
+    // arranges or routes differently must not read back answers another version stored.
+    define: { __LAYOUT_BUILD__: JSON.stringify(layoutCodeStamp()) },
     // The local memo-meta workspace links Architect beside the ontology and
     // tools packages. Force peer dependencies such as ReactFlow to share the
     // app's React instance even when Vite itself resolves from the workspace

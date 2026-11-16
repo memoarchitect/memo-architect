@@ -223,6 +223,8 @@ interface EdgeContextMenuProps {
     onChangeColor: (color: string) => void;
     onToggleLabel: () => void;
     onDelete: () => void;
+    /** Routes this connector again automatically, replacing its hand-drawn bends. Given for connectors that have a route. */
+    onAutoRoute?: () => void;
 }
 
 const EDGE_COLORS = [
@@ -236,7 +238,7 @@ const EDGE_COLORS = [
 
 export function EdgeContextMenu({
     x, y, edgeId, relType, onClose,
-    onChangeStyle, onChangeColor, onToggleLabel, onDelete, onShowProperties,
+    onChangeStyle, onChangeColor, onToggleLabel, onDelete, onShowProperties, onAutoRoute,
 }: EdgeContextMenuProps) {
     return (
         <Menu x={x} y={y} onClose={onClose}>
@@ -246,6 +248,7 @@ export function EdgeContextMenu({
             </div>
 
             {onShowProperties && <MenuItem label="Show Properties" icon="ℹ" onClick={() => { onClose(); onShowProperties(); }} />}
+            {onAutoRoute && <MenuItem label="Route automatically" icon="↯" onClick={() => { onClose(); onAutoRoute(); }} />}
             {/* Line style */}
             <div className="px-3 py-1.5 flex items-center gap-2">
                 <span style={{ fontSize: '10px', color: '#9CA3AF', minWidth: 40 }}>Style</span>

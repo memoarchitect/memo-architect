@@ -5362,6 +5362,8 @@ function DiagramCanvasInner() {
                     onChangeColor={(c) => handleEdgeColorChange(edgeCtx.edgeId, c)}
                     onToggleLabel={() => handleEdgeLabelToggle(edgeCtx.edgeId)}
                     onDelete={() => setEdges(prev => prev.filter(e => e.id !== edgeCtx.edgeId))}
+                    onAutoRoute={edges.find(edge => edge.id === edgeCtx.edgeId)?.type === 'interconnectionEdge'
+                        ? () => { void autoRouteConnectors([edgeCtx.edgeId]); } : undefined}
                 />
             )}
         </div>

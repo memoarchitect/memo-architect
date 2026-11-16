@@ -1,7 +1,8 @@
 import { attachedRoute, cubicRoutePath, arcRoutePath, polylinePath, type IbdRoutingType } from '../diagram/ibd-routing';
 import { crossoverGaps } from '../diagram/ibd-crossovers';
+import { dragAxis, guideCoordinates, nudgeSegment, snapCoordinate, straightenRoute, type SnapAxis, type SnapGuide } from '../diagram/route-snapping';
 import { ibdEdgeHitClip } from '../diagram/ibd-hit-targets';
-import { memo, useMemo, useEffect, useRef, useId, type MouseEvent as ReactMouseEvent, type PointerEvent as ReactPointerEvent } from 'react';
+import { memo, useMemo, useEffect, useRef, useState, useId, type MouseEvent as ReactMouseEvent, type PointerEvent as ReactPointerEvent } from 'react';
 import { BaseEdge, EdgeLabelRenderer, useReactFlow, useStore, type EdgeProps } from '@xyflow/react';
 import { FONT } from '../styles/tokens';
 import { useConnectorHighlighted, useConnectorHoverActive } from './connector-hover';
@@ -104,6 +105,17 @@ function InterconnectionEdgeInner(props: EdgeProps) {
     ]);
     // Labels render through a portal, out of reach of the shared dimming rule.
     const labelDimmed = useConnectorHoverActive() && !highlighted;
+    // The line a dragged segment is drawn to, shown while it holds; and the segment the arrow keys move.
+    const [guide, setGuide] = useState<SnapGuide | null>(null);
+    const [activeSegment, setActiveSegment] = useState<number | null>(null);
+    const nudge = useRef<(event: KeyboardEvent) => void>(() => {});
+    useEffect(() => {
+        if (!props.selected || activeSegment === null) return;
+        const onKey = (event: KeyboardEvent) => nudge.current(event);
+        window.addEventListener('keydown', onKey);
+        return () => window.removeEventListener('keydown', onKey);
+    }, [props.selected, activeSegment]);
+    useEffect(() => { if (!props.selected) setActiveSegment(null); }, [props.selected]);
     const points = (props.data?.points as Point[] | undefined) ?? [];
     if (points.length < 2) return null;
     const routingType = (props.data?.routingType as IbdRoutingType | undefined) ?? 'orthogonal';
@@ -159,6 +171,7 @@ function InterconnectionEdgeInner(props: EdgeProps) {
             window.removeEventListener('keydown', key);
             window.removeEventListener('blur', cancel);
             cancelGesture.current = null;
+            setGuide(null);
         };
         const cancel = () => { cleanup(); if (moved) onRouteCancel?.(); };
         const key = (e: KeyboardEvent) => { if (e.key === 'Escape') { e.preventDefault(); cancel(); } };
@@ -170,7 +183,12 @@ function InterconnectionEdgeInner(props: EdgeProps) {
         };
         const up = (e: PointerEvent) => {
             if (e.pointerId !== pointer) return;
-            cleanup(); if (moved) onRouteChangeComplete?.(points, latest, Boolean(props.data?.manualRoute));
+            cleanup();
+            if (!moved) return;
+            // A segment left level with its neighbours has bends that no longer turn; they go when the drag ends.
+            const straightened = straightenRoute(latest, routingType);
+            if (straightened !== latest) { latest = straightened; onRouteChange?.(latest); setActiveSegment(null); }
+            onRouteChangeComplete?.(points, latest, Boolean(props.data?.manualRoute));
         };
         cancelGesture.current = cancel;
         window.addEventListener('pointermove', move);
@@ -185,26 +203,35 @@ function InterconnectionEdgeInner(props: EdgeProps) {
         event.stopPropagation();
         const before = points.map(point => ({ ...point }));
         const startX = event.clientX, startY = event.clientY;
+        setActiveSegment(segment.index);
+        const others = allEdges.filter(edge => edge.id !== props.id)
+            .map(edge => (edge.data?.points as Point[] | undefined) ?? []);
+        // Draws the dragged coordinate to a nearby line of this or another connector. Alt drags freely.
+        const snap = (e: PointerEvent, axis: SnapAxis, value: number, moving: number[]) => {
+            if (e.altKey) { setGuide(null); return value; }
+            const snapped = snapCoordinate(value, guideCoordinates(axis, points, moving, others), 6 / getZoom());
+            setGuide(snapped.snapped ? { axis, value: snapped.value } : null);
+            return snapped.value;
+        };
         gesture(event, (e: PointerEvent) => {
             let latest = before;
             const dx = (e.clientX - startX) / getZoom();
             const dy = (e.clientY - startY) / getZoom();
             if (segment.straight || segment.index === 1 || segment.index === points.length - 1) {
                 if (Math.abs(dy) >= Math.abs(dx)) {
-                    const laneY = segment.a.y + dy;
+                    const laneY = snap(e, 'y', segment.a.y + dy, []);
                     latest = [...before.slice(0, segment.index), { x: segment.a.x, y: laneY }, { x: segment.b.x, y: laneY }, ...before.slice(segment.index)];
                 } else {
-                    const laneX = (segment.a.x + segment.b.x) / 2 + dx;
+                    const laneX = snap(e, 'x', (segment.a.x + segment.b.x) / 2 + dx, []);
                     latest = [...before.slice(0, segment.index), { x: laneX, y: segment.a.y }, { x: laneX, y: segment.b.y }, ...before.slice(segment.index)];
                 }
             } else {
                 latest = points.map(point => ({ ...point }));
+                const moving = [segment.index - 1, segment.index];
                 if (segment.a.y === segment.b.y) {
-                    latest[segment.index - 1].y = segment.a.y + dy;
-                    latest[segment.index].y = segment.b.y + dy;
+                    latest[segment.index - 1].y = latest[segment.index].y = snap(e, 'y', segment.a.y + dy, moving);
                 } else if (segment.a.x === segment.b.x) {
-                    latest[segment.index - 1].x = segment.a.x + dx;
-                    latest[segment.index].x = segment.b.x + dx;
+                    latest[segment.index - 1].x = latest[segment.index].x = snap(e, 'x', segment.a.x + dx, moving);
                 } else {
                     latest[segment.index - 1] = { x: segment.a.x + dx, y: segment.a.y + dy };
                     latest[segment.index] = { x: segment.b.x + dx, y: segment.b.y + dy };
@@ -212,6 +239,22 @@ function InterconnectionEdgeInner(props: EdgeProps) {
             }
             return latest;
         });
+    };
+    // Arrow keys move the segment last picked up, across its own direction: one unit, ten with Shift. Each press
+    // is one route edit, so one undo step.
+    nudge.current = (event: KeyboardEvent) => {
+        if (!onRouteChange || activeSegment === null || event.metaKey || event.ctrlKey || event.altKey) return;
+        const target = event.target as HTMLElement | null;
+        if (target && (target.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName))) return;
+        const axis = activeSegment >= 1 && activeSegment < points.length
+            ? dragAxis(points[activeSegment - 1], points[activeSegment]) : undefined;
+        const direction = axis === 'y' ? (event.key === 'ArrowUp' ? -1 : event.key === 'ArrowDown' ? 1 : 0)
+            : axis === 'x' ? (event.key === 'ArrowLeft' ? -1 : event.key === 'ArrowRight' ? 1 : 0) : 0;
+        if (!direction) return;
+        const after = nudgeSegment(points, activeSegment, direction * (event.shiftKey ? 10 : 1));
+        if (!after) return;
+        event.preventDefault(); event.stopPropagation();
+        onRouteStart?.(); onRouteChange(after); onRouteChangeComplete?.(points, after, Boolean(props.data?.manualRoute));
     };
     const nearestDraggableSegment = (point: Point): RouteSegment | undefined => {
         const squaredDistance = (segment: RouteSegment) => {
@@ -271,6 +314,12 @@ function InterconnectionEdgeInner(props: EdgeProps) {
                 />
             )}
             </g>
+            {guide && (
+                <line data-ibd-snap-guide pointerEvents="none" stroke="#2563EB" strokeWidth={1 / controlZoom}
+                    strokeDasharray={`${4 / controlZoom} ${3 / controlZoom}`}
+                    x1={guide.axis === 'x' ? guide.value : minX - 100_000} x2={guide.axis === 'x' ? guide.value : minX + 100_000}
+                    y1={guide.axis === 'y' ? guide.value : minY - 100_000} y2={guide.axis === 'y' ? guide.value : minY + 100_000} />
+            )}
             {hitPoints.length >= 2 && (
                 <path
                     d={hitPath}
@@ -340,12 +389,15 @@ function InterconnectionEdgeInner(props: EdgeProps) {
                     <EdgeLabelRenderer key={`route-${segment.index}`}>
                         <div
                             className="nodrag nopan"
-                            title="Drag connector segment"
+                            title={segment.index > 1 && segment.index < points.length - 1
+                                ? 'Drag connector segment. It lines up with nearby connectors (hold Alt to place it freely). Arrow keys move it once picked.'
+                                : 'Drag connector segment'}
                             onDoubleClick={onLineDoubleClick}
                             onPointerDown={event => beginRouteDrag(event, segment)}
                             style={{
                                 position: 'absolute', transform: `translate(-50%, -50%) translate(${x}px, ${y}px)`,
-                                width: 12 / controlZoom, height: 12 / controlZoom, boxSizing: 'border-box', borderRadius: 3 / controlZoom, background: '#FFFFFF',
+                                width: 12 / controlZoom, height: 12 / controlZoom, boxSizing: 'border-box', borderRadius: 3 / controlZoom,
+                                background: activeSegment === segment.index ? '#2563EB' : '#FFFFFF',
                                 border: `${2 / controlZoom}px solid #2563EB`, boxShadow: '0 1px 4px rgba(15,23,42,0.22)',
                                 cursor: segment.a.y === segment.b.y ? 'ns-resize' : 'ew-resize',
                                 pointerEvents: 'all', touchAction: 'none', zIndex: 20,
