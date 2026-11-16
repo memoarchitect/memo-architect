@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react';
-import { compatibleRelationshipTargets, type MemoElement, type MemoModelDTO, type RelationshipDirection } from '@memoarchitect/tools/browser';
+import { type MemoElement, type MemoModelDTO, type RelationshipDirection } from '@memoarchitect/tools/browser';
+import { pathwayRelationship } from '../lib/pathway-relationship';
 import { useModelStore } from '../store/model-store';
 
 export function PathwayRelationship({ model, selected, canWrite, type, direction, heading, peerLabel, linkLabel, peerAllowed, onPeer, canOpenPeer, placementNoun = 'allocation' }: {
@@ -12,15 +13,7 @@ export function PathwayRelationship({ model, selected, canWrite, type, direction
     const [busy, setBusy] = useState(false);
     const [notice, setNotice] = useState<{ message: string; error: boolean }>();
     const outgoing = direction === 'outgoing';
-    const linkedIds = new Set(model.relationships
-        .filter(edge => edge.type === type && (outgoing ? edge.sourceId : edge.targetId) === selected.id)
-        .map(edge => outgoing ? edge.targetId : edge.sourceId));
-    const linked = [...linkedIds].flatMap(id => model.elements[id] ? [model.elements[id]] : []);
-    const definition = model.registries?.relationships.find(item => item.name === type && !item.isAbstract);
-    const peers = definition && model.registries
-        ? compatibleRelationshipTargets(selected, definition, direction, model, model.registries).map(item => item.element)
-            .filter(item => !linkedIds.has(item.id) && peerAllowed(item))
-        : [];
+    const { linked, peers, status } = pathwayRelationship(model, selected, type, direction, peerAllowed);
     const candidate = peers.find(peer => peer.id === candidateId);
     const source = outgoing ? selected : candidate;
     const target = outgoing ? candidate : selected;
@@ -41,7 +34,7 @@ export function PathwayRelationship({ model, selected, canWrite, type, direction
 
     return <section className="pathway-related" aria-label={heading}>
         <h4>{heading}</h4>
-        <p>{linked.length ? 'Linked' : !definition ? 'Check unavailable for this profile' : peers.length ? 'Ready to link' : 'Link later'}</p>
+        <p>{status}</p>
         {linked.map(item => onPeer && (canOpenPeer?.(item) ?? true)
             ? <button type="button" className="pathway-resource" key={item.id} onClick={() => onPeer(item.id)}>{item.name}</button>
             : <p key={item.id}>{item.name}</p>)}
