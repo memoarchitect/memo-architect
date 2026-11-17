@@ -204,17 +204,22 @@ export function GuidedContextSetup({ model, system, canWrite, diagram, diagramSu
     return <div className="pathway-context-studio">
         <aside className="pathway-context-studio-panel pathway-context-palette" aria-label="Context summary">
             <h2>Context summary</h2>
-            {[...sections, ...(settings.length ? [{
+            {[...sections, {
                 category: 'environment' as const, icon: ControlIcon.location, rows: settingIds.flatMap(forSetting),
-            }] : [])].map(({ category, icon, rows }) => {
+            }].map(({ category, icon, rows }) => {
+                const needsUseContext = category === 'environment' && !settingIds.length;
                 const count = new Set(rows.map(edge => category === 'environment' ? edge.targetId : edge.sourceId)).size;
                 return <div key={category} className={`pathway-context-tool pathway-context-tool--${category === 'environment' ? 'setting' : category}`}>
                     <span aria-hidden="true">{icon}</span>
                     <strong>{labels[category][0].toUpperCase() + labels[category].slice(1)}</strong>
                     <small>{count}</small>
+                    {category === 'setting' && <p className="pathway-context-tool-hint">The situation in which the system is used, such as home monitoring.</p>}
+                    {category === 'environment' && <p className="pathway-context-tool-hint">{needsUseContext && canWrite
+                        ? 'Link a use context to add an environment.'
+                        : 'Conditions of use, such as lighting and noise.'}</p>}
                     {canWrite && <div className="pathway-context-tile-actions">
                         <button type="button" aria-label={`Add ${labels[category]}`} title={`Add ${labels[category]}`}
-                            disabled={busy} aria-pressed={picker?.category === category}
+                            disabled={busy || needsUseContext} aria-pressed={picker?.category === category}
                             onClick={() => openPicker(category, category === 'environment' ? settingIds[0] : undefined)}>+</button>
                         <button type="button" aria-label={`Remove ${labels[category]} link`} title={`Remove ${labels[category]} link`}
                             disabled={busy || !rows.length} aria-pressed={removing === category}
