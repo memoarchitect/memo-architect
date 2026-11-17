@@ -82,6 +82,25 @@ describe('the guided layer workspace', () => {
         expect(useModelStore.getState().activeView).toMatchObject({ type: 'pathway', layer: 'layerWork' });
     });
 
+    it('keeps work linked to a function apart from work linked to one use of it in a flow', async () => {
+        prepareFunctionalWorkbench();
+        const before = useModelStore.getState().model!;
+        useModelStore.setState({ model: { ...before,
+            elements: { ...before.elements, direct: element('direct', 'Scenario', 'Check the sample'), viaStep: element('viaStep', 'Scenario', 'Report the reading') },
+            operationalLevels: { direct: 'system', viaStep: 'system' },
+            relationships: [...before.relationships, { id: 'direct-performs', type: 'performs', sourceId: 'direct', targetId: 'fn' }, { id: 'step-performs', type: 'performs', sourceId: 'viaStep', targetId: 'step' }],
+        } as never });
+        await render(); await click('Compute signal');
+        const related = container.querySelector('[aria-label="Related operational work"]')!;
+        expect(related.textContent).toContain('Activities that perform this function directly');
+        const occurrences = related.querySelector('[aria-label="Operational work linked to a flow step"]')!;
+        expect(occurrences.textContent).toContain('Report the reading');
+        expect(occurrences.textContent).toContain('Measure here');
+        expect(occurrences.textContent).toContain('Run measurement');
+        expect(occurrences.textContent).not.toContain('Check the sample');
+        expect(related.textContent).toContain('Check the sample');
+    });
+
     it('opens exact scoped endpoints from Functional and Logical', async () => {
         prepareFunctionalWorkbench();
         answer.layers.push({ ...answer.layers[0], id: 'logical', name: 'layerLogical', label: 'Logical', workbench: undefined, tasks: [] });

@@ -140,13 +140,31 @@ export function FunctionalWorkbench({ model, row, workspace, canWrite, artifactI
     }, [selectedId, workspace, flowMode, model]);
     const relatedFlows = !flowMode && selected ? allFlows.filter(flow => (onFunctional || flows.some(local => local.id === flow.id)) &&
         functionalFlowSteps(model, flow.id).steps.some(step => step.functionId === selected.id)) : [];
-    const traceTargets = new Set(selected ? [selected.id] : []);
-    if (flowMode && selected) for (const item of functionalFlowSteps(model, selected.id).steps) traceTargets.add(item.step.id);
-    const operationalIds = new Set<string>();
-    for (const edge of model.relationships) {
-        if (edge.type === 'performs' && traceTargets.has(edge.targetId) && operationalWorkLevel(model, edge.sourceId)) operationalIds.add(edge.sourceId);
-        if (edge.type === 'realizes' && traceTargets.has(edge.sourceId) && operationalWorkLevel(model, edge.targetId)) operationalIds.add(edge.targetId);
+    // A flow step is an occurrence of a function. Operational work linked to a step is listed under that
+    // step and its flow, never as work linked to the function itself.
+    const operationalLinks: { id: string; via?: { flowId: string; flow: string; step: string } }[] = [];
+    if (selected) {
+        const direct = new Set([selected.id]);
+        const occurrences = new Map<string, { flowId: string; flow: string; step: string }>();
+        for (const flow of flowMode ? [selected] : allFlows) for (const item of functionalFlowSteps(model, flow.id).steps) {
+            if (flowMode || item.functionId === selected.id) occurrences.set(item.step.id, { flowId: flow.id, flow: flow.name, step: item.step.name });
+        }
+        const seen = new Set<string>();
+        const add = (id: string, target: string) => {
+            if (!operationalWorkLevel(model, id) || seen.has(`${id}:${target}`)) return;
+            seen.add(`${id}:${target}`);
+            if (direct.has(target)) operationalLinks.unshift({ id }); else operationalLinks.push({ id, via: occurrences.get(target)! });
+        };
+        for (const edge of model.relationships) {
+            if (edge.type === 'performs' && (direct.has(edge.targetId) || occurrences.has(edge.targetId))) add(edge.sourceId, edge.targetId);
+            if (edge.type === 'realizes' && (direct.has(edge.sourceId) || occurrences.has(edge.sourceId))) add(edge.targetId, edge.sourceId);
+        }
     }
+    const directLinks = operationalLinks.filter(link => !link.via);
+    const occurrenceLinks = operationalLinks.filter(link => link.via);
+    const operationalButton = (id: string) => onOperational
+        ? <button type="button" className="pathway-resource" onClick={() => onOperational(id)}>{model.elements[id].name}</button>
+        : <span>{model.elements[id].name}</span>;
     const treeRow = (id: string, ancestors: Set<string>): React.ReactNode => {
         if (ancestors.has(id)) return null;
         const element = model.elements[id]; if (!element) return null;
@@ -170,10 +188,13 @@ export function FunctionalWorkbench({ model, row, workspace, canWrite, artifactI
                     {!adding && !!relatedFlows.length && <section className="pathway-related" aria-label="Flows using this function"><h3>Used in flows</h3>
                         <div className="pathway-resources">{relatedFlows.map(flow => <button key={flow.id} type="button" className="pathway-resource" onClick={() => openFlow(flow.id)}>{flow.name}</button>)}</div>
                     </section>}
-                    {!adding && !!operationalIds.size && <section className="pathway-related" aria-label="Related operational work"><h3>Related operational work</h3>
-                        <div className="pathway-resources">{[...operationalIds].map(id => onOperational
-                            ? <button key={id} type="button" className="pathway-resource" onClick={() => onOperational(id)}>{model.elements[id].name}</button>
-                            : <span key={id}>{model.elements[id].name}</span>)}</div>
+                    {!adding && !!operationalLinks.length && <section className="pathway-related" aria-label="Related operational work"><h3>Related operational work</h3>
+                        {!!directLinks.length && <><p style={{ color: COLOR.muted, margin: '4px 0' }}>{flowMode ? 'Activities and scenarios this flow realizes' : 'Activities that perform this function directly'}</p>
+                            <div className="pathway-resources">{directLinks.map(link => <span key={link.id}>{operationalButton(link.id)}</span>)}</div></>}
+                        {!!occurrenceLinks.length && <><p style={{ color: COLOR.muted, margin: '10px 0 4px' }}>{flowMode ? 'Activities linked to one step of this flow' : 'Activities linked to one use of this function in a flow, not to the function itself'}</p>
+                            <ul aria-label="Operational work linked to a flow step" style={{ listStyle: 'none', padding: 0, margin: 0 }}>{occurrenceLinks.map(link => <li key={`${link.id}:${link.via!.flowId}:${link.via!.step}`} style={{ marginBottom: 6 }}>
+                                {operationalButton(link.id)} <small style={{ color: COLOR.muted }}>step <strong>{link.via!.step}</strong>{!flowMode && <> in {onFunctional || flows.some(flow => flow.id === link.via!.flowId)
+                                    ? <button type="button" className="pathway-button" onClick={() => openFlow(link.via!.flowId)}>{link.via!.flow}</button> : link.via!.flow}</>}</small></li>)}</ul></>}
                     </section>}
                 </section>);
     return <section className="pathway-workspace" data-testid="functional-workbench" style={{ flex: 1, minHeight: 0, overflow: 'auto', padding: 20 }}>
