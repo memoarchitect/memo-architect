@@ -131,6 +131,42 @@ describe('guided operational work', () => {
         expect(group.querySelectorAll('.pathway-icon-tile')).toHaveLength(1);
     });
 
+    it('reviews which system activities perform a system function, apart from those covered by a flow', async () => {
+        const data = useModelStore.getState().model!;
+        useModelStore.setState({ model: { ...data, relationships: data.relationships.filter(edge => edge.id !== 'flowRealization') } });
+        await render();
+        await click('System');
+        await click('Review functional coverage');
+        const table = () => container.querySelector('[aria-label="System activity function coverage"]')!;
+        expect(table().textContent).toContain('Report signal');
+        expect(table().textContent).not.toContain('Read signal');
+        const linked = container.querySelector('[aria-label="Link coverage"] input[type="checkbox"]') as HTMLInputElement;
+        act(() => linked.click()); await settle();
+        const readRow = [...table().querySelectorAll('tr')].find(row => row.textContent?.includes('Read signal'))!;
+        expect(readRow.textContent).toContain('Linked');
+        expect(readRow.textContent).toContain('Acquire signal');
+        const reportButton = [...table().querySelectorAll('button')].find(button => button.textContent === 'Report signal')!;
+        act(() => reportButton.click()); await settle();
+        expect(container.querySelector('[aria-label="Current operational task"] h2')?.textContent).toBe('Report signal');
+        await click('+ System function');
+        const options = [...container.querySelectorAll('select[aria-label="Connect existing work"] option')].map(option => option.textContent);
+        expect(options.some(option => option?.startsWith('Acquire signal'))).toBe(true);
+        expect(options.some(option => option?.startsWith('Coordinate system'))).toBe(false);
+    });
+
+    it('shows an activity realized by a flow as covered through that flow', async () => {
+        const data = useModelStore.getState().model!;
+        useModelStore.setState({ model: { ...data, relationships: data.relationships.filter(edge => edge.id !== 'functionPerformance') } });
+        await render();
+        await click('System');
+        await click('Review functional coverage');
+        const linked = container.querySelector('[aria-label="Link coverage"] input[type="checkbox"]') as HTMLInputElement;
+        act(() => linked.click()); await settle();
+        const readRow = [...container.querySelectorAll('[aria-label="System activity function coverage"] tr')].find(row => row.textContent?.includes('Read signal'))!;
+        expect(readRow.textContent).toContain('Via a functional flow');
+        expect(readRow.textContent).toContain('Signal flow');
+    });
+
     it('opens a use case diagram from the system catalog before selecting a goal', async () => {
         await render();
         await click('System');

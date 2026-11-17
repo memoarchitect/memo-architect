@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { LinkCoverageTable, type LinkCoverageRow } from './LinkCoverage';
 import { indexKinds, kindConformsTo, type MemoElement, type MemoModelDTO, type RelationshipDirection } from '@memoarchitect/tools/browser';
 import type { DisciplineMode } from '../lib/discipline-guides';
 import { pathwayRelationship } from '../lib/pathway-relationship';
@@ -87,29 +88,17 @@ function DeploymentCoverage({ model, workspace, items, realizationKinds, onSelec
     model: MemoModelDTO; workspace: string | null; items: MemoElement[]; realizationKinds: readonly string[];
     onSelect: (id: string) => void;
 }) {
-    const [includeLinked, setIncludeLinked] = useState(false);
     const registry = indexKinds(model.registries?.kinds ?? []);
-    const rows = items.flatMap(item => coverageChecks
+    const rows: LinkCoverageRow[] = items.flatMap(item => coverageChecks
         .filter(check => realizationKinds.includes(check.kind) && isDeploymentPart(item, check.kind, registry))
         .map(check => {
             const peerKind = check.direction === 'incoming' ? check.recipe.sourceKind : check.recipe.targetKind;
             const kinds = check.recipe.type === 'buildsInto' ? undefined : realizationKinds;
             const { allowed } = deploymentPeerRules(model, workspace, item, peerKind, registry, kinds);
-            return { item, check, coverage: pathwayRelationship(model, item, check.recipe.type, check.direction, allowed) };
+            return { key: `${item.id}:${check.recipe.type}`, item, relationship: check.label, coverage: pathwayRelationship(model, item, check.recipe.type, check.direction, allowed) };
         }));
-    const shown = rows.filter(row => includeLinked || row.coverage.status !== 'Linked');
-    return <section className="pathway-related" aria-label="Link coverage">
-        <label><input type="checkbox" checked={includeLinked} onChange={event => setIncludeLinked(event.target.checked)} /> Show linked items</label>
-        {shown.length > 0 ? <div className="pathway-operational-table"><table aria-label="Deployment link coverage">
-            <thead><tr><th scope="col">Item</th><th scope="col">Relationship</th><th scope="col">Status</th><th scope="col">Related items</th></tr></thead>
-            <tbody>{shown.map(({ item, check, coverage }) => <tr key={`${item.id}:${check.recipe.type}`}>
-                <td><button type="button" className="pathway-resource" onClick={() => onSelect(item.id)}>{item.name}</button></td>
-                <td>{check.label}</td><td>{coverage.status}</td>
-                <td>{coverage.linked.length ? coverage.linked.map(peer => peer.name).join(', ')
-                    : coverage.peers.length ? `${coverage.peers.length} available` : '—'}</td>
-            </tr>)}</tbody>
-        </table></div> : <p>{rows.length ? 'All listed relationships are linked.' : 'No deployment units or processing nodes in this scope.'}</p>}
-    </section>;
+    return <LinkCoverageTable label="Deployment link coverage" rows={rows} onSelect={onSelect}
+        empty={rows.length ? 'All listed relationships are linked.' : 'No deployment units or processing nodes in this scope.'} />;
 }
 
 export function DeploymentWorkbench({ model, workspace, artifactId, canWrite, realizationKinds, onSelect, onModule, discipline = 'all' }: {

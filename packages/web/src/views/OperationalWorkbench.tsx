@@ -11,6 +11,8 @@ import { DiagramEmbedContext } from '../diagram/diagram-embed-context';
 import { PaletteKindsContext } from './DiagramPalette';
 import { COLOR } from '../styles/tokens';
 import { ControlIcon } from '../components/TraceControls';
+import { pathwayRelationship } from '../lib/pathway-relationship';
+import { LinkCoverageTable, type LinkCoverageRow } from './LinkCoverage';
 import './pathway-workbench.css';
 const DiagramCanvas = lazy(() => import('./DiagramCanvas').then(module => ({ default: module.DiagramCanvas })));
 const DiagramEditor = lazy(() => import('./DiagramEditor').then(module => ({ default: module.DiagramEditor })));
@@ -94,7 +96,11 @@ export function OperationalWorkbench({ model, row, workspace, canWrite, entry, o
     const writable = canWrite && !busy && ownSelection && selected?.provenance?.declaration.writable !== false && operationalWorkLevel(model, selected!.id) === level;
     const selectedLevel = selected ? operationalWorkLevel(model, selected.id) : undefined;
     const sourceWorkspace = selected && model.workspaceMembership?.workspaces.find(scope => model.workspaceMembership?.membership[selected.id]?.includes(scope.root));
-    const functions = functionalCatalog(model, workspace);
+    // A tree's parent function groups the system's responsibilities; an activity performs one of them, not the group.
+    const functions = useMemo(() => {
+        const roots = new Set(model.relationships.filter(edge => edge.type === 'functionalRoot').map(edge => edge.targetId));
+        return functionalCatalog(model, workspace).filter(fn => !roots.has(fn.id));
+    }, [model, workspace]);
     const flows = functionalFlowsInScope(model, workspace);
     const newWrite = canWrite && !busy && (level === 'clinical' || !!workspace);
     const base = { workspace, level };
@@ -227,6 +233,22 @@ export function OperationalWorkbench({ model, row, workspace, canWrite, entry, o
         : useCases.find(item => item.id === overviewAnchor && linkedCases.includes(item.id))
         ?? useCases.find(item => linkedCases.includes(item.id));
     const [caseDetailsOpen, setCaseDetailsOpen] = useState(Boolean(entry?.artifactId));
+    const [coverageOpen, setCoverageOpen] = useState(false);
+    // System activities checked for a direct system function. A flow that realizes the activity is shown as
+    // indirect coverage, never as a function the activity performs.
+    const functionCoverage = useMemo((): LinkCoverageRow[] => {
+        if (level !== 'system' || !coverageOpen) return [];
+        const local = new Set(functions.map(fn => fn.id));
+        return operationalCatalog(model, 'OperativeAction', taskScope)
+            .filter(activity => operationalWorkLevel(model, activity.id) === 'system' && canonicalFunctionId(model, activity.id) === activity.id)
+            .map(activity => {
+                const realizingFlows = model.relationships.filter(edge => edge.type === 'realizes' && edge.targetId === activity.id && conforms(edge.sourceId, 'FunctionalFlow'))
+                    .flatMap(edge => model.elements[edge.sourceId] ? [model.elements[edge.sourceId]] : []);
+                return { key: activity.id, item: activity, relationship: 'Performs a system function',
+                    coverage: pathwayRelationship(model, activity, 'performs', 'outgoing', element => local.has(element.id)),
+                    ...(realizingFlows.length ? { indirect: { status: 'Via a functional flow', related: realizingFlows.map(flow => flow.name).join(', ') } } : {}) };
+            });
+    }, [model, level, coverageOpen, taskScope, functions]);
     const openOverviewItem = (id: string) => { setOverviewAnchor(overviewCase?.id); setCaseDetailsOpen(false); choose(id); };
     const backToUseCases = () => { setOverviewAnchor(undefined); setSelectedId(undefined); setAction(undefined); setCategory('case'); setCaseDetailsOpen(false); };
     const showOverviewDetails = !!action || !!selected && (selectedRole !== 'case' || caseDetailsOpen);
@@ -468,6 +490,13 @@ export function OperationalWorkbench({ model, row, workspace, canWrite, entry, o
                     {[[ControlIcon.goal, useCases.length, 'Use cases'], [ControlIcon.workflow, workflows.length, 'Workflows'], [ControlIcon.scenario, scenarios.length, 'Scenarios']].map(([icon, count, label]) =>
                         <div key={String(label)}><span className="pathway-icon" aria-hidden="true">{icon}</span><span><strong>{count}</strong><small>{label}</small></span></div>)}
                 </div>
+                {level === 'system' && <div style={{ margin: '0 0 12px' }}>
+                    <button type="button" className="pathway-button" aria-expanded={coverageOpen} onClick={() => setCoverageOpen(open => !open)}>
+                        {coverageOpen ? 'Hide functional coverage' : 'Review functional coverage'}</button>
+                    {coverageOpen && <LinkCoverageTable label="System activity function coverage" rows={functionCoverage}
+                        empty={functionCoverage.length ? 'Every system activity performs a system function or is realized by a flow.' : 'No system activities in this scope yet.'}
+                        onSelect={id => { setCoverageOpen(false); choose(id); }} />}
+                </div>}
                 <section className="pathway-operational-panel" aria-label="Use case catalog">
                     <div className="pathway-gallery-heading pathway-operational-panel-head">
                         <h2>Choose a goal</h2>
