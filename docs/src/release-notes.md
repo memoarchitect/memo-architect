@@ -2,6 +2,17 @@
 
 Versioned under [semantic versioning](https://semver.org/). Before 1.0 a breaking change to the ontology raises the minor number; any other release raises the patch. Every release is tagged in the repository. The notes for all three packages are also on [memoarchitect.com/releases.html](https://memoarchitect.com/releases.html).
 
+## 0.22.0
+
+### Breaking
+
+- Follows the ontology: the concern definitions' `name` and `description` attributes are gone.
+
+### Added
+
+- Connect two ports on an interconnection view by dragging between them; add a part, a port and connect two parts from the view; deleting a connector deletes its relationship.
+- Large boards open faster: layout and routing are planned in a worker, and a saved view reopens without being arranged or routed again.
+
 ## 0.20.0
 
 ### Breaking
