@@ -268,24 +268,29 @@ export class BaseInterconnectionRenderer {
     /** Resizing a part keeps its boundary ports pinned to the perimeter walls. */
     get wallSnapPortsOnResize(): boolean { return false; }
     /**
-     * Whether the canvas may AUTHOR model content — draw a connector between
-     * two ports, drop a kind from the palette, double-click to create a part.
+     * Whether dropping a kind from the palette or double-clicking the canvas
+     * creates a part.
      *
-     * Disabled, because a view is a reading of the model and not a place to
-     * write one. Dragging from a port used to open the relationship picker and
-     * write a SysML relationship; the gesture is indistinguishable from trying
-     * to pan or select, and a diagram that silently authors is a diagram you
-     * cannot explore safely.
-     *
-     * Relationships are still authored — in the SysML, or in the traceability
-     * matrix, which exists to establish trace and says so. This only removes
-     * authoring from the drawing.
+     * Disabled: both gestures are easy to make while exploring, and a diagram
+     * that authors on a stray double-click is a diagram you cannot explore
+     * safely. A part is added by command, from a part's context menu.
      *
      * It stays a renderer property rather than a constant so a project can
      * subclass and opt back in, the way every other interaction rule here can
      * be overridden.
      */
     get disableOnCanvasAuthoring(): boolean { return true; }
+    /**
+     * Whether dragging from one port to another on an interconnection view
+     * offers to connect them.
+     *
+     * Enabled. The drag starts on a port, which is not where a pan or a
+     * selection starts, and nothing is written by the drag itself: it opens
+     * the connector picker, and the relationship is written only when a
+     * connector is chosen there. Escape, or a click outside, leaves the model
+     * as it was.
+     */
+    get connectPortsByDrag(): boolean { return true; }
     /** A port drag snaps to whichever of the four walls the cursor is nearest and
      *  slides along it (vs. the default vertical-only nudge). */
     get multiWallPortDrag(): boolean { return false; }
@@ -384,7 +389,9 @@ export class IbdInterconnectionRenderer extends BaseInterconnectionRenderer {
 
     override renderImplicitPorts(): boolean { return false; }
 
-    override portConnectable(): boolean { return false; }
+    // A connector is drawn from a port's square when the view connects ports by drag; the ring around the square and
+    // the port's caption still slide it along its wall.
+    override portConnectable(): boolean { return this.connectPortsByDrag; }
 
     // Monochrome shading: parts read as light grey→white by depth (frame darkest,
     // then container, then leaf), NOT the automatic per-layer tints. A per-diagram

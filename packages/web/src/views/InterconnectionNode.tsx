@@ -118,18 +118,20 @@ const handlePinStyle = (size: number): React.CSSProperties => ({
     pointerEvents: 'none',
 });
 
+/** The share of a port's square, from its centre, that starts a connector. The band around it slides the port. */
+const CONNECT_AREA = 0.6;
+
 /**
- * The outer face of a port is where connectors are drawn from, so that handle
- * has to take pointer events — but the port also drags vertically to reposition
- * it. The two are separated by area rather than by modifier: this handle covers
- * the port square exactly and sits above it, while the larger invisible hit
- * target underneath keeps the surrounding ring for the move gesture. Draw from
- * the square, slide the port by its ring.
+ * A port is where a connector is drawn from, and it also slides along its
+ * wall. The two are separated by area, not by a modifier: the middle of the
+ * square starts a connector, and the band around it, like the caption, slides
+ * the port. The band is part of the square itself, so it is there whatever
+ * size the port is drawn at.
  */
 const connectableHandleStyle = (size: number): React.CSSProperties => ({
-    ...handlePinStyle(size),
+    ...handlePinStyle(size * CONNECT_AREA),
     pointerEvents: 'auto',
-    cursor: 'pointer',
+    cursor: 'crosshair',
     zIndex: 12,
 });
 

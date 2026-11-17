@@ -30,6 +30,7 @@ import { IbdRoutingControls } from '../diagram/toolbars/IbdRoutingControls';
 import { alertDialog, confirmDialog, promptDialog } from '../components/AppDialogs';
 import { awaitSavedElement } from '../store/await-element';
 import { ConnectPortsDialog, type ConnectPortsRequest, type PortChoice } from './ConnectPortsDialog';
+import { connectorEnds } from '../diagram/connector-ends';
 import { childKindOptions, declaredNameFor } from './templates/table-authoring';
 import { actionDrillSource, childrenOf, definitionSubtree, drillPath, drillTarget, enterLevel } from '../lib/system-navigator';
 import {
@@ -3732,10 +3733,13 @@ function DiagramCanvasInner() {
 
     // ─── Edge drawing ─────────────────────────────────────────────────────────
 
-    const onConnectStart = useCallback(() => {
+    /** The handle a connection drag started on. React Flow reports the two ends by handle type, not by drag order. */
+    const connectStartRef = useRef<{ nodeId: string | null; handleId: string | null } | null>(null);
+    const onConnectStart = useCallback((_event: unknown, started?: { nodeId: string | null; handleId: string | null }) => {
         // Clear any open menus
         setNodeCtx(null);
         setEdgeCtx(null);
+        connectStartRef.current = started ? { nodeId: started.nodeId, handleId: started.handleId } : null;
     }, []);
 
     const onConnectEnd = useCallback((event: MouseEvent | TouchEvent, connectionState: any) => {
@@ -3764,8 +3768,8 @@ function DiagramCanvasInner() {
         const { source, target, sourceHandle, targetHandle } = connection;
         if (!source || !target) return;
 
-        const sourceEl = connectionEndpoint(source, sourceHandle);
-        const targetEl = connectionEndpoint(target, targetHandle);
+        let sourceEl = connectionEndpoint(source, sourceHandle);
+        let targetEl = connectionEndpoint(target, targetHandle);
         // Both endpoints must be model elements — legality is resolved from
         // their kinds, so an edge to something unknown offers no types.
         if (!sourceEl || !targetEl) return;
@@ -3773,6 +3777,11 @@ function DiagramCanvasInner() {
         // relationship; the writer would reject it and the picker would offer
         // types for a link that cannot exist.
         if (sourceEl.id === targetEl.id) return;
+        if (viewKind === 'interconnection' && sourceEl.construct === 'port' && targetEl.construct === 'port') {
+            const started = connectStartRef.current;
+            const draggedFrom = started?.nodeId ? connectionEndpoint(started.nodeId, started.handleId) : undefined;
+            [sourceEl, targetEl] = connectorEnds(sourceEl, targetEl, draggedFrom);
+        }
 
         // Show relationship picker at approximate mouse position
         setRelPicker({
@@ -3782,8 +3791,10 @@ function DiagramCanvasInner() {
             targetElement: targetEl,
             sourceFeature: parameterOfHandle(sourceHandle),
             targetFeature: parameterOfHandle(targetHandle),
+            // Two ports on an interconnection view are joined by a connector, as "Connect to…" joins them.
+            connectors: viewKind === 'interconnection' && sourceEl.construct === 'port' && targetEl.construct === 'port',
         });
-    }, [connectionEndpoint]);
+    }, [connectionEndpoint, viewKind]);
 
     /**
      * Reconnect one end of an existing SysML relationship.
@@ -4243,10 +4254,22 @@ function DiagramCanvasInner() {
 
     // What joins two ports is whatever the ontology declares as an interface or a flow definition. Read from the
     // registry's own `sysmlConstruct`, so a project's or an extension's connector is offered like a built-in one.
-    const connectorTypeNames = useMemo(() => (model?.registries?.relationships ?? [])
-        .filter(definition => !definition.isAbstract
-            && (definition.sysmlConstruct === 'interface def' || definition.sysmlConstruct === 'flow def'))
-        .map(definition => definition.name), [model?.registries]);
+    // A view that declares its relationship vocabulary draws only that, so only connectors it will draw are offered:
+    // an `interface def` usage is an `interface` to the view, a `flow def` usage a `flow`.
+    const connectorTypeNames = useMemo(() => {
+        const drawn = selectedDiagram?.relationshipTypes?.length
+            ? new Set(selectedDiagram.relationshipTypes.map(type => type.toLowerCase())) : undefined;
+        return (model?.registries?.relationships ?? [])
+            .filter(definition => !definition.isAbstract
+                && (definition.sysmlConstruct === 'interface def' || definition.sysmlConstruct === 'flow def')
+                && (!drawn || drawn.has(definition.sysmlConstruct.replace(/\s*def$/, '')) || drawn.has(definition.name.toLowerCase())))
+            .map(definition => definition.name);
+    }, [model?.registries, selectedDiagram?.relationshipTypes]);
+
+    // Drawing a relationship between two nodes is the renderer's to allow. On an interconnection view the drag
+    // goes from port to port, which the renderer allows separately from creating parts on the canvas.
+    const mayConnect = !readOnly && (!activeRenderer.disableOnCanvasAuthoring
+        || viewKind === 'interconnection' && activeRenderer.connectPortsByDrag);
 
     /** The part "Connect to…" was chosen on, while its dialog is open. */
     const [connectFrom, setConnectFrom] = useState<string | null>(null);
@@ -4265,7 +4288,8 @@ function DiagramCanvasInner() {
         const sourceElement = sourceId ? elements?.[sourceId] : undefined;
         const targetElement = targetId ? elements?.[targetId] : undefined;
         if (!sourceElement || !targetElement) return;
-        setRelPicker({ x: window.innerWidth / 2 - 130, y: window.innerHeight / 2 - 160, sourceElement, targetElement, connectors: true });
+        setRelPicker({ x: window.innerWidth / 2 - 130, y: window.innerHeight / 2 - 160, sourceElement: connectorEnds(sourceElement, targetElement, sourceElement)[0],
+            targetElement: connectorEnds(sourceElement, targetElement, sourceElement)[1], connectors: true });
     }, [declareInPart]);
 
     const handleEdgeContextMenu = useCallback((e: React.MouseEvent, edge: FlowEdge) => {
@@ -5203,10 +5227,10 @@ function DiagramCanvasInner() {
                     nodesDraggable={!readOnly}
                     elementsSelectable={!readOnly}
                     edgesReconnectable={!readOnly}
-                    nodesConnectable={!activeRenderer.disableOnCanvasAuthoring && !readOnly}
-                    onConnect={activeRenderer.disableOnCanvasAuthoring || readOnly ? undefined : onConnect}
-                    onConnectStart={activeRenderer.disableOnCanvasAuthoring || readOnly ? undefined : onConnectStart}
-                    onConnectEnd={activeRenderer.disableOnCanvasAuthoring || readOnly ? undefined : (onConnectEnd as any)}
+                    nodesConnectable={mayConnect}
+                    onConnect={mayConnect ? onConnect : undefined}
+                    onConnectStart={mayConnect ? onConnectStart : undefined}
+                    onConnectEnd={mayConnect ? (onConnectEnd as any) : undefined}
                     onReconnect={readOnly ? undefined : onReconnect}
                     onBeforeDelete={readOnly ? undefined : beforeDelete}
                     onReconnectStart={readOnly ? undefined : onReconnectStart}
