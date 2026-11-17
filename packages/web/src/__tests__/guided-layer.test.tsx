@@ -82,6 +82,17 @@ describe('the guided layer workspace', () => {
         expect(useModelStore.getState().activeView).toMatchObject({ type: 'pathway', layer: 'layerWork' });
     });
 
+    it('records a selection made inside the workbench in the address without reopening the workbench', async () => {
+        prepareFunctionalWorkbench(); await render();
+        const filter = container.querySelector('input[aria-label="Filter functions"]') as HTMLInputElement;
+        act(() => { Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(filter, 'Compute'); filter.dispatchEvent(new Event('input', { bubbles: true })); }); await settle();
+        await click('Compute signal');
+        const view = useModelStore.getState().activeView;
+        expect(view.type === 'pathway' && view.artifactId).toBe('fn');
+        expect((container.querySelector('input[aria-label="Filter functions"]') as HTMLInputElement).value).toBe('Compute');
+        expect(container.querySelector('[aria-label="Current functional task"] h2')?.textContent).toBe('Compute signal');
+    });
+
     it('keeps work linked to a function apart from work linked to one use of it in a flow', async () => {
         prepareFunctionalWorkbench();
         const before = useModelStore.getState().model!;

@@ -26,12 +26,13 @@ type Presentation = 'overview' | 'table' | 'hierarchy' | 'visual';
 type Action = { operation: OperationalWriteContext['operation']; context: Partial<OperationalWriteContext>; title: string; options?: Element[] };
 
 /** The operational spine is native ownership plus use-case inclusion and workflow realization. */
-export function OperationalWorkbench({ model, row, workspace, canWrite, entry, onContext, onFunctional, onLevelChange }: {
+export function OperationalWorkbench({ model, row, workspace, canWrite, entry, onContext, onFunctional, onLevelChange, onSelection }: {
     model: MemoModelDTO; row: GuideLayer; workspace: string | null; canWrite: boolean;
     entry?: { work?: OperationalWorkLevel; artifactId?: string; createCase?: boolean };
     onContext?: (systemId: string) => void;
     onFunctional?: (artifactId?: string) => void;
     onLevelChange?: (level: OperationalWorkLevel) => void;
+    onSelection?: (artifactId: string | undefined, level: OperationalWorkLevel) => void;
 }) {
     const tasks = row.tasks ?? [];
     const [taskId, setTaskId] = useState(tasks.find(task => entry?.work && task.level === entry.work)?.id ?? tasks[0]?.id);
@@ -46,6 +47,7 @@ export function OperationalWorkbench({ model, row, workspace, canWrite, entry, o
     const [presentation, setPresentation] = useState<Presentation>('overview');
     const openingVisual = useRef<string>();
     const [selectedId, setSelectedId] = useState(entry?.artifactId);
+    useEffect(() => { onSelection?.(selectedId, level); }, [selectedId, level, onSelection]);
     const pendingSelection = useRef<{ id: string; workspace: string | null; taskId: string }>();
     const [filter, setFilter] = useState(''); const [review, setReview] = useState(false);
     const [expanded, setExpanded] = useState<Set<string>>(new Set());

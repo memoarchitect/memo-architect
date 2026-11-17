@@ -9,7 +9,7 @@ import { DeploymentLinks, DeploymentWorkbench } from './DeploymentWorkbench';
 import { LayerElementBrowser } from './LayerElementBrowser';
 import { functionalDisplayIds, functionalScope, functionalStructure, functionalScopes, operationalConforms, operationalWorkLevel, functionalCatalog, functionalFlowsInScope } from '@memoarchitect/tools/browser';
 import { createNativeFunction } from '../lib/functional-authoring';
-import { lazy, Suspense, useCallback, useEffect, useMemo, useState, type CSSProperties } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useModelStore } from '../store/model-store';
 import { useGuideEvaluation } from '../lib/use-guide';
@@ -67,7 +67,21 @@ export function GuidedLayer({ layer }: { layer: string }) {
     const options = useMemo(() => workspaceOptions(model?.workspaceMembership), [model?.workspaceMembership]);
     const chosen = options.find(candidate => candidate.root === workspace);
     const operationalEntry = activeView.type === 'pathway' && activeView.layer === layer ? activeView : undefined;
-    const operationalKey = JSON.stringify([row?.id, operationalEntry?.work, operationalEntry?.artifactId, operationalEntry?.createCase]);
+    // A selection made inside a workbench is written to the address so a bookmark or Back returns to it. That write
+    // must not remount the workbench, so the key stays the one it was opened with until a link brings other work.
+    const followed = useRef<{ key: string; entry: string }>();
+    const entryKey = JSON.stringify([row?.id, operationalEntry?.work, operationalEntry?.artifactId, operationalEntry?.createCase]);
+    const operationalKey = followed.current?.entry === entryKey ? followed.current.key : entryKey;
+    const follow = useCallback((artifactId: string | undefined, work?: 'clinical' | 'system') => {
+        const current = useModelStore.getState().activeView;
+        if (current.type !== 'pathway' || current.layer !== layer) return;
+        if (current.artifactId === artifactId && (!work || current.work === work) && !current.createCase) return;
+        const next = { type: 'pathway' as const, layer, ...(current.diagramId ? { diagramId: current.diagramId } : {}), ...(work ?? current.work ? { work: work ?? current.work } : {}), ...(artifactId ? { artifactId } : {}) };
+        const key = followed.current?.entry === JSON.stringify([row?.id, current.work, current.artifactId, current.createCase]) ? followed.current.key
+            : JSON.stringify([row?.id, current.work, current.artifactId, current.createCase]);
+        followed.current = { key, entry: JSON.stringify([row?.id, next.work, next.artifactId, undefined]) };
+        setActiveView(next);
+    }, [layer, row?.id, setActiveView]);
     const [levelSelection, setLevelSelection] = useState<{ key: string; level: 'clinical' | 'system' }>();
     const onOperationalLevel = useCallback((level: 'clinical' | 'system') => {
         setLevelSelection(previous => previous?.key === operationalKey && previous.level === level ? previous : { key: operationalKey, level });
@@ -268,15 +282,15 @@ export function GuidedLayer({ layer }: { layer: string }) {
                     <DiagramCanvas key={contextDiagram.id} />
                 </Suspense> : undefined} />
         </div> : row.workbench === 'operational' ? <OperationalWorkbench key={operationalKey} model={model} row={row}
-            workspace={defaultSystemScope?.root ?? workspace} canWrite={canWrite} entry={operationalEntry} onLevelChange={onOperationalLevel}
+            workspace={defaultSystemScope?.root ?? workspace} canWrite={canWrite} entry={operationalEntry} onLevelChange={onOperationalLevel} onSelection={follow}
             onFunctional={goToFunctional} onContext={guide.layers.some(candidate => candidate.name === 'layerContext') ? systemId => {
                 useModelStore.getState().inspectElement(null);
                 setWorkspace(systemId);
                 const view = { type: 'pathway' as const, layer: 'layerContext' };
                 setActiveView(view);
                 navigate(`${viewToPath(view)}?workspace=${encodeURIComponent(systemId)}`);
-            } : undefined} /> : row.workbench === 'functional' ? <FunctionalWorkbench key={`${row.id}:${requestedArtifact ?? ''}`} model={model} row={row} workspace={workspace} canWrite={canWrite}
-            artifactId={requestedArtifact} onFunctional={goToFunctional} onLogical={guide.layers.some(candidate => candidate.name === 'layerLogical') ? goToLogical : undefined} onOperational={operationalLayer ? id => { const level = operationalWorkLevel(model, id); if (level) goToOperational(level, id); } : undefined} /> : <div style={{ flex: 1, display: 'flex', overflow: 'hidden', minHeight: 0 }}>
+            } : undefined} /> : row.workbench === 'functional' ? <FunctionalWorkbench key={operationalKey} model={model} row={row} workspace={workspace} canWrite={canWrite}
+            artifactId={requestedArtifact} onSelection={follow} onFunctional={goToFunctional} onLogical={guide.layers.some(candidate => candidate.name === 'layerLogical') ? goToLogical : undefined} onOperational={operationalLayer ? id => { const level = operationalWorkLevel(model, id); if (level) goToOperational(level, id); } : undefined} /> : <div style={{ flex: 1, display: 'flex', overflow: 'hidden', minHeight: 0 }}>
             {steps.length > 0 && railOpen && <aside aria-label="Layer guidance" data-testid="guide-rail" style={{ ...panel, width: 270, borderRight: `1px solid ${COLOR.border}` }}>
                 <h1 style={{ fontSize: 20, margin: '0 0 8px' }}>{row.label}</h1><p style={{ fontSize: FONT.sm, color: COLOR.muted }}>{row.purpose}</p>
                 {starting && <section aria-label="Start here" style={{ padding: 12, background: '#eef8f5', borderRadius: 8, marginBottom: 16 }}>

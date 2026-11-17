@@ -15,9 +15,10 @@ const input: CSSProperties = { ...button, cursor: 'text', width: '100%', boxSizi
 const card: CSSProperties = { background: 'white', border: `1px solid ${COLOR.border}`, borderRadius: 8, padding: 20 };
 
 /** Task choices and semantic roles come from the active method, not a layer-name switch. */
-export function FunctionalWorkbench({ model, row, workspace, canWrite, artifactId, onOperational, onFunctional, onLogical }: {
+export function FunctionalWorkbench({ model, row, workspace, canWrite, artifactId, onOperational, onFunctional, onLogical, onSelection }: {
     model: MemoModelDTO; row: GuideLayer; workspace: string | null; canWrite: boolean;
     artifactId?: string; onOperational?: (id: string) => void; onFunctional?: (id: string) => void; onLogical?: (id: string) => void;
+    onSelection?: (artifactId: string | undefined) => void;
 }) {
     const tasks = row.tasks ?? [];
     const treeTask = tasks.find(task => task.kind === 'decomposition');
@@ -35,6 +36,7 @@ export function FunctionalWorkbench({ model, row, workspace, canWrite, artifactI
     const [presentation, setPresentation] = useState<'details' | 'visual'>('details');
     const openingVisual = useRef<string>();
     const [selectedId, setSelectedId] = useState<string | undefined>(startingId);
+    useEffect(() => { onSelection?.(selectedId); }, [selectedId, onSelection]);
     contextRef.current = `${workspace ?? ''}:${task?.id ?? ''}:${presentation}:${selectedId ?? ''}`;
     const [filter, setFilter] = useState('');
     const [review, setReview] = useState(false);
