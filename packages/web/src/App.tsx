@@ -871,7 +871,12 @@ function UrlNavigationSync() {
 
         if (url && location.pathname + location.search !== url) {
             const pathOnly = url.split('?')[0];
-            const isJustSearchChange = pathOnly === location.pathname;
+            // Clinical and system work share a layer path, so moving between them is a search change; it is still a
+            // page of its own, which Back returns from. A selection within one level only replaces the address.
+            // An address that names no level yet is only being completed, so that one is still replaced.
+            const fromLevel = new URLSearchParams(location.search).get('work');
+            const levelChange = activeView.type === 'pathway' && !!fromLevel && new URLSearchParams(url.split('?')[1] ?? '').get('work') !== fromLevel;
+            const isJustSearchChange = pathOnly === location.pathname && !levelChange;
             navigate(url, { replace: isJustSearchChange });
         }
     // eslint-disable-next-line react-hooks/exhaustive-deps

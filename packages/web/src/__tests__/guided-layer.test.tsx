@@ -110,6 +110,15 @@ describe('the guided layer workspace', () => {
         expect(container.querySelector('[aria-label="Current functional task"] h2')?.textContent).toBe('Compute signal');
     });
 
+    it('reopens the workbench when the address returns to where it was opened', async () => {
+        prepareFunctionalWorkbench(); await render();
+        const opened = useModelStore.getState().activeView;
+        await click('Compute signal');
+        expect(container.querySelector('[aria-label="Current functional task"] h2')?.textContent).toBe('Compute signal');
+        act(() => useModelStore.getState().setActiveView(opened)); await settle();
+        expect(container.querySelector('[aria-label="Current functional task"] h2')?.textContent).not.toBe('Compute signal');
+    });
+
     it('keeps work linked to a function apart from work linked to one use of it in a flow', async () => {
         prepareFunctionalWorkbench();
         const before = useModelStore.getState().model!;

@@ -336,6 +336,42 @@ describe('guided operational work', () => {
         expect(container.querySelector('[role="status"]')!.textContent).toBe('Saved to the model.');
     });
 
+    it('links clinical work to a system counterpart from the clinical end, saved with the system work', async () => {
+        await render(); await chooseNode('Assess condition'); await chooseNode('Assessment work');
+        const detail = () => container.querySelector('[aria-label="Current operational task"]')!;
+        const via = detail().querySelector('[aria-label="Covered via linked steps"]')!;
+        expect(via.textContent).toContain('Via linked steps'); expect(via.textContent).toContain('Observe condition'); expect(via.textContent).toContain('Read signal');
+        await click('Link system counterpart');
+        const picker = container.querySelector('select[aria-label="Connect existing work"]') as HTMLSelectElement;
+        expect([...picker.options].map(option => option.value)).toEqual(['', 'systemWork']);
+        expect(detail().textContent).not.toContain('Primary save location');
+        act(() => { picker.value = 'systemWork'; picker.dispatchEvent(new Event('change', { bubbles: true })); }); await settle();
+        expect(detail().textContent).toContain('Primary save location');
+        vi.mocked(sendElementCreate).mockResolvedValueOnce({ success: true, elementId: 'systemWork' } as never);
+        act(() => { container.querySelector('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true })); }); await settle();
+        expect(vi.mocked(sendElementCreate).mock.calls.at(-1)![0]).toMatchObject({ file: 'model/work.sysml',
+            operationalContext: { operation: 'refine', level: 'system', workspace: 'host', sourceId: 'systemWork', targetId: 'clinicalWork' } });
+        const before = useModelStore.getState().model!;
+        act(() => useModelStore.setState({ model: { ...before, relationships: [...before.relationships, edge('workRefine', 'realizes', 'systemWork', 'clinicalWork')] } })); await settle();
+        expect(detail().querySelector('h2')!.textContent).toBe('Assessment work');
+        expect(detail().querySelector('[aria-label="Covered via linked steps"]')).toBeNull();
+        expect(detail().textContent).toContain('Monitoring work');
+        await click('Monitoring work');
+        expect(buttons('System')[0].getAttribute('aria-pressed')).toBe('true');
+        expect(container.querySelector('[aria-label="Current operational task"] h2')!.textContent).toBe('Monitoring work');
+        expect(container.querySelector('[aria-label="Current operational task"]')!.textContent).toContain('Assessment work');
+    });
+
+    it('labels a system workflow covered only through its steps and opens the clinical evidence', async () => {
+        await render(); await click('System'); await chooseNode('Monitor condition'); await chooseNode('Monitoring work');
+        const via = container.querySelector('[aria-label="Covered via linked steps"]')!;
+        expect(via.textContent).toContain('No clinical workflow is linked');
+        expect(via.textContent).toContain('Assessment path');
+        act(() => [...via.querySelectorAll('button')].find(button => button.textContent === 'Observe condition')!.click()); await settle();
+        expect(buttons('Clinical')[0].getAttribute('aria-pressed')).toBe('true');
+        expect(container.querySelector('[aria-label="Current operational task"] h2')!.textContent).toBe('Observe condition');
+    });
+
     it('offers scenario conditions and alternate paths in the workflow context', async () => {
         await render(); await click('System'); await chooseNode('Monitor condition'); await chooseNode('Monitoring work'); await click('+ Scenario');
         expect(container.textContent).toContain('Precondition'); expect(container.textContent).toContain('Postcondition');

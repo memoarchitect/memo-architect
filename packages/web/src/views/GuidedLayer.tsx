@@ -69,17 +69,25 @@ export function GuidedLayer({ layer }: { layer: string }) {
     const operationalEntry = activeView.type === 'pathway' && activeView.layer === layer ? activeView : undefined;
     // A selection made inside a workbench is written to the address so a bookmark or Back returns to it. That write
     // must not remount the workbench, so the key stays the one it was opened with until a link brings other work.
+    // A selection the workbench made itself keeps it mounted; any other address (a link, Back, Forward) opens it afresh,
+    // including a return to the address it was first opened with.
     const followed = useRef<{ key: string; entry: string }>();
+    const opened = useRef<{ key: string; entry: string }>();
+    const openings = useRef(0);
     const entryKey = JSON.stringify([row?.id, operationalEntry?.work, operationalEntry?.artifactId, operationalEntry?.createCase]);
-    const operationalKey = followed.current?.entry === entryKey ? followed.current.key : entryKey;
+    if (followed.current?.entry !== entryKey && opened.current?.entry !== entryKey) {
+        followed.current = undefined;
+        opened.current = { entry: entryKey, key: `${entryKey}#${openings.current++}` };
+    }
+    const operationalKey = followed.current?.entry === entryKey ? followed.current.key : opened.current!.key;
+    const renderedKey = useRef(operationalKey); renderedKey.current = operationalKey;
     const follow = useCallback((artifactId: string | undefined, work?: 'clinical' | 'system') => {
         const current = useModelStore.getState().activeView;
         if (current.type !== 'pathway' || current.layer !== layer) return;
         if (current.artifactId === artifactId && (!work || current.work === work) && !current.createCase) return;
         const next = { type: 'pathway' as const, layer, ...(current.diagramId ? { diagramId: current.diagramId } : {}), ...(work ?? current.work ? { work: work ?? current.work } : {}), ...(artifactId ? { artifactId } : {}) };
-        const key = followed.current?.entry === JSON.stringify([row?.id, current.work, current.artifactId, current.createCase]) ? followed.current.key
-            : JSON.stringify([row?.id, current.work, current.artifactId, current.createCase]);
-        followed.current = { key, entry: JSON.stringify([row?.id, next.work, next.artifactId, undefined]) };
+        followed.current = { key: renderedKey.current, entry: JSON.stringify([row?.id, next.work, next.artifactId, undefined]) };
+        opened.current = undefined;
         setActiveView(next);
     }, [layer, row?.id, setActiveView]);
     const [levelSelection, setLevelSelection] = useState<{ key: string; level: 'clinical' | 'system' }>();

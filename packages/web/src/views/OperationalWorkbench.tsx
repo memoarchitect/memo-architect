@@ -25,7 +25,9 @@ type Element = MemoModelDTO['elements'][string];
 type Role = 'case' | 'workflow' | 'scenario' | 'step';
 type Category = Exclude<Role, 'step'>;
 type Presentation = 'overview' | 'table' | 'hierarchy' | 'visual';
-type Action = { operation: OperationalWriteContext['operation']; context: Partial<OperationalWriteContext>; title: string; options?: Element[] };
+// `counterpartWorkspace` marks a refinement started from the clinical end: the chosen system work is the source,
+// the link is saved with it, and it is checked in that system's workspace.
+type Action = { operation: OperationalWriteContext['operation']; context: Partial<OperationalWriteContext>; title: string; options?: Element[]; counterpartWorkspace?: Record<string, string> };
 
 /** The operational spine is native ownership plus use-case inclusion and workflow realization. */
 export function OperationalWorkbench({ model, row, workspace, canWrite, entry, onContext, onFunctional, onLevelChange, onSelection }: {
@@ -49,8 +51,9 @@ export function OperationalWorkbench({ model, row, workspace, canWrite, entry, o
     const [presentation, setPresentation] = useState<Presentation>('overview');
     const openingVisual = useRef<string>();
     const [selectedId, setSelectedId] = useState(entry?.artifactId);
-    useEffect(() => { onSelection?.(selectedId, level); }, [selectedId, level, onSelection]);
     const pendingSelection = useRef<{ id: string; workspace: string | null; taskId: string }>();
+    // While following a link to the other level, the old selection is still set for one render: report only where it lands.
+    useEffect(() => { if (!pendingSelection.current) onSelection?.(selectedId, level); }, [selectedId, level, onSelection]);
     const [filter, setFilter] = useState(''); const [review, setReview] = useState(false);
     const [expanded, setExpanded] = useState<Set<string>>(new Set());
     const [action, setAction] = useState<Action>(); const [busy, setBusy] = useState(false); const [notice, setNotice] = useState('');
@@ -364,6 +367,55 @@ export function OperationalWorkbench({ model, row, workspace, canWrite, entry, o
     const ownedScenarios = selectedRole === 'workflow' ? operationalChildren(model, selected!.id).filter(child => conforms(child.id, 'OperativeScenario')) : [];
     const clinicalKind = selectedRole === 'case' ? clinicalTask?.subjectKind : selectedRole === 'workflow' ? clinicalTask?.workflowKind : selectedRole === 'scenario' ? clinicalTask?.scenarioKind : clinicalTask?.stepKind;
     const refinements = selected ? model.relationships.filter(edge => edge.type === 'realizes' && (edge.sourceId === selected.id || edge.targetId === selected.id)).filter(edge => !conforms(edge.sourceId, 'ComponentFunction')) : [];
+    const systemTask = tasks.find(task => task.level === 'system');
+    const systemKind = selectedRole === 'case' ? systemTask?.subjectKind : selectedRole === 'workflow' ? systemTask?.workflowKind : selectedRole === 'scenario' ? systemTask?.scenarioKind : systemTask?.stepKind;
+    const otherLevel = selectedLevel === 'clinical' ? 'system' : selectedLevel === 'system' ? 'clinical' : undefined;
+    const isCounterpart = (edge: MemoModelDTO['relationships'][number], id: string) => {
+        const other = edge.sourceId === id ? edge.targetId : edge.sourceId;
+        return !conforms(edge.sourceId, 'FunctionalFlow') && !!otherLevel && operationalWorkLevel(model, other) === otherLevel;
+    };
+    const directCounterparts = selected ? refinements.filter(edge => isCounterpart(edge, selected.id)) : [];
+    // A goal, workflow or scenario without its own counterpart can still be covered by links between its steps.
+    const stepCounterparts = useMemo(() => {
+        if (!selected || !otherLevel || selectedRole === 'step' || directCounterparts.length) return [];
+        const roots = selectedRole === 'case' ? (hierarchy.children.get(selected.id) ?? []).filter(id => operationalConforms(model, id, 'OperationalWorkflow')) : [selected.id];
+        const steps = new Map<string, Element>(); const seen = new Set<string>(); const queue = [...roots];
+        while (queue.length) {
+            const id = queue.pop()!; if (seen.has(id)) continue; seen.add(id);
+            for (const child of operationalChildren(model, id)) { queue.push(child.id); if (conforms(child.id, 'OperativeAction')) steps.set(child.id, child); }
+        }
+        return [...steps.values()].flatMap(step => {
+            const canonical = canonicalFunctionId(model, step.id) ?? step.id;
+            return model.relationships.filter(edge => edge.type === 'realizes' && (edge.sourceId === canonical || edge.targetId === canonical) && isCounterpart(edge, canonical))
+                .flatMap(edge => { const other = model.elements[edge.sourceId === canonical ? edge.targetId : edge.sourceId]; return other && conforms(other.id, 'OperativeAction') ? [{ key: `${step.id}:${edge.id}`, step, other }] : []; });
+        });
+    }, [model, selected, selectedRole, otherLevel, directCounterparts.length, hierarchy]);
+    // Grouped by the counterpart's scenario, so one clinical step refined in several systems reads as one line per system path.
+    const stepCounterpartGroups = useMemo(() => {
+        const groups = new Map<string, { key: string; scenario?: Element; scope?: string; pairs: typeof stepCounterparts }>();
+        for (const pair of stepCounterparts) {
+            const scenarioId = pair.other.owner ?? pair.other.parentAction ?? pair.other.id;
+            const scopeRoot = otherLevel === 'system' ? model.workspaceMembership?.workspaces.find(scope => scope.scope === 'system' && model.workspaceMembership?.membership[pair.other.id]?.includes(scope.root))?.root : undefined;
+            const group = groups.get(scenarioId) ?? { key: scenarioId, scenario: model.elements[scenarioId], scope: scopeRoot ? model.elements[scopeRoot]?.name : undefined, pairs: [] };
+            if (!group.pairs.some(existing => existing.step.id === pair.step.id && existing.other.id === pair.other.id)) group.pairs.push(pair);
+            groups.set(scenarioId, group);
+        }
+        return [...groups.values()];
+    }, [model, stepCounterparts, otherLevel]);
+    const systemWorkspaceOf = (id: string) => {
+        const roots = model.workspaceMembership?.membership[id] ?? [];
+        if (workspace && roots.includes(workspace)) return workspace;
+        return model.workspaceMembership?.workspaces.find(scope => scope.scope === 'system' && roots.includes(scope.root))?.root ?? roots[0];
+    };
+    const linkSystemCounterpart = () => {
+        if (!selected) return;
+        const candidates = operationalCatalog(model, systemKind ?? 'UseCase').filter(element => operationalWorkLevel(model, element.id) === 'system'
+            && canonicalFunctionId(model, element.id) === element.id && element.provenance?.declaration.writable !== false && !!systemWorkspaceOf(element.id)
+            && (!workspace || !!model.workspaceMembership?.membership[element.id]?.includes(workspace)));
+        setAction({ operation: 'refine', title: 'Link a system counterpart', context: { targetId: selected.id }, options: candidates,
+            counterpartWorkspace: Object.fromEntries(candidates.map(element => [element.id, systemWorkspaceOf(element.id)!])) });
+        setNotice('');
+    };
     const performedFunctions = selected ? model.relationships.filter(edge => edge.type === 'performs' && edge.sourceId === selected.id && conforms(edge.targetId, 'SystemFunction')) : [];
     const performedTargets = new Set(selectedRole === 'step' ? model.relationships.filter(edge =>
         edge.type === 'performs' && edge.sourceId === selected?.id,
@@ -382,7 +434,7 @@ export function OperationalWorkbench({ model, row, workspace, canWrite, entry, o
             onClick={() => useModelStore.getState().inspectElement(selected.id)}>Details…</button></div>
     </>;
     const detail = (<section aria-label="Current operational task" style={card}>
-                {action ? <OperationalForm key={`${action.operation}:${selectedId ?? ''}`} action={action} model={model} level={level} workspace={workspace} disabled={!newWrite || busy} onCancel={() => setAction(undefined)} onContext={() => create('context')} onSave={(context, name) => void save(() => writeOperational({ ...base, ...action.context, ...context, operation: action.operation }, name), id => { setAction(undefined); if (id) choose(id); })} />
+                {action ? <OperationalForm key={`${action.operation}:${selectedId ?? ''}`} action={action} model={model} level={level} workspace={workspace} disabled={!newWrite || busy} onCancel={() => setAction(undefined)} onContext={() => create('context')} onSave={(context, name) => void save(() => writeOperational({ ...base, ...action.context, ...context, operation: action.operation }, name), id => { setAction(undefined); if (action.counterpartWorkspace) { if (selected) choose(selected.id); } else if (id) choose(id); })} />
                 : !selected ? <><h2 style={heading}>{category === 'case' ? 'What should someone accomplish?' : category === 'workflow' ? 'What work supports the goal?' : 'What happens along this path?'}</h2><p style={muted}>{typed.length ? `Select ${category === 'case' ? 'a use case' : `a ${category}`} to see its details.` : `Use Add ${category === 'case' ? 'use case' : category} to start.`}</p></>
                 : <><small style={muted}>{selectedLevel === 'clinical' ? 'Clinical' : selectedLevel === 'system' ? 'System' : 'Unclassified'} {selectedRole === 'case' ? 'use case' : selectedRole === 'workflow' ? 'workflow' : selectedRole === 'scenario' ? 'scenario' : 'step'} · {title}</small><h2 style={heading}>{selected.name}</h2>
                     {selectedRole === 'scenario' && <span className="pathway-operational-pill">{scenarioPath(selected)}</span>}
@@ -408,6 +460,14 @@ export function OperationalWorkbench({ model, row, workspace, canWrite, entry, o
                     {(selectedRole === 'scenario' || selectedRole === 'step' && !!operationalChildren(model, selected.id).filter(child => child.construct === 'action').length) && <ScenarioSequence key={selected.id + JSON.stringify(functionalFlowSteps(model, selected.id).steps.map(item => item.step.id))} model={model} id={selected.id} writable={writable} flowFirst={isScenarioPage} details={isScenarioPage ? artifactDetails : undefined} onAdd={() => create('step')} onSelect={choose} onDiagram={() => { setCategory('scenario'); if (selectedRole === 'scenario') setSelectedId(selected!.id); setPresentation('visual'); }} onSave={stepIds => void save(() => writeOperational({ ...base, ...(selectedRole === 'scenario' ? { scenarioId: selected.id } : { parentStepId: selected.id }), operation: 'sequence', stepIds }))} />}
                     {selectedRole === 'step' && conforms(selected.id, 'OperativeAction') && <><h3 style={{ marginTop: 18, fontWeight: 650 }}>Who performs this step?</h3><p style={muted}>{performers.map(performer => performer.name).join(', ') || 'No performer linked yet.'}</p><button style={button} disabled={!writable} onClick={() => begin('performer', 'Choose the performer', { sourceId: selected.id }, Object.values(model.elements).filter(element => ['User', 'OperationalEntity', ...(level === 'system' ? ['System', 'SystemOfSystems'] : [])].some(kind => conforms(element.id, kind)) && (!element.isDefinition || element.id === workspace) && element.provenance?.declaration.writable !== false))}>Set performer</button></>}
                     {level === 'system' && selectedLevel === 'system' && <><h3 style={{ marginTop: 20, fontWeight: 650 }}>Clinical baseline</h3><p style={muted}>Connect this system work to the clinical intent it refines.</p><button style={button} disabled={!writable || !clinicalKind} onClick={() => begin('refine', 'Refine clinical work', { sourceId: selected.id }, operationalCatalog(model, clinicalKind ?? 'UseCase').filter(element => operationalWorkLevel(model, element.id) === 'clinical' && canonicalFunctionId(model, element.id) === element.id))}>Link clinical counterpart</button></>}
+                    {level === 'clinical' && selectedLevel === 'clinical' && (selectedRole !== 'step' || conforms(selected.id, 'OperativeAction')) && <><h3 style={{ marginTop: 20, fontWeight: 650 }}>System counterparts</h3><p style={muted}>System work that refines this clinical intent. The link is saved with the system work.</p><button style={button} disabled={!canWrite || busy || !systemKind} onClick={linkSystemCounterpart}>Link system counterpart</button></>}
+                    {stepCounterparts.length > 0 && <section aria-label="Covered via linked steps"><p style={muted}><strong>Via linked steps.</strong> No {otherLevel} {selectedRole === 'case' ? 'use case' : selectedRole} is linked to this one, but some of its steps have {otherLevel} counterparts.</p>
+                        <ul style={{ paddingLeft: 18 }}>{stepCounterpartGroups.map(group => <li key={group.key} style={muted}>
+                            {group.scenario ? <button style={button} onClick={() => goToWork(group.scenario!.id)}>{group.scenario.name}</button> : 'Unplaced steps'}{group.scope ? ` · ${group.scope}` : ''}
+                            <ul style={{ paddingLeft: 18 }}>{group.pairs.map(({ key, step, other }) => <li key={key}>{step.name === other.name
+                                ? <><button style={button} onClick={() => goToWork(other.id)}>{other.name}</button> {otherLevel === 'system' ? 'refines' : 'is refined by'} the step of the same name</>
+                                : <><button style={button} onClick={() => choose(step.id)}>{step.name}</button> ↔ <button style={button} onClick={() => goToWork(other.id)}>{other.name}</button></>}</li>)}</ul>
+                        </li>)}</ul></section>}
                     {!!refinements.length && <ul style={{ paddingLeft: 18, marginTop: 10 }}>{refinements.map(edge => <li key={edge.id} style={muted}><button style={button} onClick={() => goToWork(edge.sourceId)}>{model.elements[edge.sourceId]?.name}</button> → <button style={button} onClick={() => goToWork(edge.targetId)}>{model.elements[edge.targetId]?.name}</button>{conforms(edge.sourceId, 'FunctionalFlow') ? ' · Functional flow realization' : ' · Refines'}{conforms(edge.sourceId, 'FunctionalFlow') && <ol style={{ paddingLeft: 20 }}>{functionalFlowSteps(model, edge.sourceId).steps.map(item => <li key={item.step.id}>{model.elements[item.functionId ?? '']?.name ?? item.step.name}</li>)}</ol>}</li>)}</ul>}
                     {level === 'system' && selectedLevel === 'system' && (selectedRole === 'scenario' || selectedRole === 'step' && conforms(selected.id, 'OperativeAction')) && <><h3 style={{ marginTop: 20, fontWeight: 650 }}>Functional behavior</h3>
                         {selectedRole === 'step' && <><p style={muted}>Which system functions carry out this activity?</p><ul style={{ paddingLeft: 18 }}>{performedFunctions.map(edge => <li key={edge.id} style={muted}>{onFunctional
@@ -645,8 +705,9 @@ function OperationalForm({ action, model, level, workspace, disabled, onCancel, 
     const create = ['context', 'use-case', 'workflow', 'scenario', 'step'].includes(action.operation);
     const subjects = level === 'clinical' ? operationalCatalog(model, 'OperationalEntity') : (model.workspaceMembership?.workspaces ?? []).flatMap(scope => model.elements[scope.root] ? [model.elements[scope.root]] : []);
     const keys = action.operation === 'use-case' ? ['goalStatement', 'successOutcome'] : action.operation === 'workflow' ? ['entryCondition', 'completionCondition'] : action.operation === 'scenario' ? ['preCondition', 'postCondition'] : action.operation === 'step' ? ['taskGoal'] : action.operation === 'context' ? ['responsibility'] : [];
-    const context: Partial<OperationalWriteContext> = create ? { fields, ...(needsParent ? action.operation === 'workflow' ? { useCaseId: parentId } : { workflowId: parentId } : {}), ...(action.operation === 'use-case' ? { subjectId: subject, ...(destinationId ? { homeId: destinationId } : {}) } : {}), ...(action.operation === 'scenario' ? { scenarioKind: kind } : {}) } : action.operation === 'link-workflow' ? { useCaseId: choice } : action.operation === 'performer' ? { performerId: choice } : { targetId: choice };
-    const request = { ...action.context, ...context, operation: action.operation, level, workspace };
+    const context: Partial<OperationalWriteContext> = create ? { fields, ...(needsParent ? action.operation === 'workflow' ? { useCaseId: parentId } : { workflowId: parentId } : {}), ...(action.operation === 'use-case' ? { subjectId: subject, ...(destinationId ? { homeId: destinationId } : {}) } : {}), ...(action.operation === 'scenario' ? { scenarioKind: kind } : {}) } : action.operation === 'link-workflow' ? { useCaseId: choice } : action.operation === 'performer' ? { performerId: choice }
+        : action.counterpartWorkspace ? (choice ? { sourceId: choice, level: 'system', workspace: action.counterpartWorkspace[choice] ?? null } : {}) : { targetId: choice };
+    const request = { level, workspace, ...action.context, ...context, operation: action.operation };
     const home = operationalHome(model, request);
     const performer = request.performerId ? model.elements[request.performerId] : undefined;
     const additionalSource = performer && performer.file !== home?.file ? performer.file : undefined;
@@ -661,9 +722,9 @@ function OperationalForm({ action, model, level, workspace, disabled, onCancel, 
         {needsParent && <label>{action.operation === 'workflow' ? 'Use case' : 'Workflow'}<select aria-label="Parent work" required style={input} value={parentId} onChange={event => setParentId(event.target.value)}><option value="">Choose a {action.operation === 'workflow' ? 'use case' : 'workflow'}…</option>{parents.map(parent => <option key={parent.id} value={parent.id}>{parent.name}</option>)}</select>{!parents.length && <p style={muted}>Add a {action.operation === 'workflow' ? 'use case' : 'workflow'} first, then return here.</p>}</label>}
         {action.operation === 'scenario' && <label>Path<select aria-label="Scenario path" style={input} value={kind} onChange={event => setKind(event.target.value as 'nominal' | 'alternate')}><option value="nominal">Nominal</option><option value="alternate">Alternate / recovery</option></select></label>}
         {action.operation !== 'use-case' && keys.map(key => <label key={key}>{fieldLabel(key)}<textarea style={input} rows={2} value={fields[key] ?? ''} onChange={event => setFields({ ...fields, [key]: event.target.value })} /></label>)}
-        {!create && <><label>{action.operation === 'performer' ? 'Performer' : action.operation === 'realize-flow' ? 'Functional flow' : action.operation === 'perform-function' ? 'System function' : action.operation === 'refine' ? 'Clinical counterpart' : action.operation === 'link-workflow' ? 'Use case' : 'Existing work'}<select aria-label="Connect existing work" required style={input} value={choice} onChange={event => setChoice(event.target.value)}><option value="">Choose existing work…</option>{action.options?.map(element => <option key={element.id} value={element.id}>{element.name}{model.elements[element.owner ?? element.parentAction ?? ''] ? ` · ${model.elements[element.owner ?? element.parentAction ?? ''].name}` : ''}</option>)}</select></label>{!action.options?.length && <p style={muted}>No matching work exists yet. Add it in its own task, then connect it here.</p>}</>}
+        {!create && <><label>{action.operation === 'performer' ? 'Performer' : action.operation === 'realize-flow' ? 'Functional flow' : action.operation === 'perform-function' ? 'System function' : action.operation === 'refine' ? action.counterpartWorkspace ? 'System counterpart' : 'Clinical counterpart' : action.operation === 'link-workflow' ? 'Use case' : 'Existing work'}<select aria-label="Connect existing work" required style={input} value={choice} onChange={event => setChoice(event.target.value)}><option value="">Choose existing work…</option>{action.options?.map(element => <option key={element.id} value={element.id}>{element.name}{model.elements[element.owner ?? element.parentAction ?? ''] ? ` · ${model.elements[element.owner ?? element.parentAction ?? ''].name}` : ''}</option>)}</select></label>{!action.options?.length && <p style={muted}>No matching work exists yet. Add it in its own task, then connect it here.</p>}</>}
         {action.operation === 'realize-flow' && <p style={muted}>The flow realizes the selected operational work. Its functions remain canonical system functions; existing activity-to-function links are retained.</p>}
-        {home && <p style={muted}>Primary save location <code>{home.file}</code> · {home.package}{additionalSource && <> and <code>{additionalSource}</code></>}</p>}
+        {home && (!action.counterpartWorkspace || choice) && <p style={muted}>Primary save location <code>{home.file}</code> · {home.package}{additionalSource && <> and <code>{additionalSource}</code></>}</p>}
         <div style={{ display: 'flex', gap: 8 }}><button style={button} disabled={disabled || !home || needsParent && !parentId || (create ? !name.trim() || action.operation === 'use-case' && !subject : !choice)}>{create ? 'Create' : 'Connect'}</button><button type="button" style={button} onClick={onCancel}>Cancel</button></div>
     </form>;
 }
