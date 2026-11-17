@@ -13,8 +13,8 @@ import { useModelStore, type RelationshipCreateInput } from '../store/model-stor
 type Element = MemoModelDTO['elements'][string];
 type Relationship = MemoModelDTO['relationships'][number];
 type Category = 'actor' | 'system' | 'setting' | 'environment';
-const headings = { actor: 'Actors', system: 'External systems', setting: 'Use contexts' };
-const labels = { actor: 'actor', system: 'external system', setting: 'use context', environment: 'environment' };
+const headings = { actor: 'Actors', system: 'External systems', setting: 'Locations' };
+const labels = { actor: 'actor', system: 'external system', setting: 'location', environment: 'environment' };
 
 const creationKinds = { actor: ['MemoActor', 'User'], system: ['System'], setting: ['UseContext'], environment: ['UseEnvironment'] };
 
@@ -121,12 +121,12 @@ export function GuidedContextSetup({ model, system, canWrite, diagram, diagramSu
     const sections = [
         { category: 'actor' as const, icon: ControlIcon.person, rows: interactions.filter(edge => !systemIds.has(edge.sourceId)), empty: 'No actors linked.' },
         { category: 'system' as const, icon: ControlIcon.system, rows: interactions.filter(edge => systemIds.has(edge.sourceId)), empty: 'No external systems linked.' },
-        { category: 'setting' as const, icon: ControlIcon.location, rows: settings, empty: 'No use context linked.' },
+        { category: 'setting' as const, icon: ControlIcon.location, rows: settings, empty: 'No locations linked.' },
     ];
     const showLinkOptions = picker && (choices.length > 0 || (!picker.settingId && targets.length !== 1)
         || (picker.category === 'environment' && settingIds.length > 1));
     const form = picker && showLinkOptions && <div className="pathway-context-link-form">
-        {picker.category === 'environment' && settingIds.length > 1 && <label>Use context
+        {picker.category === 'environment' && settingIds.length > 1 && <label>Location
             <select required value={picker.settingId} onChange={event => {
                 setPicker({ category: 'environment', settingId: event.target.value });
                 setCandidateId('');
@@ -211,11 +211,11 @@ export function GuidedContextSetup({ model, system, canWrite, diagram, diagramSu
                 const count = new Set(rows.map(edge => category === 'environment' ? edge.targetId : edge.sourceId)).size;
                 return <div key={category} className={`pathway-context-tool pathway-context-tool--${category === 'environment' ? 'setting' : category}`}>
                     <span aria-hidden="true">{icon}</span>
-                    <strong>{labels[category][0].toUpperCase() + labels[category].slice(1)}</strong>
+                    <strong>{category === 'setting' ? headings.setting : labels[category][0].toUpperCase() + labels[category].slice(1)}</strong>
                     <small>{count}</small>
-                    {category === 'setting' && <p className="pathway-context-tool-hint">The situation in which the system is used, such as home monitoring.</p>}
+                    {category === 'setting' && <p className="pathway-context-tool-hint">For example, at home, in an operating room, or in an EP lab.</p>}
                     {category === 'environment' && <p className="pathway-context-tool-hint">{needsUseContext && canWrite
-                        ? 'Link a use context to add an environment.'
+                        ? 'Add a location first.'
                         : 'Conditions of use, such as lighting and noise.'}</p>}
                     {canWrite && <div className="pathway-context-tile-actions">
                         <button type="button" aria-label={`Add ${labels[category]}`} title={`Add ${labels[category]}`}
