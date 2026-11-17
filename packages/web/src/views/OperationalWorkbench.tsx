@@ -240,11 +240,12 @@ export function OperationalWorkbench({ model, row, workspace, canWrite, entry, o
         if (level !== 'system' || !coverageOpen) return [];
         const local = new Set(functions.map(fn => fn.id));
         return operationalCatalog(model, 'OperativeAction', taskScope)
-            .filter(activity => operationalWorkLevel(model, activity.id) === 'system' && canonicalFunctionId(model, activity.id) === activity.id)
+            .filter(activity => operationalWorkLevel(model, activity.id) !== 'clinical' && canonicalFunctionId(model, activity.id) === activity.id)
             .map(activity => {
                 const realizingFlows = model.relationships.filter(edge => edge.type === 'realizes' && edge.targetId === activity.id && conforms(edge.sourceId, 'FunctionalFlow'))
                     .flatMap(edge => model.elements[edge.sourceId] ? [model.elements[edge.sourceId]] : []);
-                return { key: activity.id, item: activity, relationship: 'Performs a system function',
+                const unplaced = !operationalWorkLevel(model, activity.id);
+                return { key: activity.id, item: activity, relationship: 'Performs a system function', ...(unplaced ? { note: 'Not placed in a clinical or system workflow' } : {}),
                     coverage: pathwayRelationship(model, activity, 'performs', 'outgoing', element => local.has(element.id)),
                     ...(realizingFlows.length ? { indirect: { status: 'Via a functional flow', related: realizingFlows.map(flow => flow.name).join(', ') } } : {}) };
             });
@@ -494,7 +495,7 @@ export function OperationalWorkbench({ model, row, workspace, canWrite, entry, o
                     <button type="button" className="pathway-button" aria-expanded={coverageOpen} onClick={() => setCoverageOpen(open => !open)}>
                         {coverageOpen ? 'Hide functional coverage' : 'Review functional coverage'}</button>
                     {coverageOpen && <LinkCoverageTable label="System activity function coverage" rows={functionCoverage}
-                        empty={functionCoverage.length ? 'Every system activity performs a system function or is realized by a flow.' : 'No system activities in this scope yet.'}
+                        empty={functionCoverage.length ? 'Every listed activity performs a system function or is realized by a flow.' : 'No system activities in this scope yet.'}
                         onSelect={id => { setCoverageOpen(false); choose(id); }} />}
                 </div>}
                 <section className="pathway-operational-panel" aria-label="Use case catalog">

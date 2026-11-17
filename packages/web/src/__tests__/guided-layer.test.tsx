@@ -82,6 +82,14 @@ describe('the guided layer workspace', () => {
         expect(useModelStore.getState().activeView).toMatchObject({ type: 'pathway', layer: 'layerWork' });
     });
 
+    it('drops a selection from the address when the new scope does not list it', async () => {
+        prepareFunctionalWorkbench(); await render();
+        await click('Compute signal');
+        expect((useModelStore.getState().activeView as { artifactId?: string }).artifactId).toBe('fn');
+        act(() => useModelStore.getState().setWorkspace('other')); await settle();
+        expect((useModelStore.getState().activeView as { artifactId?: string }).artifactId).toBeUndefined();
+    });
+
     it('says that setting up the parent places existing functions under it as references', async () => {
         prepareFunctionalWorkbench();
         const next = useModelStore.getState().model!;
@@ -106,9 +114,9 @@ describe('the guided layer workspace', () => {
         prepareFunctionalWorkbench();
         const before = useModelStore.getState().model!;
         useModelStore.setState({ model: { ...before,
-            elements: { ...before.elements, direct: element('direct', 'Scenario', 'Check the sample'), viaStep: element('viaStep', 'Scenario', 'Report the reading') },
+            elements: { ...before.elements, direct: element('direct', 'Scenario', 'Check the sample'), viaStep: element('viaStep', 'Scenario', 'Report the reading'), loose: element('loose', 'OperativeAction', 'Loose activity') },
             operationalLevels: { direct: 'system', viaStep: 'system' },
-            relationships: [...before.relationships, { id: 'direct-performs', type: 'performs', sourceId: 'direct', targetId: 'fn' }, { id: 'step-performs', type: 'performs', sourceId: 'viaStep', targetId: 'step' }],
+            relationships: [...before.relationships, { id: 'direct-performs', type: 'performs', sourceId: 'direct', targetId: 'fn' }, { id: 'step-performs', type: 'performs', sourceId: 'viaStep', targetId: 'step' }, { id: 'loose-performs', type: 'performs', sourceId: 'loose', targetId: 'fn' }],
         } as never });
         await render(); await click('Compute signal');
         const related = container.querySelector('[aria-label="Related operational work"]')!;
@@ -119,6 +127,7 @@ describe('the guided layer workspace', () => {
         expect(occurrences.textContent).toContain('Run measurement');
         expect(occurrences.textContent).not.toContain('Check the sample');
         expect(related.textContent).toContain('Check the sample');
+        expect(related.textContent).toContain('Loose activity · not placed in a clinical or system workflow');
     });
 
     it('opens exact scoped endpoints from Functional and Logical', async () => {

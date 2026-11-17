@@ -154,6 +154,19 @@ describe('guided operational work', () => {
         expect(options.some(option => option?.startsWith('Coordinate system'))).toBe(false);
     });
 
+    it('lists an activity outside any workflow with a note instead of leaving it out', async () => {
+        const data = useModelStore.getState().model!;
+        useModelStore.setState({ model: { ...data, elements: { ...data.elements, loose: element('loose', 'OperativeAction', 'Loose activity') as never },
+            relationships: [...data.relationships, edge('loosePerforms', 'performs', 'loose', 'fn')],
+            workspaceMembership: { ...data.workspaceMembership!, membership: { ...data.workspaceMembership!.membership, loose: ['host'] } } } });
+        await render();
+        await click('System');
+        await click('Review functional coverage');
+        const row = [...container.querySelectorAll('[aria-label="System activity function coverage"] tr')].find(candidate => candidate.textContent?.includes('Loose activity'))!;
+        expect(row.textContent).toContain('Not placed in a clinical or system workflow');
+        expect(row.textContent).toContain('Linked');
+    });
+
     it('shows an activity realized by a flow as covered through that flow', async () => {
         const data = useModelStore.getState().model!;
         useModelStore.setState({ model: { ...data, relationships: data.relationships.filter(edge => edge.id !== 'functionPerformance') } });

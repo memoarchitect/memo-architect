@@ -30,6 +30,7 @@ export function FunctionalWorkbench({ model, row, workspace, canWrite, artifactI
     });
     const startsWithFlow = startingId && functionalCatalog(model, null, flowTask?.subjectKind ?? 'FunctionalFlow').some(flow => flow.id === startingId);
     const previousScope = useRef(workspace);
+    const openedWith = useRef(artifactId);
     const [taskId, setTaskId] = useState(startsWithFlow ? flowTask?.id : treeTask?.id ?? tasks[0]?.id);
     const task = tasks.find(task => task.id === taskId) ?? treeTask;
     const contextRef = useRef('');
@@ -68,7 +69,10 @@ export function FunctionalWorkbench({ model, row, workspace, canWrite, artifactI
     useEffect(() => {
         if (previousScope.current === workspace) return;
         previousScope.current = workspace;
-        setSelectedId(artifactId);
+        // Keep the work this page was opened on only where the new scope still lists it. The live prop is not used:
+        // it also carries a selection made here, which belongs to the scope just left.
+        const opened = openedWith.current;
+        setSelectedId(opened && [...functions, ...flows].some(item => item.id === opened) ? opened : undefined);
         setDiagramId(undefined);
         setAdding(false);
         setNotice('');
@@ -153,7 +157,8 @@ export function FunctionalWorkbench({ model, row, workspace, canWrite, artifactI
         }
         const seen = new Set<string>();
         const add = (id: string, target: string) => {
-            if (!operationalWorkLevel(model, id) || seen.has(`${id}:${target}`)) return;
+            const activity = !!operationalWorkLevel(model, id) || kindConformsTo(model.elements[id]?.kind ?? '', 'OperativeAction', registry);
+            if (!activity || seen.has(`${id}:${target}`)) return;
             seen.add(`${id}:${target}`);
             if (direct.has(target)) operationalLinks.unshift({ id }); else operationalLinks.push({ id, via: occurrences.get(target)! });
         };
@@ -164,9 +169,9 @@ export function FunctionalWorkbench({ model, row, workspace, canWrite, artifactI
     }
     const directLinks = operationalLinks.filter(link => !link.via);
     const occurrenceLinks = operationalLinks.filter(link => link.via);
-    const operationalButton = (id: string) => onOperational
+    const operationalButton = (id: string) => onOperational && operationalWorkLevel(model, id)
         ? <button type="button" className="pathway-resource" onClick={() => onOperational(id)}>{model.elements[id].name}</button>
-        : <span>{model.elements[id].name}</span>;
+        : <span>{model.elements[id].name}{!operationalWorkLevel(model, id) && <small style={{ color: COLOR.muted }}> · not placed in a clinical or system workflow</small>}</span>;
     const treeRow = (id: string, ancestors: Set<string>): React.ReactNode => {
         if (ancestors.has(id)) return null;
         const element = model.elements[id]; if (!element) return null;
