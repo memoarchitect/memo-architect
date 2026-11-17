@@ -82,6 +82,15 @@ describe('the guided layer workspace', () => {
         expect(useModelStore.getState().activeView).toMatchObject({ type: 'pathway', layer: 'layerWork' });
     });
 
+    it('says that setting up the parent places existing functions under it as references', async () => {
+        prepareFunctionalWorkbench();
+        const next = useModelStore.getState().model!;
+        useModelStore.setState({ model: { ...next, relationships: next.relationships.filter(edge => edge.type !== 'functionalRoot') } });
+        await render();
+        const card = [...container.querySelectorAll('h2')].find(heading => heading.textContent === 'Set up the function tree')?.parentElement;
+        expect(card?.textContent).toMatch(/placed under it as references/);
+    });
+
     it('records a selection made inside the workbench in the address without reopening the workbench', async () => {
         prepareFunctionalWorkbench(); await render();
         const filter = container.querySelector('input[aria-label="Filter functions"]') as HTMLInputElement;
