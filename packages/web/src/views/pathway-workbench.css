@@ -709,6 +709,7 @@
     font-size: 13px;
 }
 
+.pathway-context-link-form input[type="text"],
 .pathway-context-link-form select {
     min-width: 0;
     border: 1px solid #c5d5de;

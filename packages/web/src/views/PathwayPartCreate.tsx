@@ -52,7 +52,10 @@ export function PathwayPartCreate({ model, partKinds, addLabel, saveLabel, onCre
     if (!kinds.length || !sources.size) return null;
     if (!open) return <button type="button" className="pathway-button" onClick={() => setOpen(true)}>{addLabel}</button>;
     return <form className="pathway-context-link-form" onSubmit={event => void save(event)} aria-label={addLabel}>
-        <label>Name <input required value={name} onChange={event => setName(event.target.value)} /></label>
+        <label>Name
+            <input type="text" autoFocus required placeholder="Enter a name" value={name}
+                onChange={event => setName(event.target.value)} />
+        </label>
         {kinds.length > 1 && <label>Kind <select required value={kindName} onChange={event => setKindName(event.target.value)}>
             <option value="">Choose a kind…</option>
             {kinds.map(item => <option key={item.name} value={item.name}>{item.label ?? item.name}</option>)}

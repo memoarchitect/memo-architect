@@ -123,7 +123,9 @@ export function GuidedContextSetup({ model, system, canWrite, diagram, diagramSu
         { category: 'system' as const, icon: ControlIcon.system, rows: interactions.filter(edge => systemIds.has(edge.sourceId)), empty: 'No external systems linked.' },
         { category: 'setting' as const, icon: ControlIcon.location, rows: settings, empty: 'No use context linked.' },
     ];
-    const form = picker && <div className="pathway-context-link-form">
+    const showLinkOptions = picker && (choices.length > 0 || (!picker.settingId && targets.length !== 1)
+        || (picker.category === 'environment' && settingIds.length > 1));
+    const form = picker && showLinkOptions && <div className="pathway-context-link-form">
         {picker.category === 'environment' && settingIds.length > 1 && <label>Use context
             <select required value={picker.settingId} onChange={event => {
                 setPicker({ category: 'environment', settingId: event.target.value });
