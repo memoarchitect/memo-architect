@@ -1468,3 +1468,10 @@
     border-inline-start: 2px solid #ded2f5;
     padding-inline-start: 6px;
 }
+
+/* The step a page has selected, drawn in an embedded read-only diagram. */
+.react-flow__node.memo-node-highlight {
+    outline: 3px solid #0B6B52;
+    outline-offset: 3px;
+    border-radius: 10px;
+}

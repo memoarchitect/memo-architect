@@ -990,6 +990,7 @@ function DiagramCanvasInner() {
     // stray handler inside the canvas can persist anything from a read-only view.
     const embed = useDiagramEmbed();
     const readOnly = embed?.readOnly === true;
+    const highlightIds = embed?.highlightIds;
     const updateNodeInternals = useUpdateNodeInternals();
     const model = useDiagramDisplayModel(true);
     const storeCreateRelationship = useModelStore(s => s.createRelationship);
@@ -1028,6 +1029,9 @@ function DiagramCanvasInner() {
     const { fitView, screenToFlowPosition, getViewport, setViewport, getNodes } = useReactFlow();
 
     const [nodes, setNodes] = useNodesState<FlowNode>([]);
+    // An embedding page's selection, drawn as selected without touching the canvas's own selection.
+    const highlightedNodes = useMemo(() => !highlightIds?.length ? nodes : nodes.map(node => highlightIds.includes(node.id)
+        ? { ...node, selected: true, className: [node.className, 'memo-node-highlight'].filter(Boolean).join(' ') } : node), [nodes, highlightIds]);
     const [edges, setEdges, onEdgesChange] = useEdgesState<FlowEdge>([]);
     const nodesRef = useRef<FlowNode[]>([]);
     const edgesRef = useRef<FlowEdge[]>([]);
@@ -5193,7 +5197,7 @@ function DiagramCanvasInner() {
                     onMoveStart={(event) => { setCanvasMoving(event, true); }}
                     onMoveEnd={(event) => { setCanvasMoving(event, false); }}
 
-                    nodes={nodes}
+                    nodes={highlightedNodes}
                     edges={edges}
                     nodeTypes={nodeTypes}
                     edgeTypes={edgeTypes}

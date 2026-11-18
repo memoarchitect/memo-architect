@@ -468,8 +468,31 @@ export function OperationalWorkbench({ model, row, workspace, canWrite, entry, o
         openingVisual.current = pageKey; openDiagram(pageScenario, false, 'scenario');
     }, [pageKey, busy, visualKey]);
     const pageGuide = useModelStore.getState().guide;
-    const scenarioDiagram = pageScenario && (diagramId ? <section aria-label="Scenario diagram" style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 500 }}><Suspense fallback={<p>Opening diagram…</p>}><PaletteKindsContext.Provider value={pageGuide ? kindsOfLayer(pageGuide, row) : []}><DiagramDisplayScope.Provider value={level === 'clinical' ? null : workspace}><DiagramUseCaseSubject.Provider value={null}><DiagramActionSubject.Provider value={pageScenario.id}><DiagramEditor key={diagramId} diagramId={diagramId} /></DiagramActionSubject.Provider></DiagramUseCaseSubject.Provider></DiagramDisplayScope.Provider></PaletteKindsContext.Provider></Suspense></section>
-        : <section aria-label="Scenario diagram setup" className="pathway-context-preview"><p>{busy ? 'Opening diagram…' : 'This scenario has no saved diagram.'}</p>{!busy && canWrite && <button type="button" className="pathway-button" onClick={() => openDiagram(pageScenario, true, 'scenario')}>Create diagram</button>}</section>);
+    // The page draws the scenario alone, read-only, with its performers as lanes and the selected step
+    // highlighted; Edit diagram opens the saved diagram in the editor.
+    const [pageEditing, setPageEditing] = useState(false);
+    useEffect(() => { setPageEditing(false); }, [pageScenario?.id]);
+    const pageStepIds = pageScenario ? functionalFlowSteps(model, pageScenario.id).steps.map(item => item.step.id) : [];
+    const scenarioPreview = pageScenario && <section aria-label="Scenario diagram" style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 480 }}>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 8 }}>
+            <button type="button" className="pathway-button" disabled={busy || !diagramId && !canWrite} onClick={() => { if (!diagramId) openDiagram(pageScenario, true, 'scenario'); setPageEditing(true); }}>{diagramId ? 'Edit diagram' : 'Create diagram'}</button>
+        </div>
+        <div className="pathway-operative-canvas" style={{ flex: 1, minHeight: 440 }}>
+            <Suspense fallback={<p role="status">Opening scenario diagram…</p>}>
+                <DiagramEmbedContext.Provider value={{
+                    diagramId: `scenario-page:${pageScenario.id}`, readOnly: true,
+                    previewDiagram: { id: `scenario-page:${pageScenario.id}`, name: pageScenario.name, diagramType: 'ofd', viewKind: 'actionflow', viewpointId: '__model', auto: true, elementIds: actionMembers(model, pageScenario.id) },
+                    highlightIds: selectedId && selectedId !== pageScenario.id ? [selectedId] : [],
+                    onExplore: item => { if (item.type === 'element' && pageStepIds.includes(item.id)) choose(item.id); },
+                }}><DiagramActionSubject.Provider value={pageScenario.id}><DiagramCanvas key={`scenario-page:${pageScenario.id}`} /></DiagramActionSubject.Provider></DiagramEmbedContext.Provider>
+            </Suspense>
+        </div>
+    </section>;
+    const scenarioEditor = pageScenario && (diagramId ? <section aria-label="Scenario diagram editor" style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 500 }}>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 8 }}><button type="button" className="pathway-button" onClick={() => setPageEditing(false)}>Done editing</button></div>
+        <Suspense fallback={<p>Opening diagram…</p>}><PaletteKindsContext.Provider value={pageGuide ? kindsOfLayer(pageGuide, row) : []}><DiagramDisplayScope.Provider value={level === 'clinical' ? null : workspace}><DiagramUseCaseSubject.Provider value={null}><DiagramActionSubject.Provider value={pageScenario.id}><DiagramEditor key={diagramId} diagramId={diagramId} /></DiagramActionSubject.Provider></DiagramUseCaseSubject.Provider></DiagramDisplayScope.Provider></PaletteKindsContext.Provider></Suspense></section>
+        : <section aria-label="Scenario diagram setup" className="pathway-context-preview"><p>{busy ? 'Opening diagram…' : 'This scenario has no saved diagram.'}</p><button type="button" className="pathway-button" onClick={() => setPageEditing(false)}>Back to the scenario</button></section>);
+    const scenarioDiagram = pageEditing ? scenarioEditor : scenarioPreview;
     const performerCandidates = () => Object.values(model.elements).filter(element => ['User', 'OperationalEntity', ...(level === 'operational' ? ['System', 'SystemOfSystems'] : [])].some(kind => conforms(element.id, kind)) && (!element.isDefinition || element.id === workspace) && element.provenance?.declaration.writable !== false);
     const linkClinicalWork = () => begin('refine', 'Link the clinical work it realizes', { sourceId: selected!.id }, operationalCatalog(model, clinicalKind ?? 'UseCase').filter(element => operationalWorkLevel(model, element.id) === 'clinical' && canonicalFunctionId(model, element.id) === element.id));
     const artifactDetails = selected && <>

@@ -19,6 +19,8 @@ export interface DiagramEmbed {
     /** A model-derived view for an embedded task that has no saved layout. */
     previewDiagram?: DiagramDTO;
     onExplore?: (selection: { type: 'element' | 'relationship'; id: string }) => void;
+    /** Elements drawn as selected, such as the step a page has selected. */
+    highlightIds?: readonly string[];
 }
 
 export const DiagramEmbedContext = createContext<DiagramEmbed | null>(null);

@@ -24,7 +24,7 @@ vi.mock('../views/ScopedContextDiagram', () => ({
         <div data-testid="scoped-context-links">{links.map(edge => edge.id).join(',')}</div>,
 }));
 vi.mock('../views/DiagramCanvas', () => ({
-    DiagramCanvas: () => <div data-testid="operative-flow-canvas">{useDiagramEmbed()?.previewDiagram?.elementIds?.join(',')}</div>,
+    DiagramCanvas: () => { const embed = useDiagramEmbed(); return <div data-testid="operative-flow-canvas" data-highlight={embed?.highlightIds?.join(',') ?? ''}>{embed?.previewDiagram?.elementIds?.join(',')}{embed?.onExplore && embed.previewDiagram?.elementIds?.map(id => <button key={id} type="button" data-node={id} onClick={() => embed.onExplore!({ type: 'element', id })} />)}</div>; },
 }));
 vi.mock('../views/DiagramEditor', () => ({ DiagramEditor: () => <div data-testid="scenario-diagram">{[useContext(DiagramActionSubject), useContext(DiagramUseCaseSubject)].filter(Boolean).join('')}</div> }));
 const element = (id: string, kind: string, name = id, owner?: string) => ({ id, kind, name, construct: kind.includes('Workflow') || kind === 'System' || kind === 'OperationalEntity' ? 'part' : kind.includes('UseCase') ? 'use case' : 'action', file: 'model/work.sysml', package: 'work', attributes: {}, ...(owner ? { owner } : {}) });
@@ -216,7 +216,7 @@ describe('guided operational work', () => {
         act(() => scenarios.querySelector<HTMLButtonElement>('li button')!.click()); await settle();
         expect(container.querySelector('[aria-label="Where you are"]')?.textContent).toContain('Monitoring path');
         expect([...container.querySelectorAll('[aria-label="Steps in order"] li')].map(item => item.textContent)).toEqual([expect.stringContaining('Read signal'), expect.stringContaining('Report signal')]);
-        expect(container.querySelector('[data-testid="scenario-diagram"]')?.textContent).toBe('systemPath');
+        expect(container.querySelector('[aria-label="Scenario diagram"] [data-testid="operative-flow-canvas"]')?.textContent).toContain('systemStep');
         expect(sendElementCreate).not.toHaveBeenCalled();
     });
 
@@ -258,8 +258,14 @@ describe('guided operational work', () => {
         expect(container.querySelector('[aria-label="Workflow structure"]')!.textContent).toContain('Monitoring path');
         const scenario = [...container.querySelectorAll('[aria-label="Workflow structure"] button')].find(button => button.textContent?.includes('Monitoring path')) as HTMLButtonElement;
         act(() => scenario.click()); await settle(); await settle();
-        expect(container.querySelectorAll('[data-testid="scenario-diagram"]')).toHaveLength(1);
-        expect(container.querySelector('[data-testid="scenario-diagram"]')!.textContent).toBe('systemPath');
+        const canvas = () => container.querySelector('[aria-label="Scenario diagram"] [data-testid="operative-flow-canvas"]')!;
+        expect(container.querySelectorAll('[data-testid="operative-flow-canvas"]')).toHaveLength(1);
+        expect(container.querySelector('[data-testid="scenario-diagram"]')).toBeNull();
+        expect(canvas().getAttribute('data-highlight')).toBe('');
+        act(() => canvas().querySelector<HTMLButtonElement>('[data-node="report"]')!.click()); await settle();
+        expect(container.querySelector('[aria-label="Properties"] h2')!.textContent).toBe('Report signal');
+        expect(canvas().getAttribute('data-highlight')).toBe('report');
+        await click('Back to the scenario');
         expect(container.querySelector('[aria-label="Operational element types"]')).toBeNull();
         expect([...container.querySelectorAll('[aria-label="Properties"] label')].map(item => item.textContent)).toEqual(['Trigger', 'Precondition', 'Postcondition', 'Expected result', 'Description']);
         await click('Table');
@@ -324,8 +330,11 @@ describe('guided operational work', () => {
 
     it('opens an existing scenario diagram during read-only review', async () => {
         useModelStore.setState({ pinned: { label: 'Review snapshot' } as never }); await render(); await click('Operational'); await chooseNode('Monitor condition'); await chooseNode('Monitoring work'); await chooseNode('Monitoring path'); await click('Open scenario diagram');
-        expect(container.querySelector('[data-testid="scenario-diagram"]')!.textContent).toBe('systemPath');
+        expect(container.querySelector('[aria-label="Scenario diagram"] [data-testid="operative-flow-canvas"]')).not.toBeNull();
         expect((container.querySelector('[aria-label="Properties"] textarea') as HTMLTextAreaElement).disabled).toBe(true);
+        await click('Edit diagram');
+        expect(container.querySelector('[data-testid="scenario-diagram"]')!.textContent).toBe('systemPath');
+        await click('Done editing');
         await click('All use cases'); expect(container.querySelector('[aria-label="Scenario page"]')).toBeNull();
     });
     it('creates an alternate scenario in the selected workflow and waits for its canonical model identity', async () => {
