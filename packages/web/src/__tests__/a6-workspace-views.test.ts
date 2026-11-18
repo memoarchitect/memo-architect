@@ -135,7 +135,7 @@ describe('use case groups', () => {
     ];
 
     it('lists the clinical case first, with the system use cases it includes nested, and the rest under their system', () => {
-        const level = (id: string) => (id === 'ucProcedure' ? 'clinical' : 'system') as 'clinical' | 'system';
+        const level = (id: string) => (id === 'ucProcedure' ? 'clinical' : 'operational') as 'clinical' | 'operational';
         const groups = groupUseCases(ids, includes, membership, id => id, level);
         expect(groups.map(g => g.label)).toEqual(['Clinical', 'Recording']);
         expect(groups[0].entries).toEqual([
@@ -160,9 +160,9 @@ describe('use case groups', () => {
     });
 
     it('puts the clinical group first, then the system cases, in a model with no System', () => {
-        const level = (id: string) => (id === 'ucProcedure' ? 'clinical' : 'system') as 'clinical' | 'system';
+        const level = (id: string) => (id === 'ucProcedure' ? 'clinical' : 'operational') as 'clinical' | 'operational';
         const groups = groupUseCases(ids, includes, { ...membership, missingSystem: true }, id => id, level);
-        expect(groups.map(g => g.label)).toEqual(['Clinical', 'System']);
+        expect(groups.map(g => g.label)).toEqual(['Clinical', 'Operational']);
         expect(groups[1].entries.map(e => e.id)).toEqual(['ucStandalone']);
     });
 

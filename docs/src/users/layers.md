@@ -7,7 +7,7 @@ layers at once and grow them together.
 | Layer | Question | Typical kinds |
 |---|---|---|
 | [Context](../modeling/layers/context.md) | Who uses the device, where, and with what external systems? | `IntendedUse`, `User`, `UseContext` |
-| [Operational](../modeling/layers/operational.md) | What work and outcomes matter to stakeholders? | `UseCase`, `OperationalWorkflow`, `OperativeScenario` |
+| [Operational](../modeling/layers/operational.md) | What work and outcomes matter to stakeholders? | `UseCase`, `Workflow`, `OperativeScenario` |
 | [Requirements](../modeling/layers/requirements.md) | What measurable claims must be true? | `Need`, `Requirement` |
 | [Functional](../modeling/layers/functional.md) | What does the system do, and in what order? | `SystemFunction`, `FunctionalFlow` |
 | [Logical](../modeling/layers/logical.md) | Which implementation-neutral parts own the responsibilities? | `System`, `Subsystem`, `LogicalComponent` |

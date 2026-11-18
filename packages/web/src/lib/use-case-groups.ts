@@ -1,11 +1,11 @@
 // ─── Use cases at two levels ─────────────────────────────────────────────────
 //
-// A use case is declared clinical or system by its type (`ClinicalUseCase`, `SystemUseCase`); the
+// A use case is declared clinical or system by its type (`ClinicalUseCase`, `OperationalUseCase`); the
 // model DTO's `operationalLevels` says which. Clinical use cases are listed first, as their own
-// group; the system use cases they include nest under them, and an included case is not also
+// group; the operational use cases they include nest under them, and an included case is not also
 // listed at the top. The rest are listed under the system (or system of systems) that holds them,
 // from the workspace membership. Membership no longer decides the level: it only says where a
-// system use case is held. A model with no level declared, or with no System, still lists what it
+// operational use case is held. A model with no level declared, or with no System, still lists what it
 // has in one flat group, and a case nothing holds is listed last rather than hidden.
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -25,6 +25,8 @@ export function groupUseCases(
     membership: WorkspaceMembershipDTO | undefined,
     nameOf: (id: string) => string,
     levelOf: (id: string) => OperationalLevel | undefined = () => undefined,
+    /** The word for a level: the label of the method task that works at it. */
+    levelLabel: (level: OperationalLevel) => string = level => level.charAt(0).toUpperCase() + level.slice(1),
 ): UseCaseGroup[] {
     const ids = new Set(useCaseIds);
     const children = new Map<string, string[]>();
@@ -52,13 +54,13 @@ export function groupUseCases(
 
     const clinical = useCaseIds.filter(id => !included.has(id) && levelOf(id) === 'clinical');
     const groups: UseCaseGroup[] = [];
-    if (clinical.length > 0) groups.push({ id: 'clinical', label: 'Clinical', entries: rooted(clinical) });
+    if (clinical.length > 0) groups.push({ id: 'clinical', label: levelLabel('clinical'), entries: rooted(clinical) });
     const rest = useCaseIds.filter(id => !emitted.has(id) && !clinical.includes(id));
 
     if (!membership || membership.missingSystem) {
         const entries = rooted(rest.filter(id => !included.has(id)));
         const remaining = rooted(rest.filter(id => !emitted.has(id)));
-        const label = clinical.length > 0 ? 'System' : undefined;
+        const label = clinical.length > 0 ? levelLabel('operational') : undefined;
         if (entries.length + remaining.length > 0 || groups.length === 0) groups.push({ id: 'all', label, entries: [...entries, ...remaining] });
         return groups;
     }

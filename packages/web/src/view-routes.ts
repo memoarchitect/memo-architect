@@ -184,7 +184,8 @@ export function pathToView(pathname: string, search = ''): ActiveView | null {
         const artifactId = params.get('artifact');
         return { type: 'pathway', layer: decodeURIComponent(segments[1]),
             ...(diagramId ? { diagramId } : {}),
-            ...(work === 'clinical' || work === 'system' ? { work } : {}),
+            // `work=system` is the operational level's earlier name; a saved address still opens it.
+            ...(work === 'clinical' || work === 'operational' ? { work } : work === 'system' ? { work: 'operational' as const } : {}),
             ...(artifactId ? { artifactId } : {}),
             ...(params.get('createCase') === 'true' ? { createCase: true } : {}) };
     }

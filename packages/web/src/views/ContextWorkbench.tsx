@@ -32,7 +32,7 @@ export function ContextWorkbench({ model, workspace, boundaryId, onBoundary, can
     diagramHref?: string;
     onView?: () => void;
     canvas?: ReactNode;
-    onOperational?: (level: 'clinical' | 'system', artifactId?: string, createCase?: boolean) => void;
+    onOperational?: (level: 'clinical' | 'operational', artifactId?: string, createCase?: boolean) => void;
 }) {
     const [adding, setAdding] = useState(false);
     const [participantId, setParticipantId] = useState<string>();
@@ -41,7 +41,7 @@ export function ContextWorkbench({ model, workspace, boundaryId, onBoundary, can
         ...operationalCatalog(model, 'SystemOfSystems'), ...operationalCatalog(model, 'System'),
     ].map(element => [element.id, element])).values()];
     const definitionOf = model.workspaceMembership?.definitionOf ?? {};
-    const cases = system ? operationalCatalog(model, 'SystemUseCase').filter(goal => model.relationships.some(
+    const cases = system ? operationalCatalog(model, 'OperationalUseCase').filter(goal => model.relationships.some(
         edge => edge.type === 'hasSubject' && edge.sourceId === goal.id && (edge.targetId === system.id || definitionOf[edge.targetId] === system.id),
     )) : [];
     const context = authoredBoundaryContext(model, system?.id ?? '');
@@ -89,7 +89,7 @@ export function ContextWorkbench({ model, workspace, boundaryId, onBoundary, can
         {showSetup && <GuidedContextSetup key={system.id} model={model} system={system} canWrite={canWrite}
             diagram={diagram} diagramSubject={diagramSubject} diagramHref={diagramHref} onCreateDiagram={onView}
             onClinical={onOperational && (() => onOperational('clinical'))}
-            onSystemGoals={onOperational && (() => onOperational('system'))} />}
+            onSystemGoals={onOperational && (() => onOperational('operational'))} />}
         {!showSetup && diagram && system && <section className="pathway-context-diagram" aria-label="Context diagram">
             <header>
                 <div><h2>{diagram.name}</h2>{diagramSubject && <p>Wider context for {diagramSubject}</p>}</div>
@@ -134,7 +134,7 @@ export function ContextWorkbench({ model, workspace, boundaryId, onBoundary, can
                     <div className="pathway-context-next">
                         <h3>{guided ? 'Next: define the goals' : 'System goals'}</h3>
                         {guided && <p>Once the boundary is clear, describe what people need to accomplish.</p>}
-                        {onOperational && cases.map(goal => <button className="pathway-resource" type="button" key={goal.id} onClick={() => onOperational('system', goal.id)}>
+                        {onOperational && cases.map(goal => <button className="pathway-resource" type="button" key={goal.id} onClick={() => onOperational('operational', goal.id)}>
                             <strong>{goal.name}</strong>
                         </button>)}
                         {onOperational && <button className="pathway-button pathway-button--primary" type="button" onClick={() => onOperational('clinical')}>{guided ? 'Continue to clinical use cases' : 'Explore clinical goals'} →</button>}
@@ -180,9 +180,9 @@ export function ContextWorkbench({ model, workspace, boundaryId, onBoundary, can
             <section aria-label="Related operational work" style={boundary}>
                 <h2 style={{ margin: 0, fontSize: 18 }}>Related system goals</h2>
                 {cases.length ? <div className="pathway-resources">{cases.map(goal => <button key={goal.id} className="pathway-resource" type="button" disabled={!onOperational}
-                    onClick={() => onOperational?.('system', goal.id)}><span><strong>{goal.name}</strong>{goal.attributes.goalStatement && <small>{goal.attributes.goalStatement}</small>}</span></button>)}</div>
+                    onClick={() => onOperational?.('operational', goal.id)}><span><strong>{goal.name}</strong>{goal.attributes.goalStatement && <small>{goal.attributes.goalStatement}</small>}</span></button>)}</div>
                     : <p>No related system goals are recorded here yet.</p>}
-                {canWrite && workspace && onOperational && <button className="pathway-button" style={{ marginTop: 12 }} type="button" onClick={() => onOperational('system', undefined, true)}>Add a system use case</button>}
+                {canWrite && workspace && onOperational && <button className="pathway-button" style={{ marginTop: 12 }} type="button" onClick={() => onOperational('operational', undefined, true)}>Add an operational use case</button>}
                 {selected?.file && <details className="pathway-related"><summary>Model details</summary><p>{selected.name}</p><code style={{ overflowWrap: 'anywhere' }}>{selected.file}</code></details>}
             </section>
         </div> : <div className="pathway-context-preview"><strong>Choose a system boundary</strong><p>Use the boundary menu or choose a system in Working on.</p></div>}

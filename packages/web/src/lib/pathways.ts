@@ -76,6 +76,12 @@ export function diagramTypeFor(viewKind: string | undefined): string {
     return Object.entries(DIAGRAM_TYPE_META).find(([, meta]) => meta.viewKind === viewKind)?.[0] ?? 'bdd';
 }
 
+/** The word for an operational level is the label of the method task that works at it. */
+export function operationalLevelLabel(guide: GuideResult | null | undefined, level: string): string {
+    for (const layer of guide?.layers ?? []) for (const task of layer.tasks ?? []) if (task.level === level && task.label) return task.label;
+    return level.charAt(0).toUpperCase() + level.slice(1);
+}
+
 /** Row taxonomy is method data; older custom methods fall back to their produced kinds. */
 export function kindsOfLayer(guide: GuideResult, layer: GuideLayer): string[] {
     return layer.elementKinds?.length ? layer.elementKinds : [...new Set(stepsOfLayer(guide, layer).flatMap(step => step.outputKinds))];

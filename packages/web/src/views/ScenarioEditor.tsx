@@ -3,6 +3,7 @@ import { groupUseCases } from '../lib/use-case-groups';
 import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useModelStore, getRelationshipsForElement } from '../store/model-store';
+import { operationalLevelLabel } from '../lib/pathways';
 import { sendElementUpdate } from '../store/ws-client';
 import { DIAGRAM_TYPE_META, LAYER_COLORS, resolveActionFlowDiagramType } from '../constants';
 import { COLOR, FONT } from '../styles/tokens';
@@ -119,7 +120,7 @@ export function ScenarioEditor({ explorerOnly = false }: { explorerOnly?: boolea
         const byType = (...types: string[]) => relationshipsOfType(model, ...types);
         const rawUseCases = elements.filter(e => e.kind.endsWith('UseCase'));
         const useCaseIds = new Set(rawUseCases.map(useCase => useCase.id));
-        // Clinical use cases first, the system use cases they include nested under them, then the rest
+        // Clinical use cases first, the operational use cases they include nested under them, then the rest
         // under the system that holds them (lib/use-case-groups.ts). `include` lowers to an `includesStep`
         // relationship in the builder, not `Includes`, which the ontology never declared.
         const grouped = groupUseCases(
@@ -128,6 +129,7 @@ export function ScenarioEditor({ explorerOnly = false }: { explorerOnly?: boolea
             scoped?.workspaceMembership,
             id => byId[id]?.name ?? id,
             id => model.operationalLevels?.[id],
+            level => operationalLevelLabel(useModelStore.getState().guide, level),
         );
         const useCases = grouped.flatMap(group => group.entries.map((entry, index) => ({
             element: byId[entry.id], depth: entry.depth, group, firstInGroup: index === 0,
@@ -413,7 +415,7 @@ export function ScenarioEditor({ explorerOnly = false }: { explorerOnly?: boolea
                             return { ...row, hidden };
                         });
                     })().filter(row => !row.hidden).map(({ useCase, workflows, depth, group, firstInGroup }) => {
-                        // A system use case a procedure does not include may be listed under each
+                        // An operational use case a procedure does not include may be listed under each
                         // system that holds it, so its expand key carries the group too.
                         const useCaseKey = `use-case:${group.id}:${useCase.id}`;
                         const isExpanded = expandedGroups.has(useCaseKey);

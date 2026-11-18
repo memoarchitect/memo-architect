@@ -81,7 +81,7 @@ export function GuidedLayer({ layer }: { layer: string }) {
     }
     const operationalKey = followed.current?.entry === entryKey ? followed.current.key : opened.current!.key;
     const renderedKey = useRef(operationalKey); renderedKey.current = operationalKey;
-    const follow = useCallback((artifactId: string | undefined, work?: 'clinical' | 'system') => {
+    const follow = useCallback((artifactId: string | undefined, work?: 'clinical' | 'operational') => {
         const current = useModelStore.getState().activeView;
         if (current.type !== 'pathway' || current.layer !== layer) return;
         if (current.artifactId === artifactId && (!work || current.work === work) && !current.createCase) return;
@@ -90,14 +90,14 @@ export function GuidedLayer({ layer }: { layer: string }) {
         opened.current = undefined;
         setActiveView(next);
     }, [layer, row?.id, setActiveView]);
-    const [levelSelection, setLevelSelection] = useState<{ key: string; level: 'clinical' | 'system' }>();
-    const onOperationalLevel = useCallback((level: 'clinical' | 'system') => {
+    const [levelSelection, setLevelSelection] = useState<{ key: string; level: 'clinical' | 'operational' }>();
+    const onOperationalLevel = useCallback((level: 'clinical' | 'operational') => {
         setLevelSelection(previous => previous?.key === operationalKey && previous.level === level ? previous : { key: operationalKey, level });
     }, [operationalKey]);
     const operationalMode = levelSelection?.key === operationalKey ? levelSelection.level
         : operationalEntry?.work ?? row?.tasks?.[0]?.level;
     const operationalWorkbench = row?.workbench === 'operational';
-    const requiresSystem = contextWorkbench || (operationalWorkbench && operationalMode === 'system');
+    const requiresSystem = contextWorkbench || (operationalWorkbench && operationalMode === 'operational');
     const showScope = !operationalWorkbench || requiresSystem;
     const defaultSystemScope = requiresSystem && !chosen ? options[0] : undefined;
     useEffect(() => {
@@ -198,7 +198,7 @@ export function GuidedLayer({ layer }: { layer: string }) {
         } catch (error) { setNotice(error instanceof Error ? error.message : String(error)); }
         finally { setCreating(false); }
     };
-    const goToOperational = (work: 'clinical' | 'system', artifactId?: string, createCase?: boolean) => {
+    const goToOperational = (work: 'clinical' | 'operational', artifactId?: string, createCase?: boolean) => {
         if (!operationalLayer) return;
         useModelStore.getState().inspectElement(null);
         const view = { type: 'pathway' as const, layer: operationalLayer.name, work, artifactId, createCase };

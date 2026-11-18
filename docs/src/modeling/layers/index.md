@@ -14,7 +14,7 @@ then grow each of them.
 | Layer | The question it answers | Typical kinds |
 |---|---|---|
 | [Context](context.md) | Who uses the device, where, and alongside what? | `IntendedUse`, `User`, `UseContext`, `UseEnvironment`, `MemoStakeholder` |
-| [Operational](operational.md) | What work do people do, and which outcomes matter? | `UseCase`, `OperationalWorkflow`, `OperativeScenario`, `OperativeAction`, `OperationalCapability` |
+| [Operational](operational.md) | What work do people do, and which outcomes matter? | `UseCase`, `Workflow`, `OperativeScenario`, `OperativeAction`, `OperationalCapability` |
 | [Requirements](requirements.md) | What must be true, measurably? | `Need`, `Requirement`, `SystemConstant`, `TimingConstraint` |
 | [Functional](functional.md) | What does the system do, and in what order? | `SystemFunction`, `ComponentFunction`, `FunctionalFlow`, `FunctionalTransfer`, `StateMachine` |
 | [Logical](logical.md) | Which implementation-neutral parts carry the responsibility? | `System`, `Subsystem`, `LogicalComponent`, `LogicalPort`, `LogicalInterface` |

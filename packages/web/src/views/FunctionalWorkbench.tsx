@@ -171,7 +171,7 @@ export function FunctionalWorkbench({ model, row, workspace, canWrite, artifactI
     const occurrenceLinks = operationalLinks.filter(link => link.via);
     const operationalButton = (id: string) => onOperational && operationalWorkLevel(model, id)
         ? <button type="button" className="pathway-resource" onClick={() => onOperational(id)}>{model.elements[id].name}</button>
-        : <span>{model.elements[id].name}{!operationalWorkLevel(model, id) && <small style={{ color: COLOR.muted }}> · not placed in a clinical or system workflow</small>}</span>;
+        : <span>{model.elements[id].name}{!operationalWorkLevel(model, id) && <small style={{ color: COLOR.muted }}> · not placed in a clinical or operational workflow</small>}</span>;
     const treeRow = (id: string, ancestors: Set<string>): React.ReactNode => {
         if (ancestors.has(id)) return null;
         const element = model.elements[id]; if (!element) return null;

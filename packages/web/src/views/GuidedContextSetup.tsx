@@ -245,7 +245,7 @@ export function GuidedContextSetup({ model, system, canWrite, diagram, diagramSu
             <footer className="pathway-context-actions">
 
                 {!diagram && onCreateDiagram && <button className="pathway-button" type="button" onClick={onCreateDiagram}>Create context diagram</button>}
-                {onSystemGoals && <button type="button" className="pathway-button" onClick={onSystemGoals}>System use cases</button>}
+                {onSystemGoals && <button type="button" className="pathway-button" onClick={onSystemGoals}>Operational use cases</button>}
                 {onClinical && <button type="button" className="pathway-button pathway-button--primary" onClick={onClinical}>Clinical use cases →</button>}
             </footer>
         </section>

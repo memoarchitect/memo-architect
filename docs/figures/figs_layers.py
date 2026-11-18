@@ -183,9 +183,9 @@ def layer_operational():
             "A use case is realized by workflows; a workflow owns scenarios; scenarios are ordered operative actions")
     O = "operational"
     C = PALETTE[O][0]
-    uc = f.ellipse(170, 150, 130, 40, "Deliver PCA therapy", O, stereo="SystemUseCase")
+    uc = f.ellipse(170, 150, 130, 40, "Deliver PCA therapy", O, stereo="OperationalUseCase")
     cap = f.block(30, 270, 220, 60, "TitratedAnalgesia", "OperationalCapability", cat=O, soft=True)
-    wf = f.block(390, 115, 220, 70, "PcaTherapyWorkflow", "SystemWorkflow", cat=O)
+    wf = f.block(390, 115, 220, 70, "PcaTherapyWorkflow", "OperationalWorkflow", cat=O)
     sc1 = f.block(390, 250, 220, 56, "Patient requests bolus", "OperativeScenario", cat=O, soft=True)
     sc2 = f.block(390, 330, 220, 56, "Occlusion during basal", "OperativeScenario", cat=O, soft=True)
     sc3 = f.block(390, 410, 220, 56, "Lockout rejects request", "OperativeScenario", cat=O, soft=True)

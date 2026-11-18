@@ -17,7 +17,7 @@ vi.mock('../store/ws-client', () => ({ requestGuide: async () => { useModelStore
 vi.mock('../views/DiagramEditor', () => ({ DiagramEditor: ({ diagramId }: { diagramId: string }) => createElement('div', { 'data-testid': 'editor' }, `${diagramId}:${useModelStore.getState().selectedDiagramId}:${Object.keys(useDiagramDisplayModel()?.elements ?? {}).join(',')}`) }));
 vi.mock('../components/AddRelationshipDialog', () => ({ AddRelationshipDialog: ({ element }: { element: { name: string } }) => createElement('div', { 'data-testid': 'relationship-dialog' }, element.name) }));
 vi.mock('../components/AppDialogs', () => ({ askText: async () => 'A new function' }));
-const step = (id: string, over: Partial<GuideStepStatus> = {}): GuideStepStatus => ({ id, name: id, label: `Work ${id}`, stage: 'work', level: 'system', inputKinds: [], outputKinds: ['Function'], doneWhen: [], linkedWhen: [], objective: `Objective ${id}`, exitCriteria: `Criteria ${id}`, predecessors: [], methodology: 'm', state: 'open', outputs: [], rules: [], links: [], reasons: [], waiting: [], ...over });
+const step = (id: string, over: Partial<GuideStepStatus> = {}): GuideStepStatus => ({ id, name: id, label: `Work ${id}`, stage: 'work', level: 'operational', inputKinds: [], outputKinds: ['Function'], doneWhen: [], linkedWhen: [], objective: `Objective ${id}`, exitCriteria: `Criteria ${id}`, predecessors: [], methodology: 'm', state: 'open', outputs: [], rules: [], links: [], reasons: [], waiting: [], ...over });
 const viewpoints = [{ id: 'catalog::vpWork', name: 'vpWork', label: 'Work architecture', viewKind: 'general' }, { id: 'library::vpExisting', name: 'vpExisting', label: 'Existing work', viewKind: 'general' }];
 const baseGuide = (): GuideResult => ({ scope: 'system', workspace: 'Host', methodologies: ['m'], roleViews: [], layers: [
     { id: 'm::layerWork', name: 'layerWork', label: 'Functional', axis: 'architecture', stages: ['work'], elementKinds: ['Function', 'Chain'], viewpoints, importable: false, methodology: 'm' },
@@ -124,7 +124,7 @@ describe('the guided layer workspace', () => {
         const before = useModelStore.getState().model!;
         useModelStore.setState({ model: { ...before,
             elements: { ...before.elements, direct: element('direct', 'Scenario', 'Check the sample'), viaStep: element('viaStep', 'Scenario', 'Report the reading'), loose: element('loose', 'OperativeAction', 'Loose activity') },
-            operationalLevels: { direct: 'system', viaStep: 'system' },
+            operationalLevels: { direct: 'operational', viaStep: 'operational' },
             relationships: [...before.relationships, { id: 'direct-performs', type: 'performs', sourceId: 'direct', targetId: 'fn' }, { id: 'step-performs', type: 'performs', sourceId: 'viaStep', targetId: 'step' }, { id: 'loose-performs', type: 'performs', sourceId: 'loose', targetId: 'fn' }],
         } as never });
         await render(); await click('Compute signal');
@@ -136,7 +136,7 @@ describe('the guided layer workspace', () => {
         expect(occurrences.textContent).toContain('Run measurement');
         expect(occurrences.textContent).not.toContain('Check the sample');
         expect(related.textContent).toContain('Check the sample');
-        expect(related.textContent).toContain('Loose activity · not placed in a clinical or system workflow');
+        expect(related.textContent).toContain('Loose activity · not placed in a clinical or operational workflow');
     });
 
     it('opens exact scoped endpoints from Functional and Logical', async () => {

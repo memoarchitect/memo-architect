@@ -46,7 +46,7 @@ export function restoreActiveView(): ActiveView {
         if (value?.type === 'guide') return { type: 'guide' };
         if (value?.type === 'pathway' && typeof value.layer === 'string' && value.layer.trim()) {
             return { type: 'pathway', layer: value.layer, ...(typeof value.diagramId === 'string' ? { diagramId: value.diagramId } : {}),
-                ...(value.work === 'clinical' || value.work === 'system' ? { work: value.work } : {}),
+                ...(value.work === 'clinical' || value.work === 'operational' ? { work: value.work } : {}),
                 ...(typeof value.artifactId === 'string' ? { artifactId: value.artifactId } : {}),
                 ...(value.createCase === true ? { createCase: true } : {}) };
         }
@@ -170,7 +170,7 @@ export type ActiveView =
     | { type: 'dashboards' }          // custom dashboards: list
     | { type: 'custom-dashboard'; dashboardId: string; scope?: DashboardScope } // one markdown dashboard
     | { type: 'review-dashboard' }    // N1: first-review "money shot" view (#132)
-    | { type: 'pathway'; layer: string; diagramId?: string; work?: 'clinical' | 'system'; artifactId?: string; createCase?: boolean }
+    | { type: 'pathway'; layer: string; diagramId?: string; work?: 'clinical' | 'operational'; artifactId?: string; createCase?: boolean }
     | { type: 'guide' }               // the method map (Pathways): the method's rows, and where to start
     | { type: 'import' }
     | { type: 'analysis' }

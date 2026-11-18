@@ -6,7 +6,7 @@ Choose an element by the engineering statement you want to preserve.
 |---|---|
 | "The pump is used for patient-controlled analgesia in adults." | `IntendedUse` |
 | "A nurse programs therapy." | `User` (actorKind: clinician) plus an `OperativeAction` |
-| "Deliver PCA therapy." | `SystemUseCase` or `ClinicalUseCase` |
+| "Deliver PCA therapy." | `OperationalUseCase` or `ClinicalUseCase` |
 | "The patient needs controlled analgesia." | `Need` (needKind: stakeholder) |
 | "The pump shall enforce a bolus limit." | `Requirement` (requirementType: system) |
 | "Evaluate the requested bolus." | `SystemFunction` |

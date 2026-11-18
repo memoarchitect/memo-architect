@@ -12,7 +12,7 @@ Set `diagramType = "ucd"`.
 
 1. **System boundary** — the rectangle is the subject of the use cases, usually
    the system of interest. Use cases sit inside it; actors stand outside.
-2. **Use cases** — each ellipse is a `ClinicalUseCase` or `SystemUseCase`: a
+2. **Use cases** — each ellipse is a `ClinicalUseCase` or `OperationalUseCase`: a
    goal, named from the actor's point of view. A dashed «include» arrow means one
    use case always includes another; «extend» means it sometimes does.
 3. **Actors** — stick figures are `User`s (or other participants). A line from
