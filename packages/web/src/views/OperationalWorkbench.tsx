@@ -13,6 +13,7 @@ import { COLOR } from '../styles/tokens';
 import { ControlIcon } from '../components/TraceControls';
 import { pathwayRelationship } from '../lib/pathway-relationship';
 import { LinkCoverageTable, type LinkCoverageRow } from './LinkCoverage';
+import { ScenarioPage } from './ScenarioPage';
 import './pathway-workbench.css';
 const DiagramCanvas = lazy(() => import('./DiagramCanvas').then(module => ({ default: module.DiagramCanvas })));
 const DiagramEditor = lazy(() => import('./DiagramEditor').then(module => ({ default: module.DiagramEditor })));
@@ -171,21 +172,21 @@ export function OperationalWorkbench({ model, row, workspace, canWrite, entry, o
     const visualSubject = typed.find(element => element.id === selectedId) ?? typed.find(element => selectedAncestors.includes(element.id)) ?? (!selectedId ? typed[0] : undefined);
     const visualKey = `${workspace ?? ''}:${taskId}:${category}:${visualSubject?.id ?? ''}`;
     const showVisual = () => { if (!typed.some(element => element.id === selectedId) && visualSubject) setSelectedId(visualSubject.id); setAction(undefined); setPresentation('visual'); };
-    const openDiagram = (subject = visualSubject, create = false) => {
-        if (!subject || category === 'workflow') return;
-        const viewpoint = category === 'case' ? row.viewpoints.find(viewpoint => viewpoint.name === 'vpUseCase') : task?.viewpoint;
+    const openDiagram = (subject = visualSubject, create = false, as: Category = category) => {
+        if (!subject || as === 'workflow') return;
+        const viewpoint = as === 'case' ? row.viewpoints.find(viewpoint => viewpoint.name === 'vpUseCase') : task?.viewpoint;
         if (!viewpoint) { if (create) setNotice('The method has no viewpoint for this presentation.'); return; }
-        const members = category === 'case' ? useCaseMembers(model, subject.id) : actionMembers(model, subject.id);
-        const allowed = new Set(members); const diagramType = category === 'case' ? 'ucd' : viewpoint.viewKind === 'actionflow' ? 'ofd' : diagramTypeFor(viewpoint.viewKind);
-        const existing = model.diagrams?.find(diagram => (category === 'case' ? diagram.diagramType === 'ucd' : diagram.viewKind === viewpoint.viewKind)
+        const members = as === 'case' ? useCaseMembers(model, subject.id) : actionMembers(model, subject.id);
+        const allowed = new Set(members); const diagramType = as === 'case' ? 'ucd' : viewpoint.viewKind === 'actionflow' ? 'ofd' : diagramTypeFor(viewpoint.viewKind);
+        const existing = model.diagrams?.find(diagram => (as === 'case' ? diagram.diagramType === 'ucd' : diagram.viewKind === viewpoint.viewKind)
             && diagram.elementIds?.includes(subject.id) && members.every(id => diagram.elementIds?.includes(id))
-            && diagram.elementIds.every(id => allowed.has(id) || category === 'scenario' && model.elements[id]?.construct !== 'action'));
+            && diagram.elementIds.every(id => allowed.has(id) || as === 'scenario' && model.elements[id]?.construct !== 'action'));
         if (existing) { setDiagramId(existing.id); return; }
         if (!create || !canWrite) return;
         void save(async () => {
             let reason: string | undefined; const guide = useModelStore.getState().guide;
-            const id = await useModelStore.getState().createDiagram({ name: `${subject.name} — ${category === 'case' ? 'Use case diagram' : 'Scenario diagram'}`, viewpointId: viewpoint.id, viewKind: viewpoint.viewKind ?? 'actionflow', diagramType,
-                elementIds: members, elementKinds: category === 'case' ? [task!.subjectKind, 'User', 'MemoActor', 'OperationalEntity', 'System', 'SystemOfSystems'] : guide ? kindsOfLayer(guide, row) : [], properties: { autoPopulate: 'false' }, activate: false, onError: error => { reason = error; } });
+            const id = await useModelStore.getState().createDiagram({ name: `${subject.name} — ${as === 'case' ? 'Use case diagram' : 'Scenario diagram'}`, viewpointId: viewpoint.id, viewKind: viewpoint.viewKind ?? 'actionflow', diagramType,
+                elementIds: members, elementKinds: as === 'case' ? [task!.subjectKind, 'User', 'MemoActor', 'OperationalEntity', 'System', 'SystemOfSystems'] : guide ? kindsOfLayer(guide, row) : [], properties: { autoPopulate: 'false' }, activate: false, onError: error => { reason = error; } });
             if (!id) throw new Error(reason ?? 'The diagram could not be created.'); return id;
         }, id => setDiagramId(id));
     };
@@ -459,6 +460,18 @@ export function OperationalWorkbench({ model, row, workspace, canWrite, entry, o
         .filter(item => performedTargets.has(item.step.id)).map(item => ({ flow, step: item.step }))) : [];
     const performers = selected ? model.relationships.filter(edge => edge.type === 'performs' && edge.targetId === selected.id).flatMap(edge => model.elements[edge.sourceId] ? [model.elements[edge.sourceId]] : []) : [];
     const isScenarioPage = presentation === 'overview' && selectedRole === 'scenario';
+    // A scenario, or a step inside one, opens the scenario page: its steps, one diagram, and the selection's properties.
+    const pageScenario = selected && presentation !== 'hierarchy' ? (selectedRole === 'scenario' ? selected : selectedRole === 'step' ? scenarioOf(selected.id) : undefined) : undefined;
+    const pageKey = pageScenario ? `page:${workspace ?? ''}:${taskId}:${pageScenario.id}` : '';
+    useEffect(() => {
+        if (!pageKey || !pageScenario || busy || openingVisual.current === pageKey) return;
+        openingVisual.current = pageKey; openDiagram(pageScenario, false, 'scenario');
+    }, [pageKey, busy, visualKey]);
+    const pageGuide = useModelStore.getState().guide;
+    const scenarioDiagram = pageScenario && (diagramId ? <section aria-label="Scenario diagram" style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 500 }}><Suspense fallback={<p>Opening diagram…</p>}><PaletteKindsContext.Provider value={pageGuide ? kindsOfLayer(pageGuide, row) : []}><DiagramDisplayScope.Provider value={level === 'clinical' ? null : workspace}><DiagramUseCaseSubject.Provider value={null}><DiagramActionSubject.Provider value={pageScenario.id}><DiagramEditor key={diagramId} diagramId={diagramId} /></DiagramActionSubject.Provider></DiagramUseCaseSubject.Provider></DiagramDisplayScope.Provider></PaletteKindsContext.Provider></Suspense></section>
+        : <section aria-label="Scenario diagram setup" className="pathway-context-preview"><p>{busy ? 'Opening diagram…' : 'This scenario has no saved diagram.'}</p>{!busy && canWrite && <button type="button" className="pathway-button" onClick={() => openDiagram(pageScenario, true, 'scenario')}>Create diagram</button>}</section>);
+    const performerCandidates = () => Object.values(model.elements).filter(element => ['User', 'OperationalEntity', ...(level === 'operational' ? ['System', 'SystemOfSystems'] : [])].some(kind => conforms(element.id, kind)) && (!element.isDefinition || element.id === workspace) && element.provenance?.declaration.writable !== false);
+    const linkClinicalWork = () => begin('refine', 'Link the clinical work it realizes', { sourceId: selected!.id }, operationalCatalog(model, clinicalKind ?? 'UseCase').filter(element => operationalWorkLevel(model, element.id) === 'clinical' && canonicalFunctionId(model, element.id) === element.id));
     const artifactDetails = selected && <>
         {selected.doc && <p style={muted}>{selected.doc}</p>}
         <dl className="pathway-operational-facts">
@@ -468,8 +481,9 @@ export function OperationalWorkbench({ model, row, workspace, canWrite, entry, o
         <div className="pathway-scenario-actions">{creationButtons}<button style={button} disabled={!ownSelection || !!selectedLevel && selectedLevel !== level}
             onClick={() => useModelStore.getState().inspectElement(selected.id)}>Details…</button></div>
     </>;
+    const actionForm = action && <OperationalForm key={`${action.operation}:${selectedId ?? ''}`} action={action} model={model} level={level} levelTask={task} workspace={workspace} disabled={!newWrite || busy} onCancel={() => setAction(undefined)} onContext={() => create('context')} onSave={(context, name) => void save(() => writeOperational({ ...base, ...action.context, ...context, operation: action.operation }, name), id => { setAction(undefined); if (action.counterpartWorkspace) { if (selected) choose(selected.id); } else if (id) choose(id); })} />;
     const detail = (<section aria-label="Current operational task" style={card}>
-                {action ? <OperationalForm key={`${action.operation}:${selectedId ?? ''}`} action={action} model={model} level={level} levelTask={task} workspace={workspace} disabled={!newWrite || busy} onCancel={() => setAction(undefined)} onContext={() => create('context')} onSave={(context, name) => void save(() => writeOperational({ ...base, ...action.context, ...context, operation: action.operation }, name), id => { setAction(undefined); if (action.counterpartWorkspace) { if (selected) choose(selected.id); } else if (id) choose(id); })} />
+                {action ? actionForm
                 : !selected ? <><h2 style={heading}>{category === 'case' ? 'What should someone accomplish?' : category === 'workflow' ? 'What work supports the goal?' : 'What happens along this path?'}</h2><p style={muted}>{typed.length ? `Select ${category === 'case' ? 'a use case' : `a ${category}`} to see its details.` : `Use Add ${category === 'case' ? 'use case' : category} to start.`}</p></>
                 : <><small style={muted}>{levelName(selectedLevel)} {selectedRole === 'case' ? 'use case' : selectedRole === 'workflow' ? 'workflow' : selectedRole === 'scenario' ? 'scenario' : 'step'} · {title}</small><h2 style={heading}>{selected.name}</h2>
                     {selectedRole === 'scenario' && <span className="pathway-operational-pill">{scenarioPath(selected)}</span>}
@@ -542,14 +556,24 @@ export function OperationalWorkbench({ model, row, workspace, canWrite, entry, o
                 {!hierarchy.roots.length && !hierarchy.unlinked.length && !hierarchy.unplaced.length && <p style={muted}>Start with a goal. Add its workflow, then nominal and alternate scenario paths.</p>}
             </section>) : <OperationalTable model={model} level={levelLabel} category={category} items={visibleItems} selectedId={selectedId} onSelect={choose} onAdd={addTyped} canWrite={newWrite} filter={filter} setFilter={setFilter} review={review} setReview={setReview} />;
     return <section className="pathway-workspace" data-testid="operational-workbench" style={{ flex: 1, minHeight: 0, overflow: 'auto', padding: 20 }}><div style={{ maxWidth: presentation === 'visual' ? undefined : 1440, margin: 'auto' }}>
-        {(!selected || presentation !== 'overview') && <header className="pathway-header">
+        {!pageScenario && (!selected || presentation !== 'overview') && <header className="pathway-header">
             <div><h1>{levelLabel} {presentation === 'overview' ? 'use cases' : typeLabel}</h1><p>{level === 'clinical' ? 'Clinical baseline · independent of the selected product' : root ? root.name : 'Choose a system to add or connect work'}</p></div>
             <button type="button" className="pathway-button pathway-button--primary" disabled={!newWrite} onClick={presentation === 'overview' ? () => {
                 backToUseCases(); begin('use-case', `Add a ${level} use case`);
             } : addTyped}>{ControlIcon.plus} Add {presentation === 'overview' || category === 'case' ? 'use case' : category}</button>
         </header>}
-        {notice && <p role="status" style={muted}>{notice}</p>}
-        {!isScenarioPage && <div className="pathway-toolbar">
+        {notice && !pageScenario && <p role="status" style={muted}>{notice}</p>}
+        {pageScenario && <ScenarioPage model={model} scenario={pageScenario} selectedId={selectedId} levelName={levelName} writable={writable} diagram={scenarioDiagram} form={actionForm || undefined} notice={notice}
+            onSelect={choose} onOpenWork={goToWork} onBack={() => { backToUseCases(); setPresentation('overview'); }}
+            onNewStep={() => begin('step', 'Add a scenario step', { scenarioId: pageScenario.id })}
+            onExistingStep={() => begin('reuse-step', 'Add an existing step', { scenarioId: pageScenario.id }, operationalCatalog(model, 'OperativeAction').filter(candidate => operationalWorkLevel(model, candidate.id) === level && canonicalFunctionId(model, candidate.id) === candidate.id && !functionalFlowSteps(model, pageScenario.id).steps.some(item => item.step.id === candidate.id)))}
+            onPerformer={() => begin('performer', 'Choose the performer', { sourceId: selected!.id }, performerCandidates())}
+            onLink={level === 'clinical' ? linkSystemCounterpart : linkClinicalWork}
+            onLinkFunction={level === 'operational' ? () => begin('perform-function', 'Link a function that realizes this step', { sourceId: selected!.id }, functions) : undefined}
+            onOpenFunction={onFunctional ? id => onFunctional(id) : undefined}
+            onAllProperties={id => useModelStore.getState().inspectElement(id)}
+            onSave={async (element, fields) => { try { await writeOperational({ ...base, operation: 'fields', sourceId: element.id, fields }); return undefined; } catch (error) { return error instanceof Error ? error.message : String(error); } }} />}
+        {!pageScenario && !isScenarioPage && <div className="pathway-toolbar">
             <nav className="pathway-segments" aria-label="Operational tasks">{tasks.filter(task => task.primary).map(candidate => <button type="button" key={candidate.id}
                 aria-pressed={candidate.id === task?.id} onClick={() => setTaskId(candidate.id)}>{candidate.label}</button>)}</nav>
             {presentation !== 'overview' && <nav className="pathway-segments" aria-label="Operational element types">{([
@@ -566,7 +590,7 @@ export function OperationalWorkbench({ model, row, workspace, canWrite, entry, o
                     }}>{label}</button>)}</nav>
             </details>
         </div>}
-        {presentation !== 'visual' ? presentation === 'overview' ? <section aria-label={`${levelLabel} use cases overview`}>
+        {!pageScenario && (presentation !== 'visual' ? presentation === 'overview' ? <section aria-label={`${levelLabel} use cases overview`}>
             {selected ? <>
                 <nav className="pathway-operational-breadcrumb" aria-label="Operational path">
                     <button type="button" onClick={backToUseCases}>All use cases</button>
@@ -702,7 +726,7 @@ export function OperationalWorkbench({ model, row, workspace, canWrite, entry, o
                     </section>}
                 {selected && category !== 'workflow' && !action && detail}
                 </div>
-            </>}
+            </>)}
 
     </div></section>;
 }
