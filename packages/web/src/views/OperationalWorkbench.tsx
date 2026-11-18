@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { diagramUrl } from '../router';
 import { actionMembers, useCaseMembers } from '../lib/operational-presentation';
 import { lazy, Suspense, useEffect, useMemo, useRef, useState, type CSSProperties, type FormEvent, type ReactNode } from 'react';
@@ -10,10 +10,13 @@ import { DiagramUseCaseSubject, DiagramActionSubject, DiagramDisplayScope } from
 import { DiagramEmbedContext } from '../diagram/diagram-embed-context';
 import { PaletteKindsContext } from './DiagramPalette';
 import { COLOR } from '../styles/tokens';
-import { ControlIcon } from '../components/TraceControls';
+import { ControlIcon, SegmentedControl } from '../components/TraceControls';
 import { pathwayRelationship } from '../lib/pathway-relationship';
 import { LinkCoverageTable, type LinkCoverageRow } from './LinkCoverage';
 import { ScenarioPage } from './ScenarioPage';
+import { UseCaseProfile } from './UseCaseProfile';
+import { ElementChip } from '../components/ElementChip';
+import { confirmDialog } from '../components/AppDialogs';
 import './pathway-workbench.css';
 const DiagramCanvas = lazy(() => import('./DiagramCanvas').then(module => ({ default: module.DiagramCanvas })));
 const DiagramEditor = lazy(() => import('./DiagramEditor').then(module => ({ default: module.DiagramEditor })));
@@ -125,7 +128,13 @@ export function OperationalWorkbench({ model, row, workspace, canWrite, entry, o
         }
         previousSelectionScope.current = { workspace, taskId };
         const pending = pendingSelection.current; setSelectedId(pending?.workspace === workspace && pending?.taskId === taskId ? pending.id : undefined); pendingSelection.current = undefined; setAction(undefined); setDiagramId(undefined); setNotice(''); setFilter(''); setReview(false); }, [workspace, taskId, entryVisible]);
-    useEffect(() => { if (!diagramId || presentation !== 'visual' || category === 'workflow') useModelStore.getState().inspectElement(null); else useModelStore.getState().selectDiagram(diagramId); }, [diagramId, workspace, taskId, selectedId, presentation, category]);
+    // The scenario page inspects what it selects, as a click on any diagram does; elsewhere a change of selection
+    // clears the properties panel unless a diagram is open.
+    const onScenarioPage = presentation !== 'hierarchy' && (selectedRole === 'scenario' || selectedRole === 'step');
+    useEffect(() => {
+        if (onScenarioPage) return;
+        if (!diagramId || presentation !== 'visual' || category === 'workflow') useModelStore.getState().inspectElement(null); else useModelStore.getState().selectDiagram(diagramId);
+    }, [diagramId, workspace, taskId, selectedId, presentation, category, onScenarioPage]);
     useEffect(() => {
         if (!selectedId) return;
         const ancestors = new Set<string>(); const queue = [selectedId];
@@ -224,9 +233,8 @@ export function OperationalWorkbench({ model, row, workspace, canWrite, entry, o
             <button type="button" style={{ ...button, textAlign: 'left', flex: 1, background: selectedId === id ? '#e8f8f3' : 'white' }} aria-pressed={selectedId === id} onClick={() => choose(id)}><span>{element.name}</span><small style={{ display: 'block', color: COLOR.muted }}>{badge}{crossLevel ? ' · System context' : context ? ' · Other system' : ''}{review && needsReview(id) ? ' · Needs review' : ''}</small></button></div>
             {open && !!children.length && <ul style={{ listStyle: 'none', paddingLeft: 18 }}>{children.map(child => tree(child, new Set([...path, id])))}</ul>}</li>;
     };
-    const title = selectedRole === 'case' ? 'Goal and use specification' : selectedRole === 'workflow' ? 'Work analysis' : selectedRole === 'scenario' ? 'Scenario path' : 'Operational step';
+    const title = selectedRole === 'case' ? 'Goal and use specification' : selectedRole === 'scenario' ? 'Scenario path' : 'Operational step';
     const creationButtons = selectedRole === 'case' ? <><button style={button} disabled={!writable} onClick={() => create('workflow')}>+ Workflow</button><button style={button} disabled={!writable} onClick={() => create('use-case')}>+ Included use case</button><button style={button} disabled={!writable} onClick={() => begin('include', 'Include an existing use case', { sourceId: selected!.id }, operationalCatalog(model, task!.subjectKind).filter(candidate => !wouldIncludeCycle(model, selected!.id, candidate.id)))}>Reuse a use case</button></>
-        : selectedRole === 'workflow' ? <>{presentation !== 'overview' && <button style={button} disabled={!writable} onClick={() => create('scenario')}>+ Scenario</button>}<button style={button} disabled={!writable} onClick={() => begin('link-workflow', 'Connect this workflow to a use case', { workflowId: selected!.id }, useCases)}>Link to use case</button></>
         : selectedRole === 'scenario' || selectedRole === 'step' && conforms(selected!.id, 'OperativeAction') ? <>{(presentation !== 'overview' || selectedRole === 'step') && <button style={button} disabled={!writable} onClick={() => create('step')}>{selectedRole === 'scenario' ? '+ Step' : '+ Substep'}</button>}<button style={button} disabled={!writable} onClick={() => begin('reuse-step', 'Reuse an existing step', selectedRole === 'scenario' ? { scenarioId: selected!.id } : { parentStepId: selected!.id }, operationalCatalog(model, 'OperativeAction').filter(candidate => operationalWorkLevel(model, candidate.id) === level && candidate.id !== selected!.id && canonicalFunctionId(model, candidate.id) === candidate.id))}>Reuse a step</button></> : null;
     const clinicalTask = tasks.find(task => task.level === 'clinical');
     const subjectIds = selectedRole === 'case' ? model.relationships.filter(edge =>
@@ -238,7 +246,6 @@ export function OperationalWorkbench({ model, row, workspace, canWrite, entry, o
     const overviewCase = selectedRole === 'case' && selected ? selected
         : useCases.find(item => item.id === overviewAnchor && linkedCases.includes(item.id))
         ?? useCases.find(item => linkedCases.includes(item.id));
-    const [caseDetailsOpen, setCaseDetailsOpen] = useState(Boolean(entry?.artifactId));
     const [coverageOpen, setCoverageOpen] = useState(false);
     // System activities checked for a direct system function. A flow that realizes the activity is shown as
     // indirect coverage, never as a function the activity performs.
@@ -256,29 +263,39 @@ export function OperationalWorkbench({ model, row, workspace, canWrite, entry, o
                     ...(realizingFlows.length ? { indirect: { status: 'Via a functional flow', related: realizingFlows.map(flow => flow.name).join(', ') } } : {}) };
             });
     }, [model, level, coverageOpen, taskScope, functions]);
-    const openOverviewItem = (id: string) => { setOverviewAnchor(overviewCase?.id); setCaseDetailsOpen(false); choose(id); };
-    const backToUseCases = () => { setOverviewAnchor(undefined); setSelectedId(undefined); setAction(undefined); setCategory('case'); setCaseDetailsOpen(false); };
-    const showOverviewDetails = !!action || !!selected && (selectedRole !== 'case' || caseDetailsOpen);
+    const openOverviewItem = (id: string) => { setOverviewAnchor(overviewCase?.id); choose(id); };
+    const backToUseCases = () => { setOverviewAnchor(undefined); setSelectedId(undefined); setAction(undefined); setCategory('case'); };
+    // A workflow selected in the overview shows its use case's page, where its scenarios are listed under it.
+    const pageCase = presentation !== 'overview' ? undefined : selectedRole === 'case' ? selected : selectedRole === 'workflow' ? overviewCase : undefined;
+    const showOverviewDetails = !!action || !!selected && !pageCase;
     const [caseFilter, setCaseFilter] = useState('');
     const [caseDepthPreset, setCaseDepthPreset] = useState('all');
     const [collapsedCases, setCollapsedCases] = useState<Set<string>>(() => new Set());
+    const [caseShow, setCaseShow] = useState<'all' | 'with'>('all');
     const caseBranches = useMemo(() => {
         const query = caseFilter.trim().toLowerCase();
         const scopeIds = new Set(useCases.map(item => item.id));
         const visited = new Set<string>();
-        type CatalogRow = { item: Element; depth: number; parent?: Element; key: string; ancestorKeys: string[]; childCount: number; count: number; inScope: boolean };
+        type CatalogRow = { item: Element; depth: number; parent?: Element; key: string; ancestorKeys: string[]; childCount: number; count: number; total: number; inScope: boolean };
+        // A row stays when it, or a case it includes, has a workflow; cases with workflows sort first at every level.
         const branch = (item: Element, ancestors: readonly Element[], ancestorMatches = false): CatalogRow[] => {
             if (ancestors.some(parent => parent.id === item.id)) return [];
             visited.add(item.id);
             const matches = !query || item.name.toLowerCase().includes(query);
-            const children = includedUseCases(model, item.id).flatMap(child => branch(child, [...ancestors, item], ancestorMatches || matches));
+            const childBranches = includedUseCases(model, item.id)
+                .map(child => branch(child, [...ancestors, item], ancestorMatches || matches))
+                .filter(rows => rows.length > 0)
+                .sort((a, b) => Number(b[0].total > 0) - Number(a[0].total > 0));
+            const children = childBranches.flat();
             if (!matches && !ancestorMatches && children.length === 0) return [];
+            const count = (hierarchy.children.get(item.id) ?? []).filter(id => operationalConforms(model, id, 'Workflow')).length;
+            const total = count + childBranches.reduce((sum, rows) => sum + rows[0].total, 0);
+            if (caseShow === 'with' && total === 0) return [];
             return [{
                 item, depth: ancestors.length, parent: ancestors.at(-1),
                 key: JSON.stringify([...ancestors.map(parent => parent.id), item.id]),
                 ancestorKeys: ancestors.map((_, index) => JSON.stringify(ancestors.slice(0, index + 1).map(parent => parent.id))),
-                childCount: children.filter(child => child.depth === ancestors.length + 1).length,
-                count: (hierarchy.children.get(item.id) ?? []).filter(id => operationalConforms(model, id, 'Workflow')).length,
+                childCount: childBranches.length, count, total,
                 inScope: scopeIds.has(item.id),
             }, ...children];
         };
@@ -286,8 +303,8 @@ export function OperationalWorkbench({ model, row, workspace, canWrite, entry, o
         for (const item of useCases) {
             if (!visited.has(item.id)) roots.push(branch(item, []));
         }
-        return roots.filter(rows => rows.length > 0).sort((a, b) => Number(b[0].count > 0) - Number(a[0].count > 0));
-    }, [model, useCases, hierarchy, caseFilter]);
+        return roots.filter(rows => rows.length > 0).sort((a, b) => Number(b[0].total > 0) - Number(a[0].total > 0));
+    }, [model, useCases, hierarchy, caseFilter, caseShow]);
     const searchingCases = Boolean(caseFilter.trim());
     const visibleBranches = searchingCases ? caseBranches
         : caseBranches.map(rows => rows.filter(row => !row.ancestorKeys.some(key => collapsedCases.has(key))));
@@ -315,7 +332,11 @@ export function OperationalWorkbench({ model, row, workspace, canWrite, entry, o
         </button>;
     };
     const overviewScenario = selectedAncestors.find(id => role(id) === 'scenario');
-    const overviewWorkflows = overviewCase ? (hierarchy.children.get(overviewCase.id) ?? []).filter(id => role(id) === 'workflow') : [];
+    const scenarioCount = (id: string) => (hierarchy.children.get(id) ?? []).filter(child => role(child) === 'scenario').length;
+    const overviewWorkflows = overviewCase ? (hierarchy.children.get(overviewCase.id) ?? []).filter(id => role(id) === 'workflow')
+        .sort((a, b) => Number(scenarioCount(b) > 0) - Number(scenarioCount(a) > 0)) : [];
+    const [workflowShow, setWorkflowShow] = useState<'all' | 'with'>('all');
+    const shownWorkflows = workflowShow === 'with' ? overviewWorkflows.filter(id => scenarioCount(id) > 0) : overviewWorkflows;
     const canAddUnder = (id: string) => newWrite && model.elements[id]?.provenance?.declaration.writable !== false
         && operationalWorkLevel(model, id) === level && (level === 'clinical' || !!workspace && !!model.workspaceMembership?.membership[id]?.includes(workspace));
     const [caseLayout, setCaseLayout] = useState<'list' | 'grid' | 'diagram'>('list');
@@ -345,29 +366,59 @@ export function OperationalWorkbench({ model, row, workspace, canWrite, entry, o
         const actor = model.elements[edge.sourceId === id ? edge.targetId : edge.targetId === id ? edge.sourceId : ''];
         return actor ? [actor.name] : [];
     });
-    const ownedScenarioLinks = (id: string) => <ul>{(hierarchy.children.get(id) ?? []).filter(child => role(child) === 'scenario').map(child =>
-        <li key={child}><button type="button" aria-current={child === overviewScenario ? 'page' : undefined}
-            onClick={() => openOverviewItem(child)}>{model.elements[child].name}</button></li>)}</ul>;
+    // A workflow has no page of its own: its scenarios are listed under it here, and its own links are in this menu.
+    const workflowMenu = (id: string): { label: string; run: () => void; disabled?: boolean }[] => {
+        const own = canAddUnder(id);
+        return [
+            { label: 'Properties…', run: () => useModelStore.getState().inspectElement(id) },
+            ...(own ? [{ label: 'Link to a use case…', disabled: busy, run: () => begin('link-workflow', 'Connect this workflow to a use case', { workflowId: id }, useCases) }] : []),
+            ...(level === 'clinical' && canWrite ? [{ label: `Link ${levelName('operational').toLowerCase()} work…`, disabled: busy, run: () => linkSystemCounterpart(id, systemTask?.workflowKind) }] : []),
+            ...(level === 'operational' && own ? [{ label: `Link ${levelName('clinical').toLowerCase()} work…`, disabled: busy, run: () => begin('refine', 'Link the clinical work it realizes', { sourceId: id },
+                operationalCatalog(model, clinicalTask?.workflowKind ?? 'Workflow').filter(element => operationalWorkLevel(model, element.id) === 'clinical' && canonicalFunctionId(model, element.id) === element.id)) }] : []),
+        ];
+    };
+    // One workflow: its scenarios listed under it, + Scenario, and its own links in the ⋯ menu. The use case page
+    // lists these, and a workflow selected anywhere else shows the same group.
+    const workflowGroup = (id: string) => {
+        const workflow = model.elements[id];
+        if (!workflow) return null;
+        const scenarios = (hierarchy.children.get(id) ?? []).filter(child => role(child) === 'scenario').flatMap(child => model.elements[child] ? [model.elements[child]] : []);
+        const menu = workflowMenu(id);
+        return <li key={id} className="pathway-workflow-group" aria-label={`${workflow.name} workflow`} aria-current={id === overviewWorkflow ? 'true' : undefined}>
+            <div className="pathway-workflow-group-head">
+                <span className="pathway-icon" aria-hidden="true">{ControlIcon.workflow}</span>
+                <span><strong>{workflow.name}</strong>{workflow.doc && <small>{workflow.doc}</small>}</span>
+                <CountBadge icon={ControlIcon.scenario} count={scenarios.length} one="scenario" many="scenarios" />
+                {canAddUnder(id) && <button type="button" className="pathway-button" aria-label={`Add a scenario to ${workflow.name}`} disabled={busy}
+                    onClick={() => begin('scenario', 'Add a scenario to this workflow', { workflowId: id })}>{ControlIcon.plus} Scenario</button>}
+                <details className="pathway-row-menu">
+                    <summary aria-label={`More actions for ${workflow.name}`}>⋯</summary>
+                    <div role="menu">{menu.map(item => <button key={item.label} type="button" role="menuitem" disabled={item.disabled}
+                        onClick={event => { event.currentTarget.closest('details')?.removeAttribute('open'); item.run(); }}>{item.label}</button>)}</div>
+                </details>
+            </div>
+            {scenarios.length ? <ul className="pathway-operational-rows">{scenarios.map(scenario =>
+                <li key={scenario.id}><button type="button" className="pathway-operational-row" onClick={() => openOverviewItem(scenario.id)}>
+                    <span className="pathway-icon" aria-hidden="true">{ControlIcon.scenario}</span>
+                    <span><strong>{scenario.name}</strong>{(scenario.attributes.expectedResult || scenario.doc) && <small>{scenario.attributes.expectedResult || scenario.doc}</small>}</span>
+                    <span className="pathway-operational-pill">{scenarioPath(scenario)}</span><span aria-hidden="true">›</span>
+                </button></li>)}</ul> : <p className="pathway-operational-empty">No scenarios yet.</p>}
+        </li>;
+    };
     const overviewMap = overviewCase && <section aria-label="Use case workflow map" className="pathway-operational-panel">
         <header className="pathway-operational-panel-head">
             <div><h2>Workflows</h2><p>How this goal is accomplished.</p></div>
+            {overviewWorkflows.length > 0 && <SegmentedControl ariaLabel="Show workflows" value={workflowShow} onChange={setWorkflowShow} options={[
+                { id: 'all', label: 'All', icon: ControlIcon.list },
+                { id: 'with', label: 'With scenarios', icon: ControlIcon.scenario, title: 'Only workflows that have a scenario' },
+            ]} />}
             {canAddUnder(overviewCase.id) && <button type="button" className="pathway-button pathway-button--primary" onClick={() => {
                 openOverviewItem(overviewCase.id); begin('workflow', 'Add a workflow for this goal', { useCaseId: overviewCase.id });
             }}>+ Workflow</button>}
         </header>
-        {overviewWorkflows.length ? <ul className="pathway-operational-rows">{overviewWorkflows.map(id => {
-            const workflow = model.elements[id];
-            const count = (hierarchy.children.get(id) ?? []).filter(child => role(child) === 'scenario').length;
-            return <li key={id}><button type="button" className="pathway-operational-row" onClick={() => openOverviewItem(id)}>
-                <span className="pathway-icon" aria-hidden="true">{ControlIcon.workflow}</span>
-                <span><strong>{workflow.name}</strong>{workflow.doc && <small>{workflow.doc}</small>}</span>
-                <span className="pathway-operational-pill">{count} {count === 1 ? 'scenario' : 'scenarios'}</span>
-                <span aria-hidden="true">›</span>
-            </button></li>;
-        })}</ul> : <p className="pathway-operational-empty">No workflows linked to this goal yet.</p>}
+        {shownWorkflows.length ? <ul className="pathway-workflow-groups">{shownWorkflows.map(workflowGroup)}</ul> : <p className="pathway-operational-empty">{overviewWorkflows.length ? 'No workflow of this goal has a scenario yet.' : 'No workflows linked to this goal yet.'}</p>}
     </section>;
     const linkedWorkflows = selectedRole === 'case' ? (hierarchy.children.get(selected!.id) ?? []).filter(id => role(id) === 'workflow') : [];
-    const ownedScenarios = selectedRole === 'workflow' ? operationalChildren(model, selected!.id).filter(child => conforms(child.id, 'OperativeScenario')) : [];
     const clinicalKind = selectedRole === 'case' ? clinicalTask?.subjectKind : selectedRole === 'workflow' ? clinicalTask?.workflowKind : selectedRole === 'scenario' ? clinicalTask?.scenarioKind : clinicalTask?.stepKind;
     const refinements = selected ? model.relationships.filter(edge => edge.type === 'realizes' && (edge.sourceId === selected.id || edge.targetId === selected.id)).filter(edge => !conforms(edge.sourceId, 'ComponentFunction')) : [];
     const systemTask = tasks.find(task => task.level === 'operational');
@@ -443,12 +494,12 @@ export function OperationalWorkbench({ model, row, workspace, canWrite, entry, o
         if (workspace && roots.includes(workspace)) return workspace;
         return model.workspaceMembership?.workspaces.find(scope => scope.scope === 'system' && roots.includes(scope.root))?.root ?? roots[0];
     };
-    const linkSystemCounterpart = () => {
-        if (!selected) return;
-        const candidates = operationalCatalog(model, systemKind ?? 'UseCase').filter(element => operationalWorkLevel(model, element.id) === 'operational'
+    const linkSystemCounterpart = (targetId = selected?.id, kind = systemKind) => {
+        if (!targetId) return;
+        const candidates = operationalCatalog(model, kind ?? 'UseCase').filter(element => operationalWorkLevel(model, element.id) === 'operational'
             && canonicalFunctionId(model, element.id) === element.id && element.provenance?.declaration.writable !== false && !!systemWorkspaceOf(element.id)
             && (!workspace || !!model.workspaceMembership?.membership[element.id]?.includes(workspace)));
-        setAction({ operation: 'refine', title: 'Link operational work that realizes it', context: { targetId: selected.id }, options: candidates,
+        setAction({ operation: 'refine', title: 'Link operational work that realizes it', context: { targetId }, options: candidates,
             counterpartWorkspace: Object.fromEntries(candidates.map(element => [element.id, systemWorkspaceOf(element.id)!])) });
         setNotice('');
     };
@@ -467,15 +518,23 @@ export function OperationalWorkbench({ model, row, workspace, canWrite, entry, o
         if (!pageKey || !pageScenario || busy || openingVisual.current === pageKey) return;
         openingVisual.current = pageKey; openDiagram(pageScenario, false, 'scenario');
     }, [pageKey, busy, visualKey]);
-    const pageGuide = useModelStore.getState().guide;
+    // A selection on the scenario page opens the app's properties panel, as a click on any diagram does.
+    const inspectOnPage = (id: string) => { choose(id); useModelStore.getState().inspectElement(id); };
     // The page draws the scenario alone, read-only, with its performers as lanes and the selected step
-    // highlighted; Edit diagram opens the saved diagram in the editor.
-    const [pageEditing, setPageEditing] = useState(false);
-    useEffect(() => { setPageEditing(false); }, [pageScenario?.id]);
+    // highlighted. Edit diagram opens the saved diagram on its own page, which offers the way back here.
+    const navigate = useNavigate();
+    const [editWhenSaved, setEditWhenSaved] = useState(false);
+    const editDiagram = (id: string) => {
+        const diagram = useModelStore.getState().model?.diagrams?.find(candidate => candidate.id === id);
+        if (!diagram || !pageScenario) return;
+        useModelStore.getState().setDiagramReturn({ diagramId: diagram.id, label: pageScenario.name, path: `${window.location.pathname}${window.location.search}` });
+        navigate(diagramUrl(diagram.diagramType, diagram.shortId ?? diagram.id));
+    };
+    useEffect(() => { if (editWhenSaved && diagramId) { setEditWhenSaved(false); editDiagram(diagramId); } }, [editWhenSaved, diagramId]);
     const pageStepIds = pageScenario ? functionalFlowSteps(model, pageScenario.id).steps.map(item => item.step.id) : [];
     const scenarioPreview = pageScenario && <section aria-label="Scenario diagram" style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 480 }}>
         <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 8 }}>
-            <button type="button" className="pathway-button" disabled={busy || !diagramId && !canWrite} onClick={() => { if (!diagramId) openDiagram(pageScenario, true, 'scenario'); setPageEditing(true); }}>{diagramId ? 'Edit diagram' : 'Create diagram'}</button>
+            <button type="button" className="pathway-button" disabled={busy || !diagramId && !canWrite} onClick={() => { if (diagramId) editDiagram(diagramId); else { setEditWhenSaved(true); openDiagram(pageScenario, true, 'scenario'); } }}>{diagramId ? 'Edit diagram' : 'Create diagram'}</button>
         </div>
         <div className="pathway-operative-canvas" style={{ flex: 1, minHeight: 440 }}>
             <Suspense fallback={<p role="status">Opening scenario diagram…</p>}>
@@ -483,16 +542,14 @@ export function OperationalWorkbench({ model, row, workspace, canWrite, entry, o
                     diagramId: `scenario-page:${pageScenario.id}`, readOnly: true,
                     previewDiagram: { id: `scenario-page:${pageScenario.id}`, name: pageScenario.name, diagramType: 'ofd', viewKind: 'actionflow', viewpointId: '__model', auto: true, elementIds: actionMembers(model, pageScenario.id) },
                     highlightIds: selectedId && selectedId !== pageScenario.id ? [selectedId] : [],
-                    onExplore: item => { if (item.type === 'element' && pageStepIds.includes(item.id)) choose(item.id); },
+                    onExplore: item => { if (item.type === 'element' && pageStepIds.includes(item.id)) inspectOnPage(item.id); },
+                    // The walkthrough selects each step it reaches, so the bar and the properties follow it.
+                    onWalkStep: id => { if (id && pageStepIds.includes(id)) inspectOnPage(id); },
                 }}><DiagramActionSubject.Provider value={pageScenario.id}><DiagramCanvas key={`scenario-page:${pageScenario.id}`} /></DiagramActionSubject.Provider></DiagramEmbedContext.Provider>
             </Suspense>
         </div>
     </section>;
-    const scenarioEditor = pageScenario && (diagramId ? <section aria-label="Scenario diagram editor" style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 500 }}>
-        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 8 }}><button type="button" className="pathway-button" onClick={() => setPageEditing(false)}>Done editing</button></div>
-        <Suspense fallback={<p>Opening diagram…</p>}><PaletteKindsContext.Provider value={pageGuide ? kindsOfLayer(pageGuide, row) : []}><DiagramDisplayScope.Provider value={level === 'clinical' ? null : workspace}><DiagramUseCaseSubject.Provider value={null}><DiagramActionSubject.Provider value={pageScenario.id}><DiagramEditor key={diagramId} diagramId={diagramId} /></DiagramActionSubject.Provider></DiagramUseCaseSubject.Provider></DiagramDisplayScope.Provider></PaletteKindsContext.Provider></Suspense></section>
-        : <section aria-label="Scenario diagram setup" className="pathway-context-preview"><p>{busy ? 'Opening diagram…' : 'This scenario has no saved diagram.'}</p><button type="button" className="pathway-button" onClick={() => setPageEditing(false)}>Back to the scenario</button></section>);
-    const scenarioDiagram = pageEditing ? scenarioEditor : scenarioPreview;
+    const scenarioDiagram = scenarioPreview;
     const performerCandidates = () => Object.values(model.elements).filter(element => ['User', 'OperationalEntity', ...(level === 'operational' ? ['System', 'SystemOfSystems'] : [])].some(kind => conforms(element.id, kind)) && (!element.isDefinition || element.id === workspace) && element.provenance?.declaration.writable !== false);
     const linkClinicalWork = () => begin('refine', 'Link the clinical work it realizes', { sourceId: selected!.id }, operationalCatalog(model, clinicalKind ?? 'UseCase').filter(element => operationalWorkLevel(model, element.id) === 'clinical' && canonicalFunctionId(model, element.id) === element.id));
     const artifactDetails = selected && <>
@@ -508,32 +565,25 @@ export function OperationalWorkbench({ model, row, workspace, canWrite, entry, o
     const detail = (<section aria-label="Current operational task" style={card}>
                 {action ? actionForm
                 : !selected ? <><h2 style={heading}>{category === 'case' ? 'What should someone accomplish?' : category === 'workflow' ? 'What work supports the goal?' : 'What happens along this path?'}</h2><p style={muted}>{typed.length ? `Select ${category === 'case' ? 'a use case' : `a ${category}`} to see its details.` : `Use Add ${category === 'case' ? 'use case' : category} to start.`}</p></>
-                : <><small style={muted}>{levelName(selectedLevel)} {selectedRole === 'case' ? 'use case' : selectedRole === 'workflow' ? 'workflow' : selectedRole === 'scenario' ? 'scenario' : 'step'} · {title}</small><h2 style={heading}>{selected.name}</h2>
+                : <>{selectedRole !== 'workflow' && <><small style={muted}>{levelName(selectedLevel)} {selectedRole === 'case' ? 'use case' : selectedRole === 'scenario' ? 'scenario' : 'step'} · {title}</small><h2 style={heading}>{selected.name}</h2></>}
                     {selectedRole === 'scenario' && <span className="pathway-operational-pill">{scenarioPath(selected)}</span>}
                     {(selectedLevel && selectedLevel !== level || !ownSelection && level === 'operational') && <p style={muted}>This is linked {selectedLevel ?? 'operational'} work shown as context. <button style={button} onClick={() => goToWork(selected.id)}>Work on {sourceWorkspace?.name ?? selectedLevel ?? 'this context'}</button></p>}
                     {!selectedLevel && <p style={muted}>Place this scenario in a matching workflow to establish its level. Existing identities and source are preserved.</p>}
-                    {!isScenarioPage && artifactDetails}
+                    {!isScenarioPage && selectedRole !== 'workflow' && artifactDetails}
                     {presentation !== 'overview' && linkedWorkflows.length > 0 && <section aria-label="Workflows for this goal"><h3>Workflows for this goal</h3><ul>{linkedWorkflows.map(id =>
                         <li key={id}><button type="button" style={button} onClick={() => choose(id)}>{model.elements[id]?.name}</button></li>)}</ul></section>}
                     {selectedRole === 'case' && <details className="pathway-related"><summary>Model subject</summary><p style={muted}> {subjectIds.length ? subjectIds.map((id, index) => <span key={id}>{index > 0 && ', '}{onContext && model.workspaceMembership?.workspaces.some(scope => scope.root === (model.workspaceMembership?.definitionOf[id] ?? id))
                         ? <button type="button" style={button} onClick={() => onContext(model.workspaceMembership?.definitionOf[id] ?? id)}>Open {model.elements[id].name} context</button> : model.elements[id].name}</span>) : 'Not specified'}</p></details>}
-                    {selectedRole === 'workflow' && <p style={muted}><strong>Realizes:</strong> {workflowCases(model, selected.id).map(id => model.elements[id]?.name ?? id).join(', ') || 'No use case linked yet'}. Nominal and alternate scenarios are separate paths through this workflow.</p>}
-                    {selectedRole === 'workflow' && <section aria-label="Scenarios in this workflow" className="pathway-operational-panel">
-                        <header className="pathway-operational-panel-head"><h3>Scenarios in this workflow</h3>
-                            <button type="button" className="pathway-button pathway-button--primary" disabled={!writable} onClick={() => create('scenario')}>Add scenario</button>
-                        </header>
-                        {ownedScenarios.length ? <ul className="pathway-operational-rows">{ownedScenarios.map(scenario =>
-                            <li key={scenario.id}><button type="button" className="pathway-operational-row" onClick={() => openOverviewItem(scenario.id)}>
-                                <span className="pathway-icon" aria-hidden="true">{ControlIcon.scenario}</span>
-                                <span><strong>{scenario.name}</strong>{(scenario.attributes.expectedResult || scenario.doc) && <small>{scenario.attributes.expectedResult || scenario.doc}</small>}</span>
-                                <span className="pathway-operational-pill">{scenarioPath(scenario)}</span><span aria-hidden="true">›</span>
-                            </button></li>)}</ul> : <p className="pathway-operational-empty">Add a scenario to describe a path through this workflow.</p>}
-                    </section>}
+                    {selectedRole === 'workflow' && <>
+                        <div style={{ ...muted, display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}><strong>Realizes:</strong> {workflowCases(model, selected.id).length ? workflowCases(model, selected.id).flatMap(id => model.elements[id] ? [
+                            <ElementChip key={id} model={model} element={model.elements[id]} onClick={() => { setPresentation('overview'); openOverviewItem(id); }} />] : []) : 'No use case linked yet. Use ⋯ to link one.'}</div>
+                        <ul className="pathway-workflow-groups">{workflowGroup(selected.id)}</ul>
+                    </>}
                     {(selectedRole === 'scenario' || selectedRole === 'step' && !!operationalChildren(model, selected.id).filter(child => child.construct === 'action').length) && <ScenarioSequence key={selected.id + JSON.stringify(functionalFlowSteps(model, selected.id).steps.map(item => item.step.id))} model={model} id={selected.id} writable={writable} flowFirst={isScenarioPage} details={isScenarioPage ? artifactDetails : undefined} onAdd={() => create('step')} onSelect={choose} onDiagram={() => { setCategory('scenario'); if (selectedRole === 'scenario') setSelectedId(selected!.id); setPresentation('visual'); }} onSave={stepIds => void save(() => writeOperational({ ...base, ...(selectedRole === 'scenario' ? { scenarioId: selected.id } : { parentStepId: selected.id }), operation: 'sequence', stepIds }))} />}
                     {selectedRole === 'step' && conforms(selected.id, 'OperativeAction') && <><h3 style={{ marginTop: 18, fontWeight: 650 }}>Who performs this step?</h3><p style={muted}>{performers.map(performer => performer.name).join(', ') || 'No performer linked yet.'}</p><button style={button} disabled={!writable} onClick={() => begin('performer', 'Choose the performer', { sourceId: selected.id }, Object.values(model.elements).filter(element => ['User', 'OperationalEntity', ...(level === 'operational' ? ['System', 'SystemOfSystems'] : [])].some(kind => conforms(element.id, kind)) && (!element.isDefinition || element.id === workspace) && element.provenance?.declaration.writable !== false))}>Set performer</button></>}
-                    {level === 'operational' && selectedLevel === 'operational' && <><h3 style={{ marginTop: 20, fontWeight: 650 }}>Realizes clinical work</h3><p style={muted}>Link this operational work to the clinical work it realizes.</p><button style={button} disabled={!writable || !clinicalKind} onClick={() => begin('refine', 'Refine clinical work', { sourceId: selected.id }, operationalCatalog(model, clinicalKind ?? 'UseCase').filter(element => operationalWorkLevel(model, element.id) === 'clinical' && canonicalFunctionId(model, element.id) === element.id))}>Link clinical work</button></>}
-                    {level === 'clinical' && selectedLevel === 'clinical' && (selectedRole !== 'step' || conforms(selected.id, 'OperativeAction')) && <><h3 style={{ marginTop: 20, fontWeight: 650 }}>Realized by operational work</h3><p style={muted}>Operational work that realizes this clinical work. The link is saved with the operational work.</p><button style={button} disabled={!canWrite || busy || !systemKind} onClick={linkSystemCounterpart}>Link operational work</button></>}
-                    {stepCounterparts.length > 0 && selectedLevel && otherLevel && (() => {
+                    {level === 'operational' && selectedLevel === 'operational' && selectedRole !== 'workflow' && <><h3 style={{ marginTop: 20, fontWeight: 650 }}>Realizes clinical work</h3><p style={muted}>Link this operational work to the clinical work it realizes.</p><button style={button} disabled={!writable || !clinicalKind} onClick={() => begin('refine', 'Refine clinical work', { sourceId: selected.id }, operationalCatalog(model, clinicalKind ?? 'UseCase').filter(element => operationalWorkLevel(model, element.id) === 'clinical' && canonicalFunctionId(model, element.id) === element.id))}>Link clinical work</button></>}
+                    {level === 'clinical' && selectedLevel === 'clinical' && selectedRole !== 'workflow' && (selectedRole !== 'step' || conforms(selected.id, 'OperativeAction')) && <><h3 style={{ marginTop: 20, fontWeight: 650 }}>Realized by operational work</h3><p style={muted}>Operational work that realizes this clinical work. The link is saved with the operational work.</p><button style={button} disabled={!canWrite || busy || !systemKind} onClick={() => linkSystemCounterpart()}>Link operational work</button></>}
+                    {stepCounterparts.length > 0 && selectedRole !== 'workflow' && selectedLevel && otherLevel && (() => {
                         const own = levelName(selectedLevel);
                         const other = levelName(otherLevel);
                         const roleWord = selectedRole === 'case' ? 'use case' : selectedRole;
@@ -556,7 +606,8 @@ export function OperationalWorkbench({ model, row, workspace, canWrite, entry, o
                             </li>)}</ul>}
                         </section>;
                     })()}
-                    {!!refinements.length && <ul style={{ paddingLeft: 18, marginTop: 10 }}>{refinements.map(edge => <li key={edge.id} style={muted}><button style={button} onClick={() => goToWork(edge.sourceId)}>{model.elements[edge.sourceId]?.name}</button> → <button style={button} onClick={() => goToWork(edge.targetId)}>{model.elements[edge.targetId]?.name}</button>{conforms(edge.sourceId, 'FunctionalFlow') ? ' · Functional flow realization' : ' · Refines'}{conforms(edge.sourceId, 'FunctionalFlow') && <ol style={{ paddingLeft: 20 }}>{functionalFlowSteps(model, edge.sourceId).steps.map(item => <li key={item.step.id}>{model.elements[item.functionId ?? '']?.name ?? item.step.name}</li>)}</ol>}</li>)}</ul>}
+                    {selectedRole === 'workflow' && !!refinements.length && <h3 style={{ marginTop: 20, fontWeight: 650 }}>{selectedLevel === 'clinical' ? `Realized by ${levelName('operational').toLowerCase()} work` : `Realizes ${levelName('clinical').toLowerCase()} work`}</h3>}
+                    {!!refinements.length && <ul style={{ paddingLeft: 18, marginTop: 10 }}>{refinements.map(edge => <li key={edge.id} style={{ ...muted, display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center', marginBottom: 6 }}>{model.elements[edge.sourceId] && <ElementChip model={model} element={model.elements[edge.sourceId]} onClick={() => goToWork(edge.sourceId)} />} → {model.elements[edge.targetId] && <ElementChip model={model} element={model.elements[edge.targetId]} onClick={() => goToWork(edge.targetId)} />}{conforms(edge.sourceId, 'FunctionalFlow') ? ' · Functional flow realization' : ' · Refines'}{conforms(edge.sourceId, 'FunctionalFlow') && <ol style={{ paddingLeft: 20 }}>{functionalFlowSteps(model, edge.sourceId).steps.map(item => <li key={item.step.id}>{model.elements[item.functionId ?? '']?.name ?? item.step.name}</li>)}</ol>}</li>)}</ul>}
                     {level === 'operational' && selectedLevel === 'operational' && (selectedRole === 'scenario' || selectedRole === 'step' && conforms(selected.id, 'OperativeAction')) && <><h3 style={{ marginTop: 20, fontWeight: 650 }}>Functional behavior</h3>
                         {selectedRole === 'step' && <><p style={muted}>Which system functions carry out this activity?</p><ul style={{ paddingLeft: 18 }}>{performedFunctions.map(edge => <li key={edge.id} style={muted}>{onFunctional
                             ? <button type="button" className="pathway-button" onClick={() => onFunctional(edge.targetId)}>{model.elements[edge.targetId]?.name}</button>
@@ -587,11 +638,11 @@ export function OperationalWorkbench({ model, row, workspace, canWrite, entry, o
         </header>}
         {notice && !pageScenario && <p role="status" style={muted}>{notice}</p>}
         {pageScenario && <ScenarioPage model={model} scenario={pageScenario} selectedId={selectedId} levelName={levelName} writable={writable} diagram={scenarioDiagram} form={actionForm || undefined} notice={notice}
-            onSelect={choose} onOpenWork={goToWork} onBack={() => { backToUseCases(); setPresentation('overview'); }}
+            onSelect={inspectOnPage} onOpenWork={goToWork} onBack={() => { backToUseCases(); setPresentation('overview'); }}
             onNewStep={() => begin('step', 'Add a scenario step', { scenarioId: pageScenario.id })}
             onExistingStep={() => begin('reuse-step', 'Add an existing step', { scenarioId: pageScenario.id }, operationalCatalog(model, 'OperativeAction').filter(candidate => operationalWorkLevel(model, candidate.id) === level && canonicalFunctionId(model, candidate.id) === candidate.id && !functionalFlowSteps(model, pageScenario.id).steps.some(item => item.step.id === candidate.id)))}
             onPerformer={() => begin('performer', 'Choose the performer', { sourceId: selected!.id }, performerCandidates())}
-            onLink={level === 'clinical' ? linkSystemCounterpart : linkClinicalWork}
+            onLink={level === 'clinical' ? () => linkSystemCounterpart() : linkClinicalWork}
             onLinkFunction={level === 'operational' ? () => begin('perform-function', 'Link a function that realizes this step', { sourceId: selected!.id }, functions) : undefined}
             onOpenFunction={onFunctional ? id => onFunctional(id) : undefined}
             onAllProperties={id => useModelStore.getState().inspectElement(id)}
@@ -617,33 +668,30 @@ export function OperationalWorkbench({ model, row, workspace, canWrite, entry, o
             {selected ? <>
                 <nav className="pathway-operational-breadcrumb" aria-label="Operational path">
                     <button type="button" onClick={backToUseCases}>All use cases</button>
-                    {overviewCase && <><span aria-hidden="true">›</span><button type="button" onClick={() => openOverviewItem(overviewCase.id)}>{overviewCase.name}</button></>}
-                    {overviewWorkflow && <><span aria-hidden="true">›</span><button type="button" onClick={() => openOverviewItem(overviewWorkflow)}>{model.elements[overviewWorkflow]?.name}</button></>}
-                    {overviewScenario && <><span aria-hidden="true">›</span><button type="button"
+                    {overviewCase && <><span aria-hidden="true">›</span><button type="button" aria-current={pageCase ? 'page' : undefined} onClick={() => openOverviewItem(overviewCase.id)}>{overviewCase.name}</button></>}
+                    {!pageCase && overviewScenario && <><span aria-hidden="true">›</span><button type="button"
                         onClick={() => openOverviewItem(overviewScenario)}>{model.elements[overviewScenario]?.name}</button></>}
                 </nav>
-                {selectedRole === 'case' && !action && <>
-                    <header className="pathway-operational-hero">
-                        <span className="pathway-icon" aria-hidden="true">{ControlIcon.goal}</span>
-                        <div><h2>{selected.name}</h2><p>{selected.attributes.goalStatement || selected.doc}</p>
-                            {selected.attributes.successOutcome && <p><strong>Observable result</strong> · {selected.attributes.successOutcome}</p>}</div>
-                        <button type="button" className="pathway-button" onClick={() => { choose(selected.id); setPresentation('visual'); }}>Use case diagram</button>
-                        <button type="button" className="pathway-button" aria-expanded={caseDetailsOpen} onClick={() => setCaseDetailsOpen(!caseDetailsOpen)}>
-                            {caseDetailsOpen ? 'Hide details' : 'Details'}
-                        </button>
-                    </header>
-                    {overviewMap}
-                </>}
-                {showOverviewDetails && (overviewWorkflow && overviewCase && !isScenarioPage ? <div className="pathway-operational-drilldown">
-                    <nav className="pathway-operational-panel pathway-workflow-outline" aria-label="Workflows and scenarios">
-                        <h3>Workflows</h3>
-                        {overviewWorkflows.map(id => <div key={id}>
-                            <button type="button" aria-current={id === selected.id ? 'page' : undefined} onClick={() => openOverviewItem(id)}>{model.elements[id].name}</button>
-                            {id === overviewWorkflow && ownedScenarioLinks(id)}
-                        </div>)}
-                    </nav>
-                    {detail}
-                </div> : detail)}
+                {pageCase && !action && <UseCaseProfile model={model} useCase={pageCase} levelName={levelName} busy={busy}
+                    writable={canAddUnder(pageCase.id)} workflows={overviewMap}
+                    onSaveFields={async fields => { try { await writeOperational({ ...base, operation: 'fields', sourceId: pageCase.id, fields }); return undefined; } catch (error) { return error instanceof Error ? error.message : String(error); } }}
+                    onAddActor={() => begin('actor', 'Add an actor', { sourceId: pageCase.id }, Object.values(model.elements).filter(element => conforms(element.id, 'OperationalParticipant') && !element.isDefinition
+                        && !model.relationships.some(edge => edge.type === 'participatesIn' && edge.sourceId === element.id && edge.targetId === pageCase.id)))}
+                    onInclude={() => begin('include', 'Include an existing use case', { sourceId: pageCase.id }, operationalCatalog(model, task!.subjectKind, level === 'operational' ? workspace : null).filter(candidate => candidate.id !== pageCase.id && !wouldIncludeCycle(model, pageCase.id, candidate.id)))}
+                    onNewIncluded={() => begin('use-case', 'Add an included use case', { useCaseId: pageCase.id })}
+                    onRemove={(relation, id) => void (async () => {
+                        const item = model.elements[id]?.name ?? id;
+                        if (!await confirmDialog({ title: relation === 'participatesIn' ? `Remove ${item} as an actor?` : `Stop including ${item}?`, message: `The line is removed from ${pageCase.name}. ${item} itself is kept.`, confirmLabel: 'Remove', danger: true })) return;
+                        await save(() => writeOperational({ ...base, operation: 'unlink', sourceId: pageCase.id, targetId: id, relation }));
+                    })()}
+                    onOpenCase={id => openOverviewItem(id)}
+                    onLinkOther={() => level === 'clinical' ? linkSystemCounterpart(pageCase.id, systemTask?.subjectKind)
+                        : begin('refine', 'Link the clinical use case it realizes', { sourceId: pageCase.id }, operationalCatalog(model, clinicalTask?.subjectKind ?? 'UseCase').filter(element => operationalWorkLevel(model, element.id) === 'clinical' && canonicalFunctionId(model, element.id) === element.id))}
+                    onOpenWork={goToWork}
+                    onDiagram={() => { choose(pageCase.id); setPresentation('visual'); }}
+                    onProperties={() => useModelStore.getState().inspectElement(pageCase.id)}
+                    onContext={onContext} />}
+                {showOverviewDetails && detail}
             </> : action ? detail : <>
                 <div className="pathway-operational-stats" aria-label="Operational work totals">
                     {[[ControlIcon.goal, useCases.length, 'Use cases'], [ControlIcon.workflow, workflows.length, 'Workflows'], [ControlIcon.scenario, scenarios.length, 'Scenarios']].map(([icon, count, label]) =>
@@ -660,6 +708,10 @@ export function OperationalWorkbench({ model, row, workspace, canWrite, entry, o
                     <div className="pathway-gallery-heading pathway-operational-panel-head">
                         <h2>Choose a goal</h2>
                         {caseLayout !== 'diagram' && <input aria-label="Find a use case" type="search" placeholder="Find a use case…" value={caseFilter} onChange={event => setCaseFilter(event.target.value)} />}
+                        {caseLayout !== 'diagram' && <SegmentedControl ariaLabel="Show use cases" value={caseShow} onChange={setCaseShow} options={[
+                            { id: 'all', label: 'All', icon: ControlIcon.list },
+                            { id: 'with', label: 'With workflows', icon: ControlIcon.workflow, title: 'Only use cases that have a workflow, or include one that does' },
+                        ]} />}
                         <div className="pathway-context-view-switch" aria-label="Use case layout">
                             <button type="button" aria-pressed={caseLayout === 'list'} onClick={() => setCaseLayout('list')}>List</button>
                             <button type="button" aria-pressed={caseLayout === 'grid'} onClick={() => setCaseLayout('grid')}>Grid</button>
@@ -699,7 +751,7 @@ export function OperationalWorkbench({ model, row, workspace, canWrite, entry, o
                             </Suspense>
                         </div> : <p className="pathway-operational-empty">Add a use case to populate this diagram.</p>}
                     </section> : caseLayout === 'list' ? <div className="pathway-operational-table"><table>
-                        <thead><tr><th>Use case</th><th>Level</th><th>Purpose</th><th>Actors</th><th>Workflows</th><th aria-label="Open workflows" /></tr></thead>
+                        <thead><tr><th>Use case</th><th>Level</th><th>Purpose</th><th>Actors</th><th>Workflows</th><th aria-label="Open the use case" /></tr></thead>
                         <tbody>{caseRows.map(({ item, count, key, depth, parent, inScope, childCount }) => <tr key={key} className={parent ? 'pathway-case-child-row' : undefined}>
                             <th scope="row"><div className="pathway-case-branch-item" style={{ '--case-indent': `${Math.min(depth, 6) * 16}px` } as CSSProperties}>
                                 <div className="pathway-case-row-main">
@@ -713,8 +765,8 @@ export function OperationalWorkbench({ model, row, workspace, canWrite, entry, o
                             <td><span className="pathway-case-level">Level {depth + 1}</span></td>
                             <td>{item.attributes.goalStatement || item.doc || '—'}</td>
                             <td><div className="pathway-operational-actors">{[...new Set(caseActors(item.id))].map(name => <span key={name} className="pathway-operational-pill">{name}</span>)}</div>{!caseActors(item.id).length && '—'}</td>
-                            <td>{count}</td>
-                            <td><button type="button" className="pathway-button" aria-label={`Manage workflows for ${item.name}`} onClick={() => openOverviewItem(item.id)}>Manage workflows →</button></td>
+                            <td><CountBadge icon={ControlIcon.workflow} count={count} one="workflow" many="workflows" /></td>
+                            <td><button type="button" className="pathway-button" aria-label={`Open ${item.name}`} onClick={() => openOverviewItem(item.id)}>Open →</button></td>
                         </tr>)}</tbody>
                     </table></div> : <div className="pathway-operational-grid">{visibleBranches.map(rows =>
                         <article className="pathway-case-branch-card" key={rows[0].key} aria-label={`${rows[0].item.name} use case group`}>
@@ -726,12 +778,12 @@ export function OperationalWorkbench({ model, row, workspace, canWrite, entry, o
                                         <strong>{item.name}</strong><span className="pathway-case-level">Level {depth + 1}</span></span>
                                     {parent && <small>Included by {parent.name}{!inScope ? ' · Linked case' : ''}</small>}
                                     {!parent && item.attributes.goalStatement && item.attributes.goalStatement !== item.name && <span>{item.attributes.goalStatement}</span>}
-                                    <small>{count} {count === 1 ? 'workflow' : 'workflows'} <span aria-hidden="true">→</span></small>
+                                    <small><CountBadge icon={ControlIcon.workflow} count={count} one="workflow" many="workflows" /> <span aria-hidden="true">→</span></small>
                                     </button>
                                     {caseBranchToggle(key, item.name, childCount)}
                                 </div>)}
                         </article>)}</div>}
-                    {caseLayout !== 'diagram' && !caseRows.length && <p className="pathway-operational-empty">{caseFilter ? 'No matching use cases.' : 'No use cases yet.'}</p>}
+                    {caseLayout !== 'diagram' && !caseRows.length && <p className="pathway-operational-empty">{caseFilter ? 'No matching use cases.' : caseShow === 'with' && useCases.length ? 'No use case has a workflow yet.' : 'No use cases yet.'}</p>}
                 </section>
             </>}
         </section> : <div className="pathway-columns">{catalog}{detail}</div>
@@ -820,7 +872,7 @@ function OperationalForm({ action, model, level, levelTask, workspace, disabled,
         {needsParent && <label>{action.operation === 'workflow' ? 'Use case' : 'Workflow'}<select aria-label="Parent work" required style={input} value={parentId} onChange={event => setParentId(event.target.value)}><option value="">Choose a {action.operation === 'workflow' ? 'use case' : 'workflow'}…</option>{parents.map(parent => <option key={parent.id} value={parent.id}>{parent.name}</option>)}</select>{!parents.length && <p style={muted}>Add a {action.operation === 'workflow' ? 'use case' : 'workflow'} first, then return here.</p>}</label>}
         {action.operation === 'scenario' && <label>Path<select aria-label="Scenario path" style={input} value={kind} onChange={event => setKind(event.target.value as 'nominal' | 'alternate')}><option value="nominal">Nominal</option><option value="alternate">Alternate / recovery</option></select></label>}
         {action.operation !== 'use-case' && keys.map(key => <label key={key}>{fieldLabel(key)}<textarea style={input} rows={2} value={fields[key] ?? ''} onChange={event => setFields({ ...fields, [key]: event.target.value })} /></label>)}
-        {!create && <><label>{action.operation === 'performer' ? 'Performer' : action.operation === 'realize-flow' ? 'Functional flow' : action.operation === 'perform-function' ? 'System function' : action.operation === 'refine' ? action.counterpartWorkspace ? 'Operational work' : 'Clinical work' : action.operation === 'link-workflow' ? 'Use case' : 'Existing work'}<select aria-label="Connect existing work" required style={input} value={choice} onChange={event => setChoice(event.target.value)}><option value="">Choose existing work…</option>{action.options?.map(element => <option key={element.id} value={element.id}>{element.name}{model.elements[element.owner ?? element.parentAction ?? ''] ? ` · ${model.elements[element.owner ?? element.parentAction ?? ''].name}` : ''}</option>)}</select></label>{!action.options?.length && <p style={muted}>No matching work exists yet. Add it in its own task, then connect it here.</p>}</>}
+        {!create && <><label>{action.operation === 'performer' ? 'Performer' : action.operation === 'realize-flow' ? 'Functional flow' : action.operation === 'perform-function' ? 'System function' : action.operation === 'refine' ? action.counterpartWorkspace ? 'Operational work' : 'Clinical work' : action.operation === 'link-workflow' || action.operation === 'include' ? 'Use case' : action.operation === 'actor' ? 'Actor' : 'Existing work'}<select aria-label="Connect existing work" required style={input} value={choice} onChange={event => setChoice(event.target.value)}><option value="">Choose existing work…</option>{action.options?.map(element => <option key={element.id} value={element.id}>{element.name}{model.elements[element.owner ?? element.parentAction ?? ''] ? ` · ${model.elements[element.owner ?? element.parentAction ?? ''].name}` : ''}</option>)}</select></label>{!action.options?.length && <p style={muted}>No matching work exists yet. Add it in its own task, then connect it here.</p>}</>}
         {action.operation === 'realize-flow' && <p style={muted}>The flow realizes the selected operational work. Its functions remain canonical system functions; existing activity-to-function links are retained.</p>}
         {home && (!action.counterpartWorkspace || choice) && <p style={muted}>Primary save location <code>{home.file}</code> · {home.package}{additionalSource && <> and <code>{additionalSource}</code></>}</p>}
         <div style={{ display: 'flex', gap: 8 }}><button style={button} disabled={disabled || !home || needsParent && !parentId || (create ? !name.trim() || action.operation === 'use-case' && !subject : !choice)}>{create ? 'Create' : 'Connect'}</button><button type="button" style={button} onClick={onCancel}>Cancel</button></div>
@@ -828,7 +880,7 @@ function OperationalForm({ action, model, level, levelTask, workspace, disabled,
 }
 function scenarioPath(element: Element) {
     const kind = element.attributes.scenarioKind?.split('::').at(-1);
-    return kind === 'alternate' ? 'Alternate path' : kind === 'nominal' ? 'Usual path' : 'Scenario';
+    return kind === 'alternate' ? 'Alternate' : kind === 'nominal' ? 'Nominal' : 'Scenario';
 }
 
 function ScenarioSequence({ model, id, writable, flowFirst, details, onAdd, onSelect, onDiagram, onSave }: {
@@ -905,7 +957,7 @@ function ScenarioSequence({ model, id, writable, flowFirst, details, onAdd, onSe
 function OperationalTable({ model, level, category, items, selectedId, onSelect, onAdd, canWrite, filter, setFilter, review, setReview }: { model: MemoModelDTO; level: string; category: Category; items: Element[]; selectedId?: string; onSelect: (id: string) => void; onAdd: () => void; canWrite: boolean; filter: string; setFilter: (value: string) => void; review: boolean; setReview: (value: boolean) => void }) {
     const names = (ids: string[]) => ids.map(id => model.elements[id]?.name ?? id).join(', ') || '—';
     const title = category === 'case' ? 'use case' : category;
-    const columns = category === 'case' ? ['Goal', 'Subject', 'Workflows'] : category === 'workflow' ? ['Use case', 'Scenarios', 'Usual path'] : ['Workflow', 'Path', 'Steps'];
+    const columns = category === 'case' ? ['Goal', 'Subject', 'Workflows'] : category === 'workflow' ? ['Use case', 'Scenarios', 'Nominal scenario'] : ['Workflow', 'Path', 'Steps'];
     const cell = (element: Element) => category === 'case' ? [element.attributes.goalStatement || '—', names(model.relationships.filter(edge => edge.type === 'hasSubject' && edge.sourceId === element.id).map(edge => edge.targetId)), String(model.relationships.filter(edge => edge.type === 'realizesUseCase' && edge.targetId === element.id).length)]
         : category === 'workflow' ? [names(workflowCases(model, element.id)), String(operationalChildren(model, element.id).filter(child => operationalConforms(model, child.id, 'OperativeScenario')).length), operationalChildren(model, element.id).find(child => operationalConforms(model, child.id, 'OperativeScenario') && !/alternate$/.test(child.attributes.scenarioKind ?? ''))?.name ?? '—']
         : [names([element.owner ?? element.parentAction ?? ''].filter(Boolean)), (element.attributes.scenarioKind ?? 'nominal').split('::').at(-1) ?? 'nominal', String(functionalFlowSteps(model, element.id).steps.length)];
@@ -924,4 +976,11 @@ function WorkflowStructure({ model, workflow, onScenario, onAdd, writable }: { m
             {!!scenarios.length && <><div aria-hidden="true" style={{ height: 28, borderLeft: `2px solid ${COLOR.border}`, width: 1, margin: 'auto' }} /><p style={{ ...muted, textAlign: 'center' }}>Owns scenario paths</p><div style={{ display: 'flex', gap: 18, justifyContent: 'center', flexWrap: 'wrap', borderTop: `2px solid ${COLOR.border}`, paddingTop: 20 }}>{scenarios.map(scenario => <button key={scenario.id} style={{ ...card, ...button, width: 270, textAlign: 'left', borderTop: '4px solid #0f766e', padding: 18 }} onClick={() => onScenario(scenario.id)}><small style={muted}>{(scenario.attributes.scenarioKind ?? 'nominal').split('::').at(-1)} scenario</small><strong style={{ display: 'block', margin: '8px 0' }}>{scenario.name}</strong><span style={muted}>{functionalFlowSteps(model, scenario.id).steps.length} steps · Open scenario →</span></button>)}</div></>}
         </figure><div style={{ textAlign: 'center' }}>{!scenarios.length && <p style={muted}>This workflow has no scenarios yet.</p>}<button style={button} disabled={!writable} onClick={onAdd}>+ Scenario</button></div>
     </section>;
+}
+
+/** A child count with the child kind's icon; none is shown muted so the rows that have children stand out. */
+function CountBadge({ icon, count, one, many }: { icon: ReactNode; count: number; one: string; many: string }) {
+    return <span className={`pathway-count-badge${count ? '' : ' pathway-count-badge--none'}`} aria-label={`${count} ${count === 1 ? one : many}`}>
+        <span aria-hidden="true">{icon}</span><span aria-hidden="true">{count}</span>
+    </span>;
 }

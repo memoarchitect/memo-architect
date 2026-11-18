@@ -1098,50 +1098,20 @@
     .pathway-scenario-studio { grid-template-columns: 1fr; }
 }
 
-.pathway-operational-drilldown {
-    display: grid;
-    grid-template-columns: minmax(155px, 205px) minmax(0, 1fr);
-    align-items: start;
-    gap: 14px;
-}
-
-.pathway-workflow-outline {
-    padding: 12px;
-}
-
-.pathway-workflow-outline h3 {
-    margin: 0 0 8px;
-    font-size: 14px;
-}
-
-.pathway-workflow-outline button {
-    display: block;
-    width: 100%;
-    background: transparent;
-    border: 0;
-    border-radius: 6px;
-    padding: 7px 8px;
-    text-align: left;
-    font: inherit;
-    font-size: 13px;
-    cursor: pointer;
-}
-
-.pathway-workflow-outline button[aria-current],
-.pathway-workflow-outline button:hover {
-    background: #f0ebfb;
-    color: #503688;
-}
-
-.pathway-workflow-outline ul {
-    padding: 0 0 0 12px;
-    margin: 3px 0;
-    list-style: none;
-}
-
-@media (max-width: 780px) {
-    .pathway-operational-drilldown { grid-template-columns: 1fr; }
-}
+.pathway-workflow-groups { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 10px; }
+.pathway-workflow-group { border: 1px solid #e9e7f0; border-radius: 10px; overflow: hidden; background: white; }
+.pathway-workflow-group[aria-current] { border-color: #b9a6e6; box-shadow: 0 0 0 2px #efe9fb; }
+.pathway-workflow-group-head { display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto auto; align-items: center; gap: 12px; padding: 12px 14px; background: #faf9fd; }
+.pathway-workflow-group-head small { display: block; margin-top: 3px; color: var(--pathway-muted); }
+.pathway-workflow-group > .pathway-operational-rows .pathway-operational-row { padding-left: 42px; }
+.pathway-workflow-group > .pathway-operational-empty { margin: 0; padding: 10px 14px 12px 42px; border-top: 1px solid #e9e7f0; }
+.pathway-row-menu { position: relative; }
+.pathway-row-menu > summary { list-style: none; cursor: pointer; padding: 4px 10px; border-radius: 6px; font-weight: 700; color: var(--pathway-muted); }
+.pathway-row-menu > summary::-webkit-details-marker { display: none; }
+.pathway-row-menu > summary:hover, .pathway-row-menu[open] > summary { background: #f0ebfb; color: #503688; }
+.pathway-row-menu > [role="menu"] { position: absolute; right: 0; top: calc(100% + 4px); z-index: 20; min-width: 220px; display: flex; flex-direction: column; padding: 4px; background: white; border: 1px solid #e9e7f0; border-radius: 8px; box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12); }
+.pathway-row-menu [role="menuitem"] { border: 0; background: transparent; text-align: left; font: inherit; font-size: 13px; padding: 8px 10px; border-radius: 6px; cursor: pointer; }
+.pathway-row-menu [role="menuitem"]:hover { background: #f0ebfb; color: #503688; }
 
 .pathway-context-workspace--studio {
     background: linear-gradient(140deg, #f4f1fc, #f8f9fc 60%);
@@ -1475,3 +1445,35 @@
     outline-offset: 3px;
     border-radius: 10px;
 }
+
+.pathway-count-badge { display: inline-flex; align-items: center; gap: 4px; font-weight: 600; color: #0f766e; }
+.pathway-count-badge--none { color: #94a3b8; font-weight: 400; }
+.pathway-row-menu [role="menuitem"]:disabled { color: #94a3b8; cursor: default; background: transparent; }
+
+.pathway-scenario-selection { border: 1px solid #e9e7f0; border-radius: 10px; background: #faf9fd; padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; }
+.pathway-scenario-selection-line { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.pathway-scenario-selection-kind { font-size: 12px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; color: var(--pathway-muted); }
+.pathway-scenario-selection-facts { display: flex; flex-wrap: wrap; gap: 6px 20px; margin: 0; font-size: 13px; }
+.pathway-scenario-selection-facts > div { display: flex; gap: 6px; align-items: baseline; }
+.pathway-scenario-selection-facts dt { color: var(--pathway-muted); font-weight: 600; }
+.pathway-scenario-selection-facts dd { margin: 0; display: flex; flex-wrap: wrap; gap: 6px; align-items: baseline; }
+.pathway-link-button { border: 0; background: transparent; padding: 0; font: inherit; color: #503688; cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
+.pathway-link-button:disabled { color: #94a3b8; cursor: default; text-decoration: none; }
+.pathway-scenario-edit { display: flex; flex-direction: column; gap: 10px; padding-top: 8px; border-top: 1px solid #e9e7f0; }
+
+.pathway-profile { display: flex; flex-direction: column; gap: 12px; }
+.pathway-profile-edit { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; padding: 14px; }
+.pathway-profile-edit label { display: flex; flex-direction: column; gap: 6px; font-size: 13px; font-weight: 600; }
+.pathway-profile-edit > div, .pathway-profile-edit > p { grid-column: 1 / -1; }
+.pathway-profile-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px; }
+.pathway-profile-card { padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; }
+.pathway-profile-card > header { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+.pathway-profile-card h3 { margin: 0; font-size: 14px; display: inline-flex; align-items: center; gap: 6px; }
+.pathway-profile-card h4 { margin: 4px 0 0; font-size: 12px; color: var(--pathway-muted); text-transform: uppercase; letter-spacing: 0.05em; }
+
+.pathway-steps-toggle { border: 1px solid #e9e7f0; background: white; border-radius: 6px; width: 28px; height: 28px; cursor: pointer; color: #503688; font-weight: 700; line-height: 1; }
+.pathway-steps-toggle:hover { background: #f0ebfb; }
+.pathway-steps-rail { flex: 0 0 48px; display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 10px 0; }
+.pathway-steps-rail ol { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.pathway-steps-rail ol button { width: 26px; height: 26px; border-radius: 13px; border: 0; background: #eef2f5; font: inherit; font-size: 12px; font-weight: 600; cursor: pointer; }
+.pathway-steps-rail ol button[aria-pressed="true"] { background: #0b6b52; color: white; }

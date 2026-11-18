@@ -315,10 +315,10 @@ describe('the guided layer workspace', () => {
         try { await render(); await click('New work architecture view'); expect(container.textContent).toContain('The compiler rejected the declaration.'); expect(container.querySelector('[data-testid="editor"]')?.textContent).toBe('first:first:host,fn,scenario'); }
         finally { useModelStore.setState({ createDiagram: previous }); }
     });
-    it('offers a clear route from the dashboard into the Method map', async () => {
+    it('offers a clear route from the dashboard into Guided Pathways', async () => {
         container = document.createElement('div'); document.body.append(container); root = createRoot(container);
         act(() => root.render(<MemoryRouter><PathwaysEntry /></MemoryRouter>));
-        await click('Open Method map');
+        await click('Open Guided Pathways');
         expect(useModelStore.getState().activeView).toEqual({ type: 'guide' });
     });
 

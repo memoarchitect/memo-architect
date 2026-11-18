@@ -5,6 +5,7 @@ import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { MemoModelDTO } from '@memoarchitect/tools/browser';
 import { confirmDialog } from '../components/AppDialogs';
+import { MemoryRouter } from 'react-router-dom';
 import { GuidedContextSetup } from '../views/GuidedContextSetup';
 import { ContextWorkbench } from '../views/ContextWorkbench';
 import { pathToView, viewToPath } from '../view-routes';
@@ -59,12 +60,13 @@ function Page() { const model = useModelStore(s => s.model)!; const guide = useM
     return <ContextWorkbench model={model} workspace={workspace} onBoundary={() => {}} canWrite={true} diagram={model.diagrams?.find(diagram => diagram.diagramType === 'context')} onOperational={(work, artifactId, createCase) =>
         useModelStore.getState().setActiveView({ type: 'pathway', layer: 'op', work, artifactId, createCase })} />;
 } return active.type === 'pathway' && active.layer === 'fn' ? <FunctionalWorkbench model={model} row={guide.layers[1]} workspace={workspace} canWrite={true} /> : <OperationalWorkbench model={model} row={guide.layers[0]} workspace={workspace} canWrite={useModelStore.getState().pinned === null} entry={active.type === 'pathway' ? active : undefined} />; }
-const render = async (strict = false) => { container = document.createElement('div'); document.body.append(container); root = createRoot(container); act(() => root.render(strict ? <StrictMode><Page /></StrictMode> : <Page />)); await settle(); };
-const buttons = (text: string) => [...container.querySelectorAll('button')].filter(button => button.textContent?.trim() === text);
+const render = async (strict = false) => { container = document.createElement('div'); document.body.append(container); root = createRoot(container); act(() => root.render(<MemoryRouter>{strict ? <StrictMode><Page /></StrictMode> : <Page />}</MemoryRouter>)); await settle(); };
+// An element chip shows its stereotype above its name, so it is found by the name.
+const buttons = (text: string) => [...container.querySelectorAll('button')].filter(button => button.textContent?.trim() === text || button.querySelector('.memo-element-chip-name')?.textContent === text);
 const click = async (text: string) => { act(() => buttons(text)[0].click()); await settle(); };
 const chooseNode = async (name: string) => { if (!container.querySelector('[aria-label="Operational hierarchy"]')) await click('Hierarchy'); const candidate = [...container.querySelectorAll('[aria-label="Operational hierarchy"] button')].find(button => button.querySelector('span')?.textContent === name) as HTMLButtonElement; expect(candidate).toBeDefined(); act(() => candidate.click()); await settle(); };
 beforeEach(() => { useModelStore.setState({ createDiagram: originalCreateDiagram, model: model(), guide: guide(), workspace: 'host', connected: true, preferencesLoaded: true, pinned: null, selectedElementId: null, selectedDiagramId: null, activeView: { type: 'pathway', layer: 'op' } }); });
-afterEach(() => { act(() => root?.unmount()); container?.remove(); vi.clearAllMocks(); useModelStore.setState({ createDiagram: originalCreateDiagram }); });
+afterEach(() => { useModelStore.setState({ diagramReturn: null }); act(() => root?.unmount()); container?.remove(); vi.clearAllMocks(); useModelStore.setState({ createDiagram: originalCreateDiagram }); });
 describe('guided operational work', () => {
     it('writes context links to the system usage and removes the selected relationship', async () => {
         const state = useModelStore.getState();
@@ -131,6 +133,72 @@ describe('guided operational work', () => {
         expect(group.querySelectorAll('.pathway-icon-tile')).toHaveLength(1);
     });
 
+    it('sorts use cases and workflows that have children first and can show only those', async () => {
+        const data = useModelStore.getState().model!;
+        data.elements.idle = element('idle', 'OperationalUseCase', 'Idle goal') as unknown as MemoModelDTO['elements'][string];
+        data.elements.spare = element('spare', 'OperationalWorkflow', 'Spare work') as unknown as MemoModelDTO['elements'][string];
+        data.relationships.push(edge('idleSubject', 'hasSubject', 'idle', 'host'), edge('spareGoal', 'realizesUseCase', 'spare', 'system'));
+        data.workspaceMembership!.membership.idle = ['host'];
+        data.workspaceMembership!.membership.spare = ['host'];
+        // Declared first, so only the sort can put it after the case that has a workflow.
+        data.elements = { idle: data.elements.idle, spare: data.elements.spare, ...data.elements };
+        await render();
+        await click('Operational');
+        const names = () => [...container.querySelectorAll('[aria-label="Use case catalog"] tbody tr th .pathway-operational-case-link')].map(button => button.textContent);
+        expect(names()).toEqual(['Monitor condition', 'External goal', 'Idle goal']);
+        await click('With workflows');
+        expect(names()).toEqual(['Monitor condition']);
+        expect(container.querySelector('[aria-label="Use case catalog"] tbody .pathway-count-badge')?.getAttribute('aria-label')).toBe('2 workflows');
+        await click('Monitor condition');
+        const workflows = () => [...container.querySelectorAll('[aria-label="Use case workflow map"] .pathway-workflow-group-head strong')].map(node => node.textContent);
+        expect(workflows()).toEqual(['Monitoring work', 'Spare work']);
+        await click('With scenarios');
+        expect(workflows()).toEqual(['Monitoring work']);
+    });
+
+    it('opens a use case as its profile: fields, actors and related use cases are edited there', async () => {
+        const data = useModelStore.getState().model!;
+        data.elements.nurse = { ...element('nurse', 'User', 'Nurse'), construct: 'part' } as unknown as MemoModelDTO['elements'][string];
+        data.registries!.kinds.push({ name: 'OperationalParticipant' } as never);
+        data.registries!.kinds = data.registries!.kinds.map(kind => kind.name === 'User' ? { ...kind, superType: 'OperationalParticipant' } : kind);
+        if (!data.registries!.kinds.some(kind => kind.name === 'User')) data.registries!.kinds.push({ name: 'User', superType: 'OperationalParticipant' } as never);
+        vi.mocked(confirmDialog).mockResolvedValue(true);
+        await render();
+        await click('Operational');
+        expect(buttons('Open →')).toHaveLength(2);
+        act(() => container.querySelector<HTMLButtonElement>('[aria-label="Open Monitor condition"]')!.click()); await settle();
+        const profile = () => container.querySelector('[aria-label="Use case profile"]')!;
+        expect(profile().querySelector('[aria-label="Related use cases"]')!.textContent).toContain('External goal');
+        expect(profile().querySelector('[aria-label="Use case workflow map"]')).not.toBeNull();
+        await click('Edit…');
+        const goal = profile().querySelector('[aria-label="Edit the use case"] textarea') as HTMLTextAreaElement;
+        act(() => { Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')!.set!.call(goal, 'Keep it in view'); goal.dispatchEvent(new Event('input', { bubbles: true })); }); await settle();
+        vi.mocked(sendElementCreate).mockResolvedValueOnce({ success: true, elementId: 'system' } as never);
+        await click('Save');
+        expect(vi.mocked(sendElementCreate).mock.calls.at(-1)![0]).toMatchObject({ operationalContext: { operation: 'fields', sourceId: 'system', fields: { goalStatement: 'Keep it in view' } } });
+        await click('Actor');
+        expect([...container.querySelectorAll('select[aria-label="Connect existing work"] option')].map(option => option.textContent)).toContain('Nurse');
+        await click('Cancel');
+        vi.mocked(sendElementCreate).mockResolvedValueOnce({ success: true, elementId: 'system' } as never);
+        act(() => profile().querySelector<HTMLButtonElement>('[aria-label="Remove External goal"]')!.click()); await settle(); await settle();
+        expect(vi.mocked(sendElementCreate).mock.calls.at(-1)![0]).toMatchObject({ operationalContext: { operation: 'unlink', sourceId: 'system', targetId: 'foreign', relation: 'includesStep' } });
+    });
+
+    it('shows a workflow chosen outside the overview as its scenario group, not a page of its own', async () => {
+        await render();
+        await click('Operational');
+        await chooseNode('Monitor condition'); await chooseNode('Monitoring work');
+        const panel = container.querySelector('[aria-label="Current operational task"]')!;
+        const group = panel.querySelector('[aria-label="Monitoring work workflow"]')!;
+        expect(group.querySelector('.pathway-operational-row')?.textContent).toContain('Monitoring path');
+        expect([...group.querySelectorAll('[role="menuitem"]')].map(item => item.textContent)).toEqual(['Properties…', 'Link to a use case…', 'Link clinical work…']);
+        expect(panel.textContent).toContain('Realizes:');
+        expect(panel.querySelector('.memo-element-chip')?.textContent).toBe('«OperationalUseCase»Monitor condition');
+        expect(panel.querySelector('[aria-label="Scenarios in this workflow"]')).toBeNull();
+        expect(panel.querySelector('[aria-label="Covered via linked steps"]')).toBeNull();
+        expect(panel.querySelector('h2')).toBeNull();
+    });
+
     it('reviews which system activities perform a system function, apart from those covered by a flow', async () => {
         const data = useModelStore.getState().model!;
         useModelStore.setState({ model: { ...data, relationships: data.relationships.filter(edge => edge.id !== 'flowRealization') } });
@@ -147,8 +215,8 @@ describe('guided operational work', () => {
         expect(readRow.textContent).toContain('Acquire signal');
         const reportButton = [...table().querySelectorAll('button')].find(button => button.textContent === 'Report signal')!;
         act(() => reportButton.click()); await settle();
-        expect(container.querySelector('[aria-label="Properties"] h2')?.textContent).toBe('Report signal');
-        await click('Link a function…');
+        expect(container.querySelector('[aria-label="Selection"] strong')?.textContent).toBe('Report signal');
+        act(() => container.querySelector<HTMLButtonElement>('[aria-label="Realized by functions"] button:last-child')!.click()); await settle();
         const options = [...container.querySelectorAll('select[aria-label="Connect existing work"] option')].map(option => option.textContent);
         expect(options.some(option => option?.startsWith('Acquire signal'))).toBe(true);
         expect(options.some(option => option?.startsWith('Coordinate system'))).toBe(false);
@@ -205,16 +273,18 @@ describe('guided operational work', () => {
         expect(container.querySelector('[aria-label="Boundary overview"]')?.textContent).toContain('Outpatient clinic');
         expect(container.querySelector('[aria-label="Related operational work"]')?.textContent).not.toContain('External goal');
         await click('Monitor condition');
-        expect(container.querySelector('[aria-label="Current operational task"] h2')?.textContent).toBe('Monitor condition');
+        expect(container.querySelector('[aria-label="Use case profile"] h2')?.textContent).toBe('Monitor condition');
         const overview = container.querySelector('[aria-label="Use case workflow map"]')!;
         expect(overview.textContent).toContain('Monitoring work');
         expect(container.querySelector('[aria-label="Operational element types"]')).toBeNull();
-        const workflowNode = [...overview.querySelectorAll('button')].find(button => button.textContent?.includes('Monitoring work'))!;
-        act(() => workflowNode.click()); await settle();
-        expect(container.querySelector('[aria-label="Current operational task"] h2')?.textContent).toBe('Monitoring work');
-        const scenarios = container.querySelector('[aria-label="Scenarios in this workflow"]')!;
-        act(() => scenarios.querySelector<HTMLButtonElement>('li button')!.click()); await settle();
-        expect(container.querySelector('[aria-label="Where you are"]')?.textContent).toContain('Monitoring path');
+        // The workflow has no page: its scenarios are listed under it and open the scenario page directly.
+        const group = overview.querySelector('[aria-label="Monitoring work workflow"]')!;
+        act(() => group.querySelector<HTMLButtonElement>('.pathway-operational-row')!.click()); await settle();
+        const where = container.querySelector('[aria-label="Where you are"]')?.textContent;
+        expect(where).toContain('Monitor condition');
+        expect(where).toContain('Monitoring path');
+        expect(where).not.toContain('Monitoring work');
+        expect(container.querySelector('[aria-label="Steps"]')?.textContent).toContain('In workflow: Monitoring work');
         expect([...container.querySelectorAll('[aria-label="Steps in order"] li')].map(item => item.textContent)).toEqual([expect.stringContaining('Read signal'), expect.stringContaining('Report signal')]);
         expect(container.querySelector('[aria-label="Scenario diagram"] [data-testid="operative-flow-canvas"]')?.textContent).toContain('systemStep');
         expect(sendElementCreate).not.toHaveBeenCalled();
@@ -263,11 +333,15 @@ describe('guided operational work', () => {
         expect(container.querySelector('[data-testid="scenario-diagram"]')).toBeNull();
         expect(canvas().getAttribute('data-highlight')).toBe('');
         act(() => canvas().querySelector<HTMLButtonElement>('[data-node="report"]')!.click()); await settle();
-        expect(container.querySelector('[aria-label="Properties"] h2')!.textContent).toBe('Report signal');
+        // A click on the diagram opens the app's properties panel, as on any diagram.
+        expect(useModelStore.getState().selectedElementId).toBe('report');
+        expect(container.querySelector('[aria-label="Properties"]')).toBeNull();
+        expect(container.querySelector('[aria-label="Selection"] strong')!.textContent).toBe('Report signal');
         expect(canvas().getAttribute('data-highlight')).toBe('report');
         await click('Back to the scenario');
         expect(container.querySelector('[aria-label="Operational element types"]')).toBeNull();
-        expect([...container.querySelectorAll('[aria-label="Properties"] label')].map(item => item.textContent)).toEqual(['Trigger', 'Precondition', 'Postcondition', 'Expected result', 'Description']);
+        await click('Edit scenario…');
+        expect([...container.querySelectorAll('[aria-label="Edit the selection"] label')].map(item => item.textContent)).toEqual(['Trigger', 'Precondition', 'Postcondition', 'Expected result', 'Description']);
         await click('Table');
         expect([...container.querySelectorAll('[aria-label="Scenario table"] th')].map(cell => cell.textContent)).toEqual(['#', 'Operational step', 'Performed by', 'Realizes clinical step']);
         const trigger = container.querySelector('#scenario-field-trigger') as HTMLTextAreaElement;
@@ -276,7 +350,8 @@ describe('guided operational work', () => {
         await click('Save');
         expect(vi.mocked(sendElementCreate).mock.calls.at(-1)![0]).toMatchObject({ operationalContext: { operation: 'fields', level: 'operational', sourceId: 'systemPath', fields: { trigger: 'A reading is due' } } });
         await click('Read signal');
-        expect(container.querySelector('[aria-label="Properties"] h2')!.textContent).toBe('Read signal');
+        expect(useModelStore.getState().selectedElementId).toBe('systemStep');
+        expect(container.querySelector('[aria-label="Selection"] strong')!.textContent).toBe('Read signal');
         expect(container.querySelector('[aria-label="Realizes clinical steps"]')!.textContent).toContain('Observe condition');
     });
 
@@ -328,17 +403,29 @@ describe('guided operational work', () => {
         expect(container.querySelector('[aria-label="Current functional task"]')!.textContent).toContain('Signal flow');
     });
 
+    it('folds the scenario steps to a rail of numbers', async () => {
+        await render(); await click('Operational'); await chooseNode('Monitor condition'); await chooseNode('Monitoring work'); await chooseNode('Monitoring path'); await click('Overview');
+        act(() => container.querySelector<HTMLButtonElement>('[aria-label="Hide the steps"]')!.click()); await settle();
+        const rail = () => [...container.querySelectorAll('[aria-label="Steps in order"] button')].map(button => button.getAttribute('aria-label'));
+        expect(rail()).toEqual(['1. Read signal', '2. Report signal']);
+        act(() => container.querySelector<HTMLButtonElement>('[aria-label="2. Report signal"]')!.click()); await settle();
+        expect(container.querySelector('[aria-label="Selection"] strong')!.textContent).toBe('Report signal');
+        act(() => container.querySelector<HTMLButtonElement>('[aria-label="Show the steps"]')!.click()); await settle();
+        expect(container.querySelector('[aria-label="Steps"]')!.textContent).toContain('In workflow: Monitoring work');
+    });
+
     it('opens an existing scenario diagram during read-only review', async () => {
         useModelStore.setState({ pinned: { label: 'Review snapshot' } as never }); await render(); await click('Operational'); await chooseNode('Monitor condition'); await chooseNode('Monitoring work'); await chooseNode('Monitoring path'); await click('Open scenario diagram');
         expect(container.querySelector('[aria-label="Scenario diagram"] [data-testid="operative-flow-canvas"]')).not.toBeNull();
-        expect((container.querySelector('[aria-label="Properties"] textarea') as HTMLTextAreaElement).disabled).toBe(true);
+        expect(buttons('Edit scenario…')[0].disabled).toBe(true);
+        // Edit diagram opens the saved diagram on its own page, which offers the way back to this scenario.
         await click('Edit diagram');
-        expect(container.querySelector('[data-testid="scenario-diagram"]')!.textContent).toBe('systemPath');
-        await click('Done editing');
+        expect(useModelStore.getState().diagramReturn).toMatchObject({ diagramId: 'scenarioView', label: 'Monitoring path' });
+        expect(container.querySelector('[data-testid="scenario-diagram"]')).toBeNull();
         await click('All use cases'); expect(container.querySelector('[aria-label="Scenario page"]')).toBeNull();
     });
     it('creates an alternate scenario in the selected workflow and waits for its canonical model identity', async () => {
-        await render(); await click('Operational'); await chooseNode('Monitor condition'); await chooseNode('Monitoring work'); await click('+ Scenario');
+        await render(); await click('Operational'); await chooseNode('Monitor condition'); await chooseNode('Monitoring work'); await click('Scenario');
         const name = container.querySelector('form input') as HTMLInputElement;
         act(() => { Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(name, 'Recovery path'); name.dispatchEvent(new Event('input', { bubbles: true })); });
         const path = container.querySelector('[aria-label="Scenario path"]') as HTMLSelectElement;
@@ -356,11 +443,9 @@ describe('guided operational work', () => {
     it('links clinical work to a system counterpart from the clinical end, saved with the system work', async () => {
         await render(); await chooseNode('Assess condition'); await chooseNode('Assessment work');
         const detail = () => container.querySelector('[aria-label="Current operational task"]')!;
-        const via = detail().querySelector('[aria-label="Covered via linked steps"]')!;
-        expect(via.querySelector('h3')!.textContent).toBe('Operational counterparts, step by step');
-        expect(via.textContent).toContain('Assessment path — 1 of 1 step has an operational counterpart in Host');
-        expect(via.querySelector('table')).toBeNull();
-        await click('Link operational work');
+        // The workflow has no step-by-step summary of its own; its scenarios' pages show that.
+        expect(detail().querySelector('[aria-label="Covered via linked steps"]')).toBeNull();
+        await click('Link operational work…');
         const picker = container.querySelector('select[aria-label="Connect existing work"]') as HTMLSelectElement;
         expect([...picker.options].map(option => option.value)).toEqual(['', 'systemWork']);
         expect(detail().textContent).not.toContain('Primary save location');
@@ -372,21 +457,18 @@ describe('guided operational work', () => {
             operationalContext: { operation: 'refine', level: 'operational', workspace: 'host', sourceId: 'systemWork', targetId: 'clinicalWork' } });
         const before = useModelStore.getState().model!;
         act(() => useModelStore.setState({ model: { ...before, relationships: [...before.relationships, edge('workRefine', 'realizes', 'systemWork', 'clinicalWork')] } })); await settle();
-        expect(detail().querySelector('h2')!.textContent).toBe('Assessment work');
+        expect(detail().querySelector('[aria-label="Assessment work workflow"]')).not.toBeNull();
         expect(detail().querySelector('[aria-label="Covered via linked steps"]')).toBeNull();
         expect(detail().textContent).toContain('Monitoring work');
         await click('Monitoring work');
         expect(buttons('Operational')[0].getAttribute('aria-pressed')).toBe('true');
-        expect(container.querySelector('[aria-label="Current operational task"] h2')!.textContent).toBe('Monitoring work');
+        expect(container.querySelector('[aria-label="Current operational task"] [aria-label="Monitoring work workflow"]')).not.toBeNull();
         expect(container.querySelector('[aria-label="Current operational task"]')!.textContent).toContain('Assessment work');
     });
 
-    it('summarizes step counterparts per scenario on a workflow and lists them on the scenario', async () => {
-        await render(); await click('Operational'); await chooseNode('Monitor condition'); await chooseNode('Monitoring work');
+    it('lists step counterparts on the scenario', async () => {
+        await render(); await click('Operational'); await chooseNode('Monitor condition'); await chooseNode('Monitoring work'); await chooseNode('Monitoring path');
         const via = () => container.querySelector('[aria-label="Covered via linked steps"]')!;
-        expect(via().textContent).toContain('No clinical workflow is linked to this workflow as a whole');
-        expect(via().textContent).toContain('Monitoring path — 1 of 2 steps has a clinical counterpart');
-        act(() => [...via().querySelectorAll('button')].find(button => button.textContent === 'Monitoring path')!.click()); await settle();
         const table = via().querySelector('table')!;
         expect([...table.querySelectorAll('th')].map(cell => cell.textContent)).toEqual(['Operational step', 'Realizes clinical step']);
         expect(via().textContent).toContain('Clinical scenario: Assessment path');
@@ -397,7 +479,7 @@ describe('guided operational work', () => {
     });
 
     it('offers scenario conditions and alternate paths in the workflow context', async () => {
-        await render(); await click('Operational'); await chooseNode('Monitor condition'); await chooseNode('Monitoring work'); await click('+ Scenario');
+        await render(); await click('Operational'); await chooseNode('Monitor condition'); await chooseNode('Monitoring work'); await click('Scenario');
         expect(container.textContent).toContain('Precondition'); expect(container.textContent).toContain('Postcondition');
         const select = container.querySelector('[aria-label="Scenario path"]') as HTMLSelectElement; expect([...select.options].map(option => option.value)).toEqual(['nominal', 'alternate']);
     });

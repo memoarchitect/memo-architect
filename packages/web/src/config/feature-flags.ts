@@ -65,7 +65,7 @@ export const FEATURE_FLAGS: readonly FeatureFlag[] = [
     },
     {
         id: 'guide',
-        label: 'Method map',
+        label: 'Guided Pathways',
         description: 'Open the model’s method, its layer workbenches, and guidance for the next step.',
         stage: 'experimental',
     },

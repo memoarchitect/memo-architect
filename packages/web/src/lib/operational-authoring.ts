@@ -26,6 +26,8 @@ export async function writeOperational(context: OperationalWriteContext, name = 
             case 'realize-flow': return edge('realizes', context.targetId, context.sourceId);
             case 'perform-function': return edge('performs', context.sourceId, context.targetId);
             case 'performer': return edge('performs', context.performerId, context.sourceId);
+            case 'actor': return edge('participatesIn', context.targetId, context.sourceId);
+            case 'unlink': return context.relation === 'participatesIn' ? !edge('participatesIn', context.targetId, context.sourceId) : !edge('includesStep', context.sourceId, context.targetId);
             case 'sequence': return JSON.stringify(functionalFlowSteps(model, context.parentStepId ?? context.scenarioId!).steps.map(item => item.step.id)) === JSON.stringify(context.stepIds ?? []);
             case 'workflow': return edge('realizesUseCase', result.elementId, context.useCaseId);
             case 'use-case': return !context.useCaseId || edge('includesStep', context.useCaseId, result.elementId);

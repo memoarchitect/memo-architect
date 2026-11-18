@@ -1,6 +1,6 @@
-// ─── Method map ──────────────────────────────────────────────────────────────
+// ─── Guided Pathways ──────────────────────────────────────────────────────────────
 //
-// Opened from the toolbar’s Method map button: where a team starts, in any row. Its rows are
+// Opened from the toolbar’s Guided Pathways button: where a team starts, in any row. Its rows are
 // the method's (`MethodLayer`): the architecture layers and the assurance disciplines, each as a tab; a third
 // tab is the chosen system's design history. A row lists its steps' progress and opens the step a person would
 // take next; nothing waits for anything, and the map never says a row is blocked. The scope is the tree of
@@ -92,7 +92,7 @@ export function MethodMap() {
 
             <div style={{ flex: 1, overflow: 'auto', padding: '20px 28px 32px', minWidth: 0 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
-                    <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0, color: TITLE }}>Method map</h1>
+                    <h1 style={{ fontSize: 22, fontWeight: 700, margin: 0, color: TITLE }}>Guided Pathways</h1>
                     <button ref={scopeToggle} type="button" data-testid="map-scope" aria-label="Choose working scope" aria-expanded={scopeOpen}
                         aria-controls="method-scope-selector" onClick={() => setScopeOpen(open => !open)}
                         style={{ cursor: 'pointer', textAlign: 'left', fontSize: FONT.sm, border: `1px solid ${COLOR.border}`, borderRadius: 6, padding: '2px 10px', background: '#fff' }}>

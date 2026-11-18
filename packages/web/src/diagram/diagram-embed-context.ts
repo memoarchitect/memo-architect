@@ -21,6 +21,8 @@ export interface DiagramEmbed {
     onExplore?: (selection: { type: 'element' | 'relationship'; id: string }) => void;
     /** Elements drawn as selected, such as the step a page has selected. */
     highlightIds?: readonly string[];
+    /** The step a walkthrough has reached, or undefined when it ends; a page can follow it. */
+    onWalkStep?: (id: string | undefined) => void;
 }
 
 export const DiagramEmbedContext = createContext<DiagramEmbed | null>(null);

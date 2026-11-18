@@ -257,7 +257,7 @@ export function GuidedLayer({ layer }: { layer: string }) {
     const linksFor = (item: GuideStepStatus) => <StepLinks key={item.id} step={item} steps={guide?.steps ?? []} elementName={id => model?.elements[id]?.name ?? id} onElement={openElement} onLink={canWrite ? setLinkFrom : undefined} />;
     return <main data-testid="guided-layer" style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, minHeight: 0, background: 'var(--color-bg)', color: COLOR.primary }}>
         <header style={{ padding: '12px 18px', borderBottom: `1px solid ${COLOR.border}`, display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 12, background: '#fff' }}>
-            <button type="button" style={link} onClick={() => { setActiveView({ type: 'guide' }); navigate('/method'); }}>‹ Method map</button>
+            <button type="button" style={link} onClick={() => { setActiveView({ type: 'guide' }); navigate('/method'); }}>‹ Guided Pathways</button>
             <label style={{ fontSize: FONT.sm }}>Layer{' '}<select aria-label="Layer" style={button} value={layer} onChange={event => goToRow(event.target.value)}>
                 {axesOf(guide).map(axis => <optgroup key={axis} label={words(axis)}>{guide?.layers.filter(candidate => candidate.axis === axis).map(candidate => <option key={candidate.id} value={candidate.name}>{candidate.label}</option>)}</optgroup>)}
             </select></label>

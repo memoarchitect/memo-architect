@@ -3574,8 +3574,12 @@ function DiagramCanvasInner() {
     }, [model]);
 
     // The flow walkthrough: light the way taken and the ways on, ring the current step, and bring them into view.
+    // A page that embeds the flow can follow the walk; read through a ref so a new embed value does not restart it.
+    const walkFollower = useRef(embed?.onWalkStep);
+    walkFollower.current = embed?.onWalkStep;
     const onWalkStep = useCallback((trail: string[]) => {
         setWalking(trail.length > 0);
+        walkFollower.current?.(trail[trail.length - 1]);
         if (trail.length === 0) {
             dimCanvas(() => 1, () => 1);
             setNodes(prev => prev.map(n => ({ ...n, className: withoutWalkCurrent(n.className) })));
@@ -5370,7 +5374,7 @@ function DiagramCanvasInner() {
                             }}
                         >{miniMapOpen ? '\u2013' : '\u25A2'}</button>
                     )}
-                    {!embed && viewKind === 'actionflow' && actionFlowMode === 'flow' && !focusNodeId && !isLayouting && !layoutAnimating && (
+                    {viewKind === 'actionflow' && actionFlowMode === 'flow' && !focusNodeId && !isLayouting && !layoutAnimating && (
                         <FlowWalkthrough key={selectedDiagramId ?? ''} diagramId={selectedDiagramId ?? ''} nodes={nodes} edges={edges} model={model} onStep={onWalkStep}
                             title={selectedDiagram?.name ?? selectedDiagramId ?? ''} />
                     )}

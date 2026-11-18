@@ -431,6 +431,9 @@ export interface ModelState {
     setExplorerTab: (tab: ExplorerTab) => void;
     selectElement: (id: string | null) => void;
     inspectElement: (id: string | null) => void;
+    /** Where a diagram opened from a guided page returns to; its page offers the way back while that diagram is open. */
+    diagramReturn: { diagramId: string; label: string; path: string } | null;
+    setDiagramReturn: (target: { diagramId: string; label: string; path: string } | null) => void;
     inspectRelationship: (id: string | null) => void;
     toggleElementSelection: (id: string) => void;
     selectAllElements: (ids: string[]) => void;
@@ -1152,6 +1155,8 @@ export const useModelStore = create<ModelState>((set, get) => ({
     },
     // Diagram selection updates the side properties browser without replacing
     // the active diagram with the full-page element detail route.
+    diagramReturn: null,
+    setDiagramReturn: (target) => set({ diagramReturn: target }),
     inspectElement: (id) => set((s) => ({
         selectedElementId: id,
         selectedRelationshipId: null,

@@ -488,6 +488,7 @@ export function App() {
 
                 {/* Center: route-aware canvas */}
                 <div className="flex-1 flex flex-col" style={{ minWidth: 0 }}>
+                    <DiagramReturnBar />
                     <ErrorBoundary label="This view" resetKey={resetKey}>
                     <Routes>
                         {/* Catalog routes — new deep-link pages */}
@@ -596,6 +597,26 @@ function ElementPermalinkRoute() {
 }
 
 /** Renders /viewpoints/:diagramType/:diagramId */
+/** A diagram opened from a guided page, such as a scenario's, offers the way back to that page. */
+function DiagramReturnBar() {
+    const target = useModelStore(s => s.diagramReturn);
+    const activeView = useModelStore(s => s.activeView);
+    const navigate = useNavigate();
+    if (!target || activeView.type !== 'diagram' || activeView.diagramId !== target.diagramId) return null;
+    return <div role="navigation" aria-label="Return" style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '6px 16px', background: '#F4F1FB', borderBottom: '1px solid #E5E0F2', fontSize: 13 }}>
+        <button type="button" onClick={() => {
+            // The store drives the view while the person clicks, so the guided page is set as well as the address.
+            const [pathname, search = ''] = target.path.split('?');
+            const view = pathToView(pathname, search ? `?${search}` : '');
+            useModelStore.getState().setDiagramReturn(null);
+            if (view) useModelStore.getState().setActiveView(view);
+            navigate(target.path);
+        }}
+            style={{ border: 0, background: 'transparent', color: '#503688', fontWeight: 600, cursor: 'pointer', padding: 0, font: 'inherit' }}>‹ Back to {target.label}</button>
+        <span style={{ color: '#6B7280' }}>Edits here are saved to the model; the scenario page shows them when you return.</span>
+    </div>;
+}
+
 function DiagramPermalinkRoute() {
     const { diagramId = '' } = useParams<{ diagramType: string; diagramId: string }>();
     const model = useModelStore(s => s.model);

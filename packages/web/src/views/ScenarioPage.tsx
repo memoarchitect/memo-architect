@@ -1,11 +1,14 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
-import { canonicalFunctionId, functionalFlowSteps, operationalConforms, operationalWorkLevel, type MemoModelDTO, type OperationalWorkLevel } from '@memoarchitect/tools/browser';
+import { canonicalFunctionId, functionalFlowSteps, operationalConforms, operationalWorkLevel, workflowCases, type MemoModelDTO, type OperationalWorkLevel } from '@memoarchitect/tools/browser';
 import { COLOR } from '../styles/tokens';
+import { ElementChip } from '../components/ElementChip';
 import './pathway-workbench.css';
 
 type Element = MemoModelDTO['elements'][string];
 
-// One scenario on one page: its steps in order, one diagram, and the properties of what is selected.
+// One scenario on one page: its steps in order and its diagram, which has the focus. A click selects, and the
+// app's properties panel shows the selection as it does on any diagram; the bar above the diagram keeps what that
+// panel cannot do here: the performer, the links between levels, and the fields the operational writer edits.
 // A scenario is a path with a start and an end, so its own fields are the trigger, the pre- and
 // postcondition and the expected result; a step says what happens and who performs it. The link
 // between the clinical and the operational level reads "Realized by" from the clinical end and
@@ -27,7 +30,7 @@ export interface ScenarioPageProps {
     levelName: (level?: OperationalWorkLevel) => string;
     writable: boolean;
     diagram: ReactNode;
-    /** An open form (new step, existing step, performer, link), shown in place of the properties. */
+    /** An open form (new step, existing step, performer, link), shown under the selection bar. */
     form?: ReactNode;
     notice?: string;
     onSelect: (id: string) => void;
@@ -54,6 +57,8 @@ export function ScenarioPage({ model, scenario, selectedId, levelName, writable,
     const steps = useMemo(() => functionalFlowSteps(model, scenario.id).steps.map(item => item.step as Element), [model, scenario.id]);
     const selected = (selectedId && selectedId !== scenario.id && steps.some(step => step.id === selectedId)) ? model.elements[selectedId] : scenario;
     const workflow = model.elements[scenario.owner ?? scenario.parentAction ?? ''];
+    // The breadcrumb skips the workflow: it has no page; the use case lists its scenarios.
+    const useCase = workflow ? model.elements[workflowCases(model, workflow.id)[0] ?? ''] : undefined;
     // Who performs a step: a performer that `perform`s it, or one the step is allocated to (`allocate step to actor`).
     const performersOf = (id: string) => [...new Map(model.relationships.flatMap(edge => {
         const performer = edge.type === 'performs' && edge.targetId === id ? model.elements[edge.sourceId]
@@ -92,6 +97,11 @@ export function ScenarioPage({ model, scenario, selectedId, levelName, writable,
     const isStep = selected.id !== scenario.id;
     const editable = writable && selected.provenance?.declaration.writable !== false;
 
+    // The step list folds to a rail of numbers: the diagram walks through the steps too, so the list is optional.
+    const [stepsOpen, setStepsOpen] = useState(() => { try { return localStorage.getItem('memo.scenarioPage.stepsOpen') !== 'false'; } catch { return true; } });
+    const toggleSteps = () => setStepsOpen(open => { try { localStorage.setItem('memo.scenarioPage.stepsOpen', String(!open)); } catch { /* the choice is a convenience */ } return !open; });
+    const [editing, setEditing] = useState(false);
+    useEffect(() => { setEditing(false); }, [selected.id]);
     const [draft, setDraft] = useState<Record<string, string>>({});
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState('');
@@ -104,7 +114,7 @@ export function ScenarioPage({ model, scenario, selectedId, levelName, writable,
         setSaving(true); setError('');
         const failure = await onSave(selected, fields);
         setSaving(false);
-        if (failure) setError(failure); else setDraft({});
+        if (failure) setError(failure); else { setDraft({}); setEditing(false); }
     };
     const input = (key: string, text: string, rows = 2) => <div key={key} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
         <label htmlFor={`scenario-field-${key}`} style={label}>{text}</label>
@@ -114,75 +124,58 @@ export function ScenarioPage({ model, scenario, selectedId, levelName, writable,
     const counterparts = counterpartsOf(selected.id);
 
     const stepRows = steps.map((step, index) => ({ step, index, performers: performersOf(step.id), counterparts: counterpartsOf(step.id) }));
-    const properties = form ?? <form aria-label="Properties of the selection" onSubmit={event => { event.preventDefault(); void save(); }}
-        style={{ display: 'flex', flexDirection: 'column', gap: 14, padding: '16px 20px' }}>
-        <div>
-            <p style={{ ...muted, fontSize: 12, fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
-                Selected · {isStep ? `${own.toLowerCase()} step ${steps.findIndex(step => step.id === selected.id) + 1} of ${steps.length}` : `${own.toLowerCase()} scenario`}</p>
-            <h2 style={{ margin: '4px 0 0', fontSize: 17 }}>{selected.name}</h2>
-            {isStep && <button type="button" className="pathway-button" style={{ marginTop: 8 }} onClick={() => onSelect(scenario.id)}>Back to the scenario</button>}
-        </div>
-        {isStep ? <>
-            {input('doc', 'What happens', 3)}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                <span style={label}>Performed by</span>
-                <p style={muted}>{performersOf(selected.id).map(item => item.name).join(', ') || 'No one yet.'}</p>
-                <div><button type="button" className="pathway-button" disabled={!editable} onClick={onPerformer}>Set performer…</button></div>
-            </div>
-        </> : <>
-            <p style={muted}><strong>Path:</strong> {(scenario.attributes.scenarioKind ?? 'nominal').split('::').at(-1) === 'alternate' ? 'alternate path' : 'usual path'}</p>
-            {SCENARIO_FIELDS.map(([key, text]) => input(key, text))}
-            {input('doc', 'Description')}
-        </>}
-        {otherLevel && <section aria-label={`${linkWord} ${other.toLowerCase()} ${isStep ? 'steps' : 'work'}`} style={{ borderTop: `1px solid ${COLOR.border}`, paddingTop: 14, display: 'flex', flexDirection: 'column', gap: 8 }}>
-            <h3 style={{ margin: 0, fontSize: 14 }}>{linkWord} {other.toLowerCase()} {isStep ? 'steps' : 'work'}</h3>
-            {counterparts.length ? <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: 8 }}>{counterparts.map(item => {
-                const owner = scenarioOf(item.id);
-                return <li key={item.id} style={{ border: `1px solid ${COLOR.border}`, borderRadius: 8, padding: '8px 12px' }}>
-                    <button type="button" className="pathway-button" onClick={() => onOpenWork(item.id)}>{item.name}</button>
-                    {owner && owner.id !== item.id && <p style={{ ...muted, marginTop: 4 }}>{owner.name}</p>}
-                </li>;
-            })}</ul> : <p style={muted}>{isStep || !stepRows.some(row => row.counterparts.length)
-                ? `Not linked to ${other.toLowerCase()} work yet.`
-                : `Not linked as a whole. ${stepRows.filter(row => row.counterparts.length).length} of ${steps.length} steps are linked one by one; select a step to see which.`}</p>}
-            <div><button type="button" className="pathway-button" disabled={!writable} onClick={onLink}>Link {other.toLowerCase()} work…</button></div>
-        </section>}
-        {isStep && level === 'operational' && onLinkFunction && <section aria-label="Realized by functions" style={{ borderTop: `1px solid ${COLOR.border}`, paddingTop: 14, display: 'flex', flexDirection: 'column', gap: 8 }}>
-            <h3 style={{ margin: 0, fontSize: 14 }}>Realized by functions</h3>
-            {(() => {
-                // A step performs a function directly, or a step of a functional flow, which stands for the
-                // function it subsets or performs.
-                const isFunction = (id: string) => operationalConforms(model, id, 'SystemFunction');
-                const performed = (id: string) => model.relationships.filter(edge => edge.type === 'performs' && edge.sourceId === id).map(edge => edge.targetId);
-                const realized = [...new Map(performed(selected.id).flatMap(target => {
-                    const canonical = canonicalFunctionId(model, target) ?? target;
-                    const ids = isFunction(canonical) ? [canonical] : performed(target).map(id => canonicalFunctionId(model, id) ?? id).filter(isFunction);
-                    return ids.flatMap(id => model.elements[id] ? [[id, model.elements[id]] as const] : []);
-                })).values()];
-                return realized.length ? <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>{realized.map(item => onOpenFunction
-                    ? <button key={item.id} type="button" className="pathway-button" onClick={() => onOpenFunction(item.id)}>{item.name}</button>
-                    : <span key={item.id}>{item.name}</span>)}</div> : <p style={muted}>No function realizes this step yet.</p>;
-            })()}
-            <div><button type="button" className="pathway-button" disabled={!editable} onClick={onLinkFunction}>Link a function…</button></div>
-        </section>}
-        {isStep && usedIn(selected.id).length > 0 && <section aria-label="Where this step is used" style={{ borderTop: `1px solid ${COLOR.border}`, paddingTop: 14 }}>
-            <h3 style={{ margin: 0, fontSize: 14 }}>Also used in</h3>
-            <p style={muted}>{usedIn(selected.id).map(item => item.name).join(', ')}. It is one step: an edit here changes it there too.</p>
-        </section>}
+    const realizingFunctions = (() => {
+        if (!isStep || level !== 'operational') return [];
+        // A step performs a function directly, or a step of a functional flow, which stands for the
+        // function it subsets or performs.
+        const isFunction = (id: string) => operationalConforms(model, id, 'SystemFunction');
+        const performed = (id: string) => model.relationships.filter(edge => edge.type === 'performs' && edge.sourceId === id).map(edge => edge.targetId);
+        return [...new Map(performed(selected.id).flatMap(target => {
+            const canonical = canonicalFunctionId(model, target) ?? target;
+            const ids = isFunction(canonical) ? [canonical] : performed(target).map(id => canonicalFunctionId(model, id) ?? id).filter(isFunction);
+            return ids.flatMap(id => model.elements[id] ? [[id, model.elements[id]] as const] : []);
+        })).values()];
+    })();
+    const fieldsForm = <form aria-label="Edit the selection" className="pathway-scenario-edit" onSubmit={event => { event.preventDefault(); void save(); }}>
+        {isStep ? input('doc', 'What happens', 3) : <>{SCENARIO_FIELDS.map(([key, text]) => input(key, text))}{input('doc', 'Description')}</>}
         {error && <p role="alert" style={{ ...muted, color: '#9B1C1C' }}>{error}</p>}
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center', borderTop: `1px solid ${COLOR.border}`, paddingTop: 14 }}>
+        <div style={{ display: 'flex', gap: 8 }}>
             <button type="submit" className="pathway-button pathway-button--primary" disabled={!editable || !dirty || saving}>{saving ? 'Saving…' : 'Save'}</button>
-            <button type="button" className="pathway-button" disabled={!dirty || saving} onClick={() => setDraft({})}>Cancel</button>
-            <span style={{ flex: 1 }} />
-            <button type="button" className="pathway-button" onClick={() => onAllProperties(selected.id)}>All properties…</button>
+            <button type="button" className="pathway-button" disabled={saving} onClick={() => { setDraft({}); setEditing(false); }}>Cancel</button>
         </div>
     </form>;
+    const selectionBar = <section aria-label="Selection" className="pathway-scenario-selection">
+        <div className="pathway-scenario-selection-line">
+            <span className="pathway-scenario-selection-kind">{isStep ? `${own} step ${steps.findIndex(step => step.id === selected.id) + 1} of ${steps.length}` : `${own} scenario · ${(scenario.attributes.scenarioKind ?? 'nominal').split('::').at(-1) === 'alternate' ? 'alternate' : 'nominal'}`}</span>
+            <strong>{selected.name}</strong>
+            {isStep && <button type="button" className="pathway-button" onClick={() => onSelect(scenario.id)}>Back to the scenario</button>}
+            <span style={{ flex: 1 }} />
+            <button type="button" className="pathway-button" aria-expanded={editing} disabled={!editable} onClick={() => setEditing(open => !open)}>Edit {isStep ? 'step' : 'scenario'}…</button>
+            <button type="button" className="pathway-button" onClick={() => onAllProperties(selected.id)}>Properties</button>
+        </div>
+        <dl className="pathway-scenario-selection-facts">
+            {isStep && <div><dt>Performed by</dt><dd>{performersOf(selected.id).length ? performersOf(selected.id).map(item => <ElementChip key={item.id} model={model} element={item} />) : 'No one yet'}
+                <button type="button" className="pathway-link-button" disabled={!editable} onClick={onPerformer}>Set…</button></dd></div>}
+            {otherLevel && <div aria-label={`${linkWord} ${other.toLowerCase()} ${isStep ? 'steps' : 'work'}`}><dt>{linkWord} {other.toLowerCase()}</dt><dd>
+                {counterparts.length ? counterparts.map(item => <ElementChip key={item.id} model={model} element={item} title={scenarioOf(item.id)?.name} onClick={() => onOpenWork(item.id)} />)
+                    : isStep || !stepRows.some(row => row.counterparts.length) ? 'Nothing yet'
+                    : `Not as a whole; ${stepRows.filter(row => row.counterparts.length).length} of ${steps.length} steps one by one`}
+                <button type="button" className="pathway-link-button" disabled={!writable} onClick={onLink}>Link…</button></dd></div>}
+            {isStep && level === 'operational' && onLinkFunction && <div aria-label="Realized by functions"><dt>Realized by functions</dt><dd>
+                {realizingFunctions.length ? realizingFunctions.map(item => onOpenFunction
+                    ? <ElementChip key={item.id} model={model} element={item} onClick={() => onOpenFunction(item.id)} />
+                    : <ElementChip key={item.id} model={model} element={item} />) : 'None yet'}
+                <button type="button" className="pathway-link-button" disabled={!editable} onClick={onLinkFunction}>Link…</button></dd></div>}
+            {isStep && usedIn(selected.id).length > 0 && <div aria-label="Where this step is used"><dt>Also used in</dt><dd>{usedIn(selected.id).map(item => <ElementChip key={item.id} model={model} element={item} />)} <span>One step: an edit changes it there too.</span></dd></div>}
+        </dl>
+        {form ?? (editing && fieldsForm)}
+    </section>;
 
     return <section aria-label="Scenario page" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
         <header style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
             <nav aria-label="Where you are" className="pathway-operational-breadcrumb">
                 <button type="button" onClick={onBack}>All use cases</button>
-                {workflow && <><span aria-hidden="true">›</span><button type="button" onClick={() => onSelect(workflow.id)}>{workflow.name}</button></>}
+                {useCase && <><span aria-hidden="true">›</span><button type="button" onClick={() => onSelect(useCase.id)}>{useCase.name}</button></>}
                 <span aria-hidden="true">›</span><strong>{scenario.name}</strong>
             </nav>
             <span style={{ flex: 1 }} />
@@ -193,10 +186,17 @@ export function ScenarioPage({ model, scenario, selectedId, levelName, writable,
         </header>
         {notice && <p role="status" style={muted}>{notice}</p>}
         <div style={{ display: 'flex', gap: 12, alignItems: 'stretch', flexWrap: 'wrap' }}>
-            <aside aria-label="Steps" style={{ ...panel, flex: '0 1 300px', display: 'flex', flexDirection: 'column' }}>
-                <div style={{ padding: '16px 16px 8px' }}>
+            {!stepsOpen ? <aside aria-label="Steps" className="pathway-steps-rail" style={{ ...panel }}>
+                <button type="button" className="pathway-steps-toggle" aria-expanded={false} aria-label="Show the steps" title="Show the steps" onClick={toggleSteps}>»</button>
+                <ol aria-label="Steps in order">{stepRows.map(({ step, index }) => <li key={step.id}>
+                    <button type="button" aria-pressed={selected.id === step.id} aria-label={`${index + 1}. ${step.name}`} title={step.name} onClick={() => onSelect(step.id)}>{index + 1}</button>
+                </li>)}</ol>
+            </aside> : <aside aria-label="Steps" style={{ ...panel, flex: '0 1 260px', display: 'flex', flexDirection: 'column' }}>
+                <div style={{ padding: '16px 16px 8px', position: 'relative' }}>
+                    <button type="button" className="pathway-steps-toggle" aria-expanded={true} aria-label="Hide the steps" title="Hide the steps" onClick={toggleSteps} style={{ position: 'absolute', top: 10, right: 10 }}>«</button>
                     <p style={{ ...muted, fontSize: 12, fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase' }}>{own} scenario</p>
                     <button type="button" className="pathway-operational-case-link" aria-pressed={!isStep} onClick={() => onSelect(scenario.id)} style={{ fontSize: 18, fontWeight: 700, marginTop: 4 }}>{scenario.name}</button>
+                    {workflow && <p style={{ ...muted, fontSize: 13, marginTop: 4 }}>In workflow: {workflow.name}</p>}
                 </div>
                 <p style={{ ...muted, padding: '0 16px 6px', fontWeight: 600 }}>Steps, in order</p>
                 <ol aria-label="Steps in order" style={{ listStyle: 'none', margin: 0, padding: '0 8px', display: 'flex', flexDirection: 'column', gap: 4, flex: 1 }}>
@@ -219,8 +219,9 @@ export function ScenarioPage({ model, scenario, selectedId, levelName, writable,
                     </div>
                     <p style={{ ...muted, fontSize: 12 }}>An existing step comes from another scenario and stays one step: edit it once, both scenarios change.</p>
                 </div>
-            </aside>
-            <main aria-label={view === 'diagram' ? 'Scenario diagram area' : 'Scenario table'} style={{ ...panel, flex: '999 1 480px', padding: 12, display: 'flex', flexDirection: 'column', minHeight: 520 }}>
+            </aside>}
+            <main aria-label={view === 'diagram' ? 'Scenario diagram area' : 'Scenario table'} style={{ ...panel, flex: '999 1 520px', padding: 12, display: 'flex', flexDirection: 'column', gap: 10, minHeight: 'calc(100vh - 230px)' }}>
+                {selectionBar}
                 {view === 'diagram' ? diagram : <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
                     <thead><tr style={{ textAlign: 'left', color: COLOR.muted }}>
                         <th scope="col" style={{ padding: 8 }}>#</th><th scope="col" style={{ padding: 8 }}>{own} step</th><th scope="col" style={{ padding: 8 }}>Performed by</th>
@@ -231,11 +232,10 @@ export function ScenarioPage({ model, scenario, selectedId, levelName, writable,
                         <td style={{ padding: 8 }}><button type="button" className="pathway-button" onClick={() => onSelect(step.id)}>{step.name}</button></td>
                         <td style={{ padding: 8 }}>{performers.map(item => item.name).join(', ') || '—'}</td>
                         {otherLevel && <td style={{ padding: 8 }}>{links.length ? <span style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>{links.map(item =>
-                            <button key={item.id} type="button" className="pathway-button" onClick={() => onOpenWork(item.id)}>{item.name}</button>)}</span> : '—'}</td>}
+                            <ElementChip key={item.id} model={model} element={item} onClick={() => onOpenWork(item.id)} />)}</span> : '—'}</td>}
                     </tr>)}</tbody>
                 </table>}
             </main>
-            <aside aria-label="Properties" style={{ ...panel, flex: '0 1 360px' }}>{properties}</aside>
         </div>
     </section>;
 }
