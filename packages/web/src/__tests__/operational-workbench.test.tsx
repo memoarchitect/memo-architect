@@ -340,7 +340,9 @@ describe('guided operational work', () => {
         await render(); await chooseNode('Assess condition'); await chooseNode('Assessment work');
         const detail = () => container.querySelector('[aria-label="Current operational task"]')!;
         const via = detail().querySelector('[aria-label="Covered via linked steps"]')!;
-        expect(via.textContent).toContain('Via linked steps'); expect(via.textContent).toContain('Observe condition'); expect(via.textContent).toContain('Read signal');
+        expect(via.querySelector('h3')!.textContent).toBe('System counterparts, step by step');
+        expect(via.textContent).toContain('Assessment path — 1 of 1 step has a system counterpart in Host');
+        expect(via.querySelector('table')).toBeNull();
         await click('Link system counterpart');
         const picker = container.querySelector('select[aria-label="Connect existing work"]') as HTMLSelectElement;
         expect([...picker.options].map(option => option.value)).toEqual(['', 'systemWork']);
@@ -362,12 +364,17 @@ describe('guided operational work', () => {
         expect(container.querySelector('[aria-label="Current operational task"]')!.textContent).toContain('Assessment work');
     });
 
-    it('labels a system workflow covered only through its steps and opens the clinical evidence', async () => {
+    it('summarizes step counterparts per scenario on a workflow and lists them on the scenario', async () => {
         await render(); await click('System'); await chooseNode('Monitor condition'); await chooseNode('Monitoring work');
-        const via = container.querySelector('[aria-label="Covered via linked steps"]')!;
-        expect(via.textContent).toContain('No clinical workflow is linked');
-        expect(via.textContent).toContain('Assessment path');
-        act(() => [...via.querySelectorAll('button')].find(button => button.textContent === 'Observe condition')!.click()); await settle();
+        const via = () => container.querySelector('[aria-label="Covered via linked steps"]')!;
+        expect(via().textContent).toContain('No clinical workflow is linked to this workflow as a whole');
+        expect(via().textContent).toContain('Monitoring path — 1 of 2 steps has a clinical counterpart');
+        act(() => [...via().querySelectorAll('button')].find(button => button.textContent === 'Monitoring path')!.click()); await settle();
+        const table = via().querySelector('table')!;
+        expect([...table.querySelectorAll('th')].map(cell => cell.textContent)).toEqual(['System step', 'Refines clinical step']);
+        expect(via().textContent).toContain('Clinical scenario: Assessment path');
+        expect([...table.querySelectorAll('tbody tr')].map(row => [...row.querySelectorAll('td')].map(cell => cell.textContent))).toEqual([['Read signal', 'Observe condition']]);
+        act(() => [...table.querySelectorAll('button')].find(button => button.textContent === 'Observe condition')!.click()); await settle();
         expect(buttons('Clinical')[0].getAttribute('aria-pressed')).toBe('true');
         expect(container.querySelector('[aria-label="Current operational task"] h2')!.textContent).toBe('Observe condition');
     });

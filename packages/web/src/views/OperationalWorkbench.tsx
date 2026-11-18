@@ -390,17 +390,50 @@ export function OperationalWorkbench({ model, row, workspace, canWrite, entry, o
                 .flatMap(edge => { const other = model.elements[edge.sourceId === canonical ? edge.targetId : edge.sourceId]; return other && conforms(other.id, 'OperativeAction') ? [{ key: `${step.id}:${edge.id}`, step, other }] : []; });
         });
     }, [model, selected, selectedRole, otherLevel, directCounterparts.length, hierarchy]);
-    // Grouped by the counterpart's scenario, so one clinical step refined in several systems reads as one line per system path.
-    const stepCounterpartGroups = useMemo(() => {
-        const groups = new Map<string, { key: string; scenario?: Element; scope?: string; pairs: typeof stepCounterparts }>();
-        for (const pair of stepCounterparts) {
-            const scenarioId = pair.other.owner ?? pair.other.parentAction ?? pair.other.id;
-            const scopeRoot = otherLevel === 'system' ? model.workspaceMembership?.workspaces.find(scope => scope.scope === 'system' && model.workspaceMembership?.membership[pair.other.id]?.includes(scope.root))?.root : undefined;
-            const group = groups.get(scenarioId) ?? { key: scenarioId, scenario: model.elements[scenarioId], scope: scopeRoot ? model.elements[scopeRoot]?.name : undefined, pairs: [] };
-            if (!group.pairs.some(existing => existing.step.id === pair.step.id && existing.other.id === pair.other.id)) group.pairs.push(pair);
-            groups.set(scenarioId, group);
+    // The scenario a step belongs to: the nearest owner that is a scenario.
+    const scenarioOf = (id: string): Element | undefined => {
+        let parent = model.elements[id]?.owner ?? model.elements[id]?.parentAction;
+        for (const seen = new Set<string>(); parent && !seen.has(parent); parent = model.elements[parent]?.owner ?? model.elements[parent]?.parentAction) {
+            seen.add(parent);
+            if (conforms(parent, 'OperativeScenario')) return model.elements[parent];
         }
-        return [...groups.values()];
+        return undefined;
+    };
+    const systemNameOf = (id: string) => {
+        const root = model.workspaceMembership?.workspaces.find(scope => scope.scope === 'system' && model.workspaceMembership?.membership[id]?.includes(scope.root))?.root;
+        return root ? model.elements[root]?.name : undefined;
+    };
+    const stepsUnder = (id: string) => {
+        const steps = new Set<string>(); const queue = [id];
+        while (queue.length) for (const child of operationalChildren(model, queue.pop()!)) if (conforms(child.id, 'OperativeAction') && !steps.has(child.id)) { steps.add(child.id); queue.push(child.id); }
+        return steps;
+    };
+    // On a scenario: one table per counterpart scenario, one row per step of this scenario, every step it is linked to on the right.
+    const stepCounterpartGroups = useMemo(() => {
+        const groups = new Map<string, { key: string; scenario?: Element; system?: string; rows: Map<string, { step: Element; others: Element[] }> }>();
+        for (const { step, other } of stepCounterparts) {
+            const scenario = scenarioOf(other.id);
+            const key = scenario?.id ?? '';
+            const group = groups.get(key) ?? { key, scenario, system: otherLevel === 'system' ? systemNameOf(other.id) : undefined, rows: new Map() };
+            const row: { step: Element; others: Element[] } = group.rows.get(step.id) ?? { step, others: [] };
+            if (!row.others.some(existing => existing.id === other.id)) row.others.push(other);
+            group.rows.set(step.id, row); groups.set(key, group);
+        }
+        return [...groups.values()].map(group => ({ ...group, rows: [...group.rows.values()] }));
+    }, [model, stepCounterparts, otherLevel]);
+    // On a workflow or use case: the step evidence lives on its scenarios, so each scenario gets one line saying how far it is covered.
+    const scenarioCoverage = useMemo(() => {
+        const entries = new Map<string, { key: string; scenario?: Element; linked: Set<string>; systems: Set<string> }>();
+        for (const { step, other } of stepCounterparts) {
+            const scenario = scenarioOf(step.id);
+            const key = scenario?.id ?? '';
+            const entry = entries.get(key) ?? { key, scenario, linked: new Set<string>(), systems: new Set<string>() };
+            entry.linked.add(step.id);
+            const system = otherLevel === 'system' ? systemNameOf(other.id) : undefined;
+            if (system) entry.systems.add(system);
+            entries.set(key, entry);
+        }
+        return [...entries.values()].map(entry => ({ ...entry, total: entry.scenario ? stepsUnder(entry.scenario.id).size : entry.linked.size }));
     }, [model, stepCounterparts, otherLevel]);
     const systemWorkspaceOf = (id: string) => {
         const roots = model.workspaceMembership?.membership[id] ?? [];
@@ -461,13 +494,29 @@ export function OperationalWorkbench({ model, row, workspace, canWrite, entry, o
                     {selectedRole === 'step' && conforms(selected.id, 'OperativeAction') && <><h3 style={{ marginTop: 18, fontWeight: 650 }}>Who performs this step?</h3><p style={muted}>{performers.map(performer => performer.name).join(', ') || 'No performer linked yet.'}</p><button style={button} disabled={!writable} onClick={() => begin('performer', 'Choose the performer', { sourceId: selected.id }, Object.values(model.elements).filter(element => ['User', 'OperationalEntity', ...(level === 'system' ? ['System', 'SystemOfSystems'] : [])].some(kind => conforms(element.id, kind)) && (!element.isDefinition || element.id === workspace) && element.provenance?.declaration.writable !== false))}>Set performer</button></>}
                     {level === 'system' && selectedLevel === 'system' && <><h3 style={{ marginTop: 20, fontWeight: 650 }}>Clinical baseline</h3><p style={muted}>Connect this system work to the clinical intent it refines.</p><button style={button} disabled={!writable || !clinicalKind} onClick={() => begin('refine', 'Refine clinical work', { sourceId: selected.id }, operationalCatalog(model, clinicalKind ?? 'UseCase').filter(element => operationalWorkLevel(model, element.id) === 'clinical' && canonicalFunctionId(model, element.id) === element.id))}>Link clinical counterpart</button></>}
                     {level === 'clinical' && selectedLevel === 'clinical' && (selectedRole !== 'step' || conforms(selected.id, 'OperativeAction')) && <><h3 style={{ marginTop: 20, fontWeight: 650 }}>System counterparts</h3><p style={muted}>System work that refines this clinical intent. The link is saved with the system work.</p><button style={button} disabled={!canWrite || busy || !systemKind} onClick={linkSystemCounterpart}>Link system counterpart</button></>}
-                    {stepCounterparts.length > 0 && <section aria-label="Covered via linked steps"><p style={muted}><strong>Via linked steps.</strong> No {otherLevel} {selectedRole === 'case' ? 'use case' : selectedRole} is linked to this one, but some of its steps have {otherLevel} counterparts.</p>
-                        <ul style={{ paddingLeft: 18 }}>{stepCounterpartGroups.map(group => <li key={group.key} style={muted}>
-                            {group.scenario ? <button style={button} onClick={() => goToWork(group.scenario!.id)}>{group.scenario.name}</button> : 'Unplaced steps'}{group.scope ? ` · ${group.scope}` : ''}
-                            <ul style={{ paddingLeft: 18 }}>{group.pairs.map(({ key, step, other }) => <li key={key}>{step.name === other.name
-                                ? <><button style={button} onClick={() => goToWork(other.id)}>{other.name}</button> {otherLevel === 'system' ? 'refines' : 'is refined by'} the step of the same name</>
-                                : <><button style={button} onClick={() => choose(step.id)}>{step.name}</button> ↔ <button style={button} onClick={() => goToWork(other.id)}>{other.name}</button></>}</li>)}</ul>
-                        </li>)}</ul></section>}
+                    {stepCounterparts.length > 0 && selectedLevel && otherLevel && (() => {
+                        const own = selectedLevel === 'clinical' ? 'Clinical' : 'System';
+                        const other = otherLevel === 'clinical' ? 'Clinical' : 'System';
+                        const roleWord = selectedRole === 'case' ? 'use case' : selectedRole;
+                        return <section aria-label="Covered via linked steps" className="pathway-related">
+                            <h3 style={{ marginTop: 20, fontWeight: 650 }}>{other} counterparts, step by step</h3>
+                            <p style={muted}>No {otherLevel} {roleWord} is linked to this {roleWord} as a whole. {selectedRole === 'scenario'
+                                ? `Some of its steps are linked to ${otherLevel} steps one by one.`
+                                : `Some steps of its scenarios are linked to ${otherLevel} steps one by one. Open a scenario to see which.`}</p>
+                            {selectedRole === 'scenario' ? stepCounterpartGroups.map(group => <div key={group.key} style={{ marginTop: 12 }}>
+                                <p style={muted}><strong>{other} scenario:</strong> {group.scenario ? <button style={button} onClick={() => goToWork(group.scenario!.id)}>{group.scenario.name}</button> : 'not placed in a scenario'}{group.system && <> · {group.system}</>}</p>
+                                <table aria-label={`Steps linked to ${group.scenario?.name ?? 'unplaced steps'}`} style={{ borderCollapse: 'collapse', width: '100%', fontSize: 14 }}>
+                                    <thead><tr style={{ textAlign: 'left', color: COLOR.muted }}><th style={{ padding: '4px 8px 4px 0', fontWeight: 600 }}>{own} step</th><th style={{ padding: '4px 0', fontWeight: 600 }}>{otherLevel === 'system' ? `Refined by ${otherLevel} step` : `Refines ${otherLevel} step`}</th></tr></thead>
+                                    <tbody>{group.rows.map(({ step, others }) => <tr key={step.id} style={{ borderTop: `1px solid ${COLOR.border}`, verticalAlign: 'top' }}>
+                                        <td style={{ padding: '6px 8px 6px 0' }}><button style={button} onClick={() => choose(step.id)}>{step.name}</button></td>
+                                        <td style={{ padding: '6px 0', display: 'flex', flexWrap: 'wrap', gap: 6 }}>{others.map(item => <button key={item.id} style={button} onClick={() => goToWork(item.id)}>{item.name}</button>)}</td>
+                                    </tr>)}</tbody>
+                                </table>
+                            </div>) : <ul style={{ paddingLeft: 18 }}>{scenarioCoverage.map(entry => <li key={entry.key} style={muted}>
+                                {entry.scenario ? <button style={button} onClick={() => choose(entry.scenario!.id)}>{entry.scenario.name}</button> : 'Steps not placed in a scenario'} — {entry.linked.size} of {entry.total} {entry.total === 1 ? 'step' : 'steps'} {entry.linked.size === 1 ? 'has' : 'have'} {otherLevel === 'system' ? 'a system counterpart' : 'a clinical counterpart'}{entry.systems.size ? ` in ${[...entry.systems].join(', ')}` : ''}
+                            </li>)}</ul>}
+                        </section>;
+                    })()}
                     {!!refinements.length && <ul style={{ paddingLeft: 18, marginTop: 10 }}>{refinements.map(edge => <li key={edge.id} style={muted}><button style={button} onClick={() => goToWork(edge.sourceId)}>{model.elements[edge.sourceId]?.name}</button> → <button style={button} onClick={() => goToWork(edge.targetId)}>{model.elements[edge.targetId]?.name}</button>{conforms(edge.sourceId, 'FunctionalFlow') ? ' · Functional flow realization' : ' · Refines'}{conforms(edge.sourceId, 'FunctionalFlow') && <ol style={{ paddingLeft: 20 }}>{functionalFlowSteps(model, edge.sourceId).steps.map(item => <li key={item.step.id}>{model.elements[item.functionId ?? '']?.name ?? item.step.name}</li>)}</ol>}</li>)}</ul>}
                     {level === 'system' && selectedLevel === 'system' && (selectedRole === 'scenario' || selectedRole === 'step' && conforms(selected.id, 'OperativeAction')) && <><h3 style={{ marginTop: 20, fontWeight: 650 }}>Functional behavior</h3>
                         {selectedRole === 'step' && <><p style={muted}>Which system functions carry out this activity?</p><ul style={{ paddingLeft: 18 }}>{performedFunctions.map(edge => <li key={edge.id} style={muted}>{onFunctional
