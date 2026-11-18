@@ -11,6 +11,7 @@ type Element = MemoModelDTO['elements'][string];
 // between the clinical and the operational level reads "Realized by" from the clinical end and
 // "Realizes" from the operational end; the words for the two levels come from the method.
 
+const PERFORMER_KINDS = ['User', 'MemoActor', 'OperationalEntity', 'System', 'SystemOfSystems'];
 const SCENARIO_FIELDS = [['trigger', 'Trigger'], ['preCondition', 'Precondition'], ['postCondition', 'Postcondition'], ['expectedResult', 'Expected result']] as const;
 
 const panel = { background: 'white', border: `1px solid ${COLOR.border}`, borderRadius: 12, minWidth: 0 } as const;
@@ -53,8 +54,12 @@ export function ScenarioPage({ model, scenario, selectedId, levelName, writable,
     const steps = useMemo(() => functionalFlowSteps(model, scenario.id).steps.map(item => item.step as Element), [model, scenario.id]);
     const selected = (selectedId && selectedId !== scenario.id && steps.some(step => step.id === selectedId)) ? model.elements[selectedId] : scenario;
     const workflow = model.elements[scenario.owner ?? scenario.parentAction ?? ''];
-    const performersOf = (id: string) => model.relationships.filter(edge => edge.type === 'performs' && edge.targetId === id)
-        .flatMap(edge => model.elements[edge.sourceId] ? [model.elements[edge.sourceId]] : []);
+    // Who performs a step: a performer that `perform`s it, or one the step is allocated to (`allocate step to actor`).
+    const performersOf = (id: string) => [...new Map(model.relationships.flatMap(edge => {
+        const performer = edge.type === 'performs' && edge.targetId === id ? model.elements[edge.sourceId]
+            : edge.type === 'allocatedTo' && edge.sourceId === id ? model.elements[edge.targetId] : undefined;
+        return performer && PERFORMER_KINDS.some(kind => operationalConforms(model, performer.id, kind)) ? [[performer.id, performer] as const] : [];
+    })).values()];
     // Realization runs between the two levels, on the canonical step a usage stands for.
     const counterpartsOf = (id: string) => {
         if (!otherLevel) return [];
@@ -145,8 +150,15 @@ export function ScenarioPage({ model, scenario, selectedId, levelName, writable,
         {isStep && level === 'operational' && onLinkFunction && <section aria-label="Realized by functions" style={{ borderTop: `1px solid ${COLOR.border}`, paddingTop: 14, display: 'flex', flexDirection: 'column', gap: 8 }}>
             <h3 style={{ margin: 0, fontSize: 14 }}>Realized by functions</h3>
             {(() => {
-                const realized = model.relationships.filter(edge => edge.type === 'performs' && edge.sourceId === selected.id && operationalConforms(model, edge.targetId, 'SystemFunction'))
-                    .flatMap(edge => model.elements[edge.targetId] ? [model.elements[edge.targetId]] : []);
+                // A step performs a function directly, or a step of a functional flow, which stands for the
+                // function it subsets or performs.
+                const isFunction = (id: string) => operationalConforms(model, id, 'SystemFunction');
+                const performed = (id: string) => model.relationships.filter(edge => edge.type === 'performs' && edge.sourceId === id).map(edge => edge.targetId);
+                const realized = [...new Map(performed(selected.id).flatMap(target => {
+                    const canonical = canonicalFunctionId(model, target) ?? target;
+                    const ids = isFunction(canonical) ? [canonical] : performed(target).map(id => canonicalFunctionId(model, id) ?? id).filter(isFunction);
+                    return ids.flatMap(id => model.elements[id] ? [[id, model.elements[id]] as const] : []);
+                })).values()];
                 return realized.length ? <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>{realized.map(item => onOpenFunction
                     ? <button key={item.id} type="button" className="pathway-button" onClick={() => onOpenFunction(item.id)}>{item.name}</button>
                     : <span key={item.id}>{item.name}</span>)}</div> : <p style={muted}>No function realizes this step yet.</p>;
