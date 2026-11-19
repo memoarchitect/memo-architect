@@ -43,8 +43,7 @@ const isSystemOfInterest = (element: MemoElement) =>
 // ─── Geometry (px) ───────────────────────────────────────────────────────────
 
 const EXTERNAL_H = 76;
-const EXTERNAL_MIN_W = 170;
-const EXTERNAL_MAX_W = 238;
+const EXTERNAL_W = 230;
 const COLUMN_GAP = 30;      // vertical gap between entities in one column
 const SIDE_GAP = 104;       // gap between a column and the scope boundary
 const SYSTEM_W = 240;
@@ -52,10 +51,6 @@ const SYSTEM_H = 108;
 const BOUNDARY_PAD_X = 92;
 const BOUNDARY_PAD_Y = 74;
 const MARGIN = 40;
-
-/** Entity box width from its label, capped so one long name cannot stretch the board. */
-const externalWidth = (name: string): number =>
-    Math.min(Math.max(name.length * 7.4 + 28, EXTERNAL_MIN_W), EXTERNAL_MAX_W);
 
 type Side = 'left' | 'right' | 'top' | 'bottom';
 
@@ -69,6 +64,8 @@ export interface ContextViewOptions {
     viewpointFilter?: (element: MemoElement) => boolean;
     /** How a spoke is drawn: one straight segment (the default), or bent to run along the axes. */
     edgeStyle?: UseCaseEdgeStyle;
+    /** Explicit grouping for the system workspace projection. */
+    participantSides?: ReadonlyMap<string, Side>;
     /** Relationship kinds selected by the authored view. */
     relationshipTypes?: string[];
     /**
@@ -147,7 +144,7 @@ export function computeContextViewLayout(
         && (!selectedRelationshipTypes || selectedRelationshipTypes.has(relationshipType(rel.type))),
     );
     const referenced = new Set(relationships.flatMap(rel => [rel.sourceId, rel.targetId]));
-    const elements = allElements.filter(element => referenced.has(element.id) && !isPortElement(element));
+    const elements = allElements.filter(element => (referenced.has(element.id) || element.id === options.subjectElement) && !isPortElement(element));
     if (elements.length === 0) return { nodes: [], edges: [] };
 
     const degree = (element: MemoElement) => relationships.filter(rel => rel.sourceId === element.id || rel.targetId === element.id).length;
@@ -182,6 +179,7 @@ export function computeContextViewLayout(
             sides.set(element.id, 'top');
         }
     }
+    for (const [id, side] of options.participantSides ?? []) sides.set(id, side);
     // `ClinicianActor` is a person and `Actor` is not the only spelling
     // of one, so the column rank asks what the role IS rather than matching two
     // exact kind names.
@@ -197,11 +195,11 @@ export function computeContextViewLayout(
     const columnHeight = (items: MemoElement[]) =>
         items.length === 0 ? 0 : items.length * EXTERNAL_H + (items.length - 1) * COLUMN_GAP;
     const columnWidth = (items: MemoElement[]) =>
-        items.length === 0 ? 0 : Math.max(...items.map(element => externalWidth(element.name)));
+        items.length === 0 ? 0 : EXTERNAL_W;
 
     const rowWidth = (items: MemoElement[]) => items.length === 0
         ? 0
-        : items.reduce((total, element) => total + externalWidth(element.name), 0) + (items.length - 1) * COLUMN_GAP;
+        : items.length * EXTERNAL_W + (items.length - 1) * COLUMN_GAP;
     const boundaryWidth = SYSTEM_W + BOUNDARY_PAD_X * 2;
     const boundaryHeight = SYSTEM_H + BOUNDARY_PAD_Y * 2;
     const leftWidth = columnWidth(columns.left);
@@ -246,7 +244,7 @@ export function computeContextViewLayout(
         const items = columns[side];
         let cursor = centreY - columnHeight(items) / 2;
         for (const element of items) {
-            const width = externalWidth(element.name);
+            const width = EXTERNAL_W;
             const x = side === 'left' ? MARGIN + leftWidth - width : rightX;
             placed.set(element.id, { x, y: cursor, width, height: EXTERNAL_H, side });
             nodes.push({
@@ -269,7 +267,7 @@ export function computeContextViewLayout(
         let cursor = centreX - width / 2;
         const y = side === 'top' ? boundaryY - SIDE_GAP - EXTERNAL_H : boundaryY + boundaryHeight + SIDE_GAP;
         for (const element of items) {
-            const itemWidth = externalWidth(element.name);
+            const itemWidth = EXTERNAL_W;
             placed.set(element.id, { x: cursor, y, width: itemWidth, height: EXTERNAL_H, side });
             nodes.push({
                 id: element.id, type: 'contextExternal', position: { x: cursor, y },
@@ -391,6 +389,7 @@ export function computeContextViewLayout(
             style: { stroke: '#0F766E', strokeWidth: 1.5 },
             data: {
                 routing: options.edgeStyle ?? 'straight',
+                contextInteraction: true,
                 points: spokePoints(draft),
                 labelPoint: labelPoints.get(draft.rel.id),
                 sourceSide: draft.sourceSide, targetSide: draft.targetSide,

@@ -10,7 +10,7 @@ const USE_CASE_KINDS = new Set(['UseCase']);
 const ASSOCIATION_TYPES = new Set(['initiates', 'participatesin', 'performs', 'interactswith', 'includes', 'extends', 'specialization']);
 export type UseCaseEdgeStyle = 'straight' | 'elbow' | 'rounded' | 'curved' | 'arc';
 
-const relationshipType = (type: string) => type.toLowerCase();
+const relationshipType = (type: string) => type.toLowerCase() === 'includesstep' ? 'includes' : type.toLowerCase();
 
 export function isUseCaseActor(element: MemoElement): boolean {
     return ACTOR_KINDS.test(element.kind) || element.construct === 'actor';
@@ -38,6 +38,8 @@ export function useCaseMaxDepth(model: MemoModelDTO): number {
 export interface UseCaseViewOptions {
     viewpointFilter?: (element: MemoElement) => boolean;
     systemName?: string;
+    /** The selected goal whose actual subject names the boundary; other subjects are labelled context. */
+    focusUseCaseId?: string;
     /** L0 shows roots; L1 includes direct children. "all" shows the full hierarchy. */
     level?: number | 'all';
     edgeStyle?: UseCaseEdgeStyle;
@@ -53,7 +55,8 @@ export function useCaseActorOptions(model: MemoModelDTO): UseCaseActorOption[] {
     const relatedActorIds = new Set(model.relationships
         .filter(rel => ASSOCIATION_TYPES.has(relationshipType(rel.type)))
         .flatMap(rel => caseIds.has(rel.sourceId) ? [rel.targetId] : caseIds.has(rel.targetId) ? [rel.sourceId] : []));
-    return elements.filter(isUseCaseActor).filter(actor => relatedActorIds.has(actor.id))
+    const nativeActors = nativeActorIds(model);
+    return elements.filter(element => isUseCaseActor(element) || nativeActors.has(element.id)).filter(actor => relatedActorIds.has(actor.id))
         .map(actor => ({ id: actor.id, name: actor.name })).sort((a, b) => a.name.localeCompare(b.name));
 }
 
@@ -90,10 +93,26 @@ export function useCaseViewOptions(properties?: Record<string, string>): Pick<Us
     };
 }
 
+/** Native actor roles can bind any participant metaclass, not only a User. */
+function nativeActorIds(model: MemoModelDTO): Set<string> {
+    return new Set(model.relationships.filter(edge => relationshipType(edge.type) === 'participatesin').flatMap(edge => isUseCase(model.elements[edge.targetId] ?? {} as MemoElement) ? [edge.sourceId] : isUseCase(model.elements[edge.sourceId] ?? {} as MemoElement) ? [edge.targetId] : []));
+}
+export function useCaseSubjectOptions(model: MemoModelDTO, id?: string | null, fallback?: string, exposedIds?: readonly string[]): Pick<UseCaseViewOptions, 'systemName' | 'focusUseCaseId'> {
+    const cases = new Set((exposedIds ?? []).filter(id => !!model.elements[id] && isUseCase(model.elements[id])));
+    const included = new Set(model.relationships.filter(edge => relationshipType(edge.type) === 'includes' && cases.has(edge.sourceId) && cases.has(edge.targetId)).map(edge => edge.targetId));
+    const roots = [...cases].filter(id => !included.has(id));
+    const focus = id ?? (roots.length === 1 ? roots[0] : undefined);
+    const subject = focus ? model.relationships.find(edge => edge.type === 'hasSubject' && edge.sourceId === focus)?.targetId : undefined;
+    return { systemName: subject ? model.elements[subject]?.name ?? fallback : focus ? 'Subject not specified' : fallback, ...(focus ? { focusUseCaseId: focus } : {}) };
+}
+
 /** Lay out a classic use-case diagram: actors outside a system boundary, use cases inside. */
 export function computeUseCaseViewLayout(model: MemoModelDTO, options: UseCaseViewOptions = {}): LayoutResult {
     const visible = Object.values(model.elements).filter(element => !options.viewpointFilter || options.viewpointFilter(element));
     const allUseCases = visible.filter(isUseCase);
+    const subjectOf = (id: string) => model.relationships.find(edge => edge.type === 'hasSubject' && edge.sourceId === id)?.targetId;
+    const focusSubject = options.focusUseCaseId ? subjectOf(options.focusUseCaseId) : undefined;
+    const normalizedSubject = (id?: string) => id ? model.workspaceMembership?.definitionOf[id] ?? id : undefined;
     const relationships = model.relationships.filter(rel => ASSOCIATION_TYPES.has(relationshipType(rel.type)));
     // Includes creates the presentation hierarchy. An included use case has
     // one parent; L0 therefore means a root use case with no parent.
@@ -136,7 +155,8 @@ export function computeUseCaseViewLayout(model: MemoModelDTO, options: UseCaseVi
         }
     }
     const useCases = allUseCases.filter(element => useCaseIds.has(element.id));
-    const allVisibleActors = visible.filter(isUseCaseActor).filter(actor => !hiddenActorIds.has(actor.id));
+    const nativeActors = nativeActorIds(model);
+    const allVisibleActors = visible.filter(element => isUseCaseActor(element) || nativeActors.has(element.id)).filter(actor => !hiddenActorIds.has(actor.id));
     const actorIds = new Set(allVisibleActors.map(a => a.id));
     const actors = allVisibleActors.filter(actor => relationships.some(rel =>
         (rel.sourceId === actor.id && useCaseIds.has(rel.targetId)) || (rel.targetId === actor.id && useCaseIds.has(rel.sourceId))));
@@ -267,7 +287,7 @@ export function computeUseCaseViewLayout(model: MemoModelDTO, options: UseCaseVi
             positions.set(element.id, position);
             nodes.push({
                 id: element.id, type: 'useCase', position,
-                data: { label: element.name, kind: element.kind, color: '#E67E22', level: depth(element.id) },
+                data: { label: focusSubject && subjectOf(element.id) && normalizedSubject(subjectOf(element.id)) !== normalizedSubject(focusSubject) ? `${element.name}\n[${model.elements[subjectOf(element.id)!]?.name ?? 'Other subject'} context]` : element.name, kind: element.kind, color: '#E67E22', level: depth(element.id) },
                 style: { width: CASE_W, height: CASE_H },
             });
             cursor += CASE_H + ROW_GAP;

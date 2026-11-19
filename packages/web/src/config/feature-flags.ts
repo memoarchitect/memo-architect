@@ -65,8 +65,8 @@ export const FEATURE_FLAGS: readonly FeatureFlag[] = [
     },
     {
         id: 'guide',
-        label: 'Method Guide',
-        description: 'The Guide, and the next-step panel on the dashboard, read the model against its method. The method is not finished, and the panel adds to what a person has to read, so it stays off by default.',
+        label: 'Guided Pathways',
+        description: 'Open the model’s method, its layer workbenches, and guidance for the next step.',
         stage: 'experimental',
     },
     {

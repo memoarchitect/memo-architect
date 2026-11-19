@@ -1,4 +1,4 @@
-import { rendererModel } from '../../renderer-model';
+import { DiagramUseCaseSubject, DiagramActionSubject, useDiagramDisplayModel } from '../../display-scope';
 // ─── MaxGraphCanvas ───────────────────────────────────────────────────────────
 //
 // Alternate diagram surface on maxGraph (@maxgraph/core), the maintained
@@ -12,7 +12,7 @@ import { rendererModel } from '../../renderer-model';
 // Element creation, edge drawing and context menus stay on ReactFlow.
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import {
     ConnectionHandler, FitPlugin, Graph, InternalEvent, Point,
     RubberBandHandler, SelectionHandler, getDefaultPlugins,
@@ -155,7 +155,7 @@ function applySavedLayout(scene: NotationScene, saved?: DiagramLayout): Notation
 }
 
 export function MaxGraphCanvas() {
-    const model = useModelStore(s => rendererModel(s.model));
+    const model = useDiagramDisplayModel(true);
     const selectedDiagramId = useModelStore(s => s.selectedDiagramId);
     const selectedViewpointId = useModelStore(s => s.selectedViewpointId);
     const selectedElementId = useModelStore(s => s.selectedElementId);
@@ -180,7 +180,10 @@ export function MaxGraphCanvas() {
     const [direction, setDirection] = useState<'horizontal' | 'vertical'>('horizontal');
     const [visibleFlowKinds, setVisibleFlowKinds] = useState<Set<ActionFlowKind>>(new Set(['control', 'data', 'energy', 'material']));
     const [expandedActionIds, setExpandedActionIds] = useState<Set<string>>(new Set());
-    const [focusedActionId, setFocusedActionId] = useState<string | null>(null);
+    const actionSubject = useContext(DiagramActionSubject);
+    const useCaseSubject = useContext(DiagramUseCaseSubject);
+    const [focusedActionId, setFocusedActionId] = useState<string | null>(actionSubject);
+    useEffect(() => { setFocusedActionId(actionSubject); setSwimlanes(!actionSubject); }, [selectedDiagramId, actionSubject]);
     /** Selected vertex count — the align tools appear from two. */
     const [selectionCount, setSelectionCount] = useState(0);
     /** Open relationship picker for an interactively drawn connector. */
@@ -230,6 +233,7 @@ export function MaxGraphCanvas() {
                 model,
                 diagram: selectedDiagram ?? null,
                 selectedViewpointId,
+                useCaseSubjectId: useCaseSubject,
                 hiddenLayers,
                 layoutProviderId,
                 actionFlow: { swimlanes, laneGrouping, displayLevel, expandedActionIds, focusActionId: focusedActionId, visibleFlowKinds, direction },
@@ -247,7 +251,7 @@ export function MaxGraphCanvas() {
         });
         return () => { cancelled = true; };
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [model, selectedDiagram, selectedDiagramId, selectedViewpointId, hiddenLayers, layoutProviderId, nonCanvas, swimlanes, laneGrouping, displayLevel, expandedActionIds, focusedActionId, visibleFlowKinds, direction]);
+    }, [model, selectedDiagram, selectedDiagramId, selectedViewpointId, hiddenLayers, layoutProviderId, nonCanvas, swimlanes, laneGrouping, displayLevel, expandedActionIds, focusedActionId, useCaseSubject, visibleFlowKinds, direction]);
 
     // ── Persist node drags to the sidecar layout ──────────────────────────────
     const persistMovedCells = useCallback((cells: Cell[]) => {

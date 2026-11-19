@@ -57,7 +57,7 @@ describe('viewToPath / pathToView round trip', () => {
             // path that does not serialise back to itself.
             const expected = path === '/dashboard' ? '/'
                 : path === '/scenarios' ? '/use-cases'
-                : path === '/workflow' ? '/guide'
+                : path === '/workflow' || path === '/guide' ? '/method'
                 : path;
             expect(viewToPath(view!)).toBe(expected);
         }
@@ -75,6 +75,16 @@ describe('viewToPath / pathToView round trip', () => {
     it('keeps the pre-model splash on the same path as the dashboard', () => {
         // Loading '/' before the model arrives must not rewrite the URL.
         expect(viewToPath({ type: 'welcome' })).toBe('/');
+    });
+
+    it('round-trips a method row and an optional authored view', () => {
+        for (const diagramId of [undefined, 'model::view / 1']) {
+            const view: ActiveView = { type: 'pathway', layer: 'layer / logical', ...(diagramId ? { diagramId } : {}) };
+            const url = new URL(viewToPath(view)!, 'https://example.test');
+            expect(url.pathname).toBe('/method/layer%20%2F%20logical');
+            expect(pathToView(url.pathname, url.search)).toEqual(view);
+        }
+        expect(pathToView('/method')).toEqual({ type: 'guide' });
     });
 
     it('round-trips a settings tab', () => {

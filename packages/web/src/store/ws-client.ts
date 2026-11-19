@@ -314,9 +314,16 @@ export function connectWebSocket(url?: string): void {
         }
     };
 
+    let receivedPreferences = false;
     ws.onmessage = (event) => {
         try {
             const msg: ExtendedServerMessage = JSON.parse(event.data);
+            // The server echoes each save. Applying an older echo can move the
+            // user back to a scope they already left.
+            if (msg.type === 'user-preferences') {
+                if (receivedPreferences) return;
+                receivedPreferences = true;
+            }
             handleMessage(msg);
         } catch {
             // Ignore malformed messages

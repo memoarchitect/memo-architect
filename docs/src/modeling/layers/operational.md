@@ -10,10 +10,10 @@ concrete paths that need analysis (scenarios), each an ordered list of actions.
 ![Operational layer](../../images/modeling/layer-operational.svg)
 
 1. **Use case** — an actor's goal: "Deliver PCA therapy". Use `ClinicalUseCase`
-   for clinical goals and `SystemUseCase` for goals the system serves. Set the
+   for clinical goals and `OperationalUseCase` for goals the system serves. Set the
    goal, trigger and success outcome, and name the actors.
 2. **Workflow** — how the work is organized: `ClinicalWorkflow` or
-   `SystemWorkflow`, with entry and completion conditions. A workflow
+   `OperationalWorkflow`, with entry and completion conditions. A workflow
    **realizes** a use case.
 3. **Scenarios** — selected paths through a workflow, as `OperativeScenario`
    actions owned by the workflow: the nominal path, alternatives and failure
@@ -28,8 +28,8 @@ concrete paths that need analysis (scenarios), each an ordered list of actions.
 
 | Kind | Use it for |
 |---|---|
-| `ClinicalUseCase`, `SystemUseCase` | A goal; group use cases by declared level. |
-| `ClinicalWorkflow`, `SystemWorkflow` | The organized work that reaches a goal. |
+| `ClinicalUseCase`, `OperationalUseCase` | A goal; group use cases by declared level. |
+| `ClinicalWorkflow`, `OperationalWorkflow` | The organized work that reaches a goal. |
 | `OperativeScenario` | One path through a workflow. |
 | `OperativeAction` | One step: who does it, how hard it is, how long it takes. |
 | `OperationalCapability` | An ability the device must provide. |
@@ -49,7 +49,7 @@ concrete paths that need analysis (scenarios), each an ordered list of actions.
 ## Example
 
 ```sysml
-use case ucDeliverPcaTherapy : SystemUseCase {
+use case ucDeliverPcaTherapy : OperationalUseCase {
     attribute :>> useCaseKind = UseCaseKind::care;
     @MemoIdentity { :>> providedId = "UC-001"; :>> label = "DeliverPatientControlledAnalgesia"; }
     attribute :>> goalStatement = "Deliver prescribed analgesia safely while allowing patient-controlled bolus requests within configured limits.";
@@ -58,7 +58,7 @@ use case ucDeliverPcaTherapy : SystemUseCase {
     actor nurseInitiator = actorNurse;
 }
 
-part wfManageActiveTherapy : SystemWorkflow {
+part wfManageActiveTherapy : OperationalWorkflow {
     @MemoIdentity { :>> label = "ManageActiveTherapy"; }
     attribute :>> entryCondition = "Basal therapy is active.";
     action osNominalTherapy : OperativeScenario {
@@ -73,6 +73,44 @@ connection : RealizesUseCase
 ```
 
 ## In Architect
+
+Open **Operational** from the method map. The guided workspace has two tasks:
+
+- **Clinical** describes the product-independent baseline. Choose an operational
+  entity as the subject of a clinical use case. Add a clinical workflow for the
+  goal, then its nominal and alternate scenarios and their steps.
+- **Operational** describes how the work is done with the selected system or system of
+  systems. Add operational use cases, their operational workflows, scenarios and
+  activities. Each activity realizes a clinical step. Include
+  existing use cases to reuse services across systems, retaining each subject.
+
+Choose **Use cases**, **Workflows**, or **Scenarios** within the current task.
+**Table** lists that type and opens its guided editor. **Visual** shows a use-case
+diagram with its subject and actors, a workflow's scenario structure, or the
+selected scenario's activity diagram. Select a scenario in the workflow visual
+to open its diagram.
+
+**Hierarchy** presents use-case inclusion, workflow realization and scenario/step
+ownership as distinct links. System refinements appear under clinical intent as
+labelled context; **Work on …** switches to that system for editing. Unlinked
+workflows and scenarios without an owning workflow remain visible for review.
+
+Clinical and system scenarios both use `OperativeScenario`. Their level comes
+from the workflow that owns them. Nominal and alternate paths are siblings,
+not separate scenario types. Reused steps keep their canonical identity.
+
+Select a system activity to link its clinical counterpart, performer and canonical
+system functions. **Functional flow** adds native refinement from an existing flow
+to that activity. The separate **Link flow to whole scenario** action says the flow
+realizes the entire scenario. A flow realization retains the activity's direct
+system-function performances; it does not replace them. Clicking a linked flow
+opens that flow in Functional.
+
+Scenario sequence controls reorder native steps without replacing their bodies or
+identities. **Open scenario diagram** opens the selected path's action editor;
+branching and guarded behavior use that editor. **Details** exposes the element's
+other properties when needed.
+
 
 - **☰ › Views › Use Cases** lists use cases grouped by declared level, with each
   use case's workflows and scenarios. Select a scenario to see it as an

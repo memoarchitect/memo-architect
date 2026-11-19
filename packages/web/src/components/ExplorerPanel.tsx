@@ -1,3 +1,4 @@
+import { componentFunctionWorkspace, createComponentFunction } from '../lib/functional-authoring';
 import { Fragment, createContext, lazy, Suspense, useContext, useState, useMemo, useCallback, useEffect, useRef, type PointerEvent as ReactPointerEvent } from 'react';
 import { alertDialog, askConfirm, askText } from './AppDialogs';
 import { groupParentPath, siblingGroups, waitForPackage } from '../lib/element-package';
@@ -43,6 +44,7 @@ import { OntologyKindCatalog } from '../lib/ontology-kinds';
 import { viewToPath } from '../view-routes';
 import { useWorkspaceModel, useScopedValidation } from '../store/scoped-model';
 import { useOpenDomain } from '../lib/open-domain';
+import { operationalLevelLabel } from '../lib/pathways';
 
 const ScenarioExplorer = lazy(() => import('../views/ScenarioEditor').then(module => ({ default: module.ScenarioEditor })));
 
@@ -263,6 +265,7 @@ function ElementContextMenu({ menu, onClose }: { menu: CtxMenuState; onClose: ()
         const isUndefinedKind = !(model.registries?.kinds ?? []).some(kind => kind.name === el.kind);
         actions = [
             { label: 'View details', action: () => selectElement(el.id) },
+            ...(useModelStore.getState().connected && !useModelStore.getState().pinned && componentFunctionWorkspace(model, el.id, useModelStore.getState().workspace) ? [{ label: 'Create component function…', action: () => { void createComponentFunction(el.id); } }] : []),
             {
                 label: 'Move to package…',
                 action: async () => {
@@ -1259,6 +1262,8 @@ export function computeExplorerGroupTree(
         packageFolders?: boolean;
         /** The operational level an element is at, from the model (see memo-tools `operationalLevels`); an element at none is listed as before. */
         levelOf?: (el: MemoElement) => OperationalLevel | undefined;
+        /** The word for a level, from the method. */
+        levelLabel?: (level: string) => string;
     },
 ): { group: LayerGroup; subGroups: ExplorerSubGroup[] }[] {
     const lower = searchTerm.toLowerCase();
@@ -1669,12 +1674,13 @@ export function computeExplorerGroupTree(
                 if (!levelOf) return byKindOnly(members);
                 const at = (level: OperationalLevel) => members.filter(node => node.element && levelOf(node.element) === level);
                 const clinical = at('clinical');
-                const system = at('system');
-                if (clinical.length + system.length === 0) return byKindOnly(members);
-                const rest = members.filter(node => !clinical.includes(node) && !system.includes(node));
+                const operational = at('operational');
+                if (clinical.length + operational.length === 0) return byKindOnly(members);
+                const rest = members.filter(node => !clinical.includes(node) && !operational.includes(node));
                 const level = (id: string, name: string, of: TreeNode[]): TreeNode[] =>
                     of.length === 0 ? [] : [{ id: `lv:${id}`, name, type: 'folder' as const, children: byKindOnly(of) }];
-                return [...level('clinical', 'Clinical', clinical), ...level('system', 'System', system), ...byKindOnly(rest)];
+                const label = modes?.levelLabel ?? ((at: string) => at.charAt(0).toUpperCase() + at.slice(1));
+                return [...level('clinical', label('clinical'), clinical), ...level('operational', label('operational'), operational), ...byKindOnly(rest)];
             };
             const typed = roots.filter(node => typeOf(node));
             if (typed.length === 0) return byKind(roots);
@@ -1930,6 +1936,7 @@ function ModelExplorerContent({ searchTerm }: { searchTerm: string }) {
                 groupBy: groupBy || undefined,
                 packageFolders,
                 levelOf: el => model.operationalLevels?.[el.id],
+                levelLabel: level => operationalLevelLabel(useModelStore.getState().guide, level),
             },
         ) : [],
         [model, shownElements, searchTerm, availableOntologies, kindFilter, explorerMode, membership, workspace, groupBy, packageFolders],

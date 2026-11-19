@@ -1,10 +1,33 @@
 import { describe, expect, it } from 'vitest';
-import { computeUseCaseViewLayout, edgeHintValue, isUseCase, isUseCaseActor, useCaseActorOptions, useCaseMaxDepth, useCaseViewOptions, withViewHint } from '../use-case-view';
+import { computeUseCaseViewLayout, edgeHintValue, isUseCase, isUseCaseActor, useCaseActorOptions, useCaseMaxDepth, useCaseSubjectOptions, useCaseViewOptions, withViewHint } from '../use-case-view';
 
 const el = (id: string, kind: string, name = id) => ({ id, kind, name, construct: kind === 'UseCase' ? ('use case' as const) : ('part' as const), layer: 'operational', file: 'test.sysml', attributes: {} });
 const model = (elements: Record<string, any>, relationships: any[] = []) => ({ elements, relationships, errors: [] }) as any;
 
 describe('use-case view template', () => {
+    it('renders native includesStep and explicit actor roles with the actual subject boundary', () => {
+        const goal = el('goal', 'UseCase', 'Monitor condition');
+        const included = el('included', 'UseCase', 'Report condition');
+        const unrelated = el('unrelated', 'UseCase');
+        const team = el('team', 'OperationalEntity', 'Care team');
+        const system = el('system', 'System', 'Controller');
+        const external = el('external', 'System', 'Recorder');
+        const m = model({ goal, included, unrelated, team, system, external }, [
+            { id: 'include', type: 'includesStep', sourceId: 'goal', targetId: 'included' },
+            { id: 'actor', type: 'participatesIn', sourceId: 'team', targetId: 'goal' },
+            { id: 'subject', type: 'hasSubject', sourceId: 'goal', targetId: 'system' },
+            { id: 'otherSubject', type: 'hasSubject', sourceId: 'included', targetId: 'external' },
+        ]);
+        const layout = computeUseCaseViewLayout(m, { ...useCaseSubjectOptions(m, 'goal', 'Goal diagram'), viewpointFilter: element => element.id !== 'unrelated' });
+        expect(layout.nodes.find(node => node.id === '__use_case_boundary__')!.data.label).toBe('Controller');
+        expect(layout.nodes.find(node => node.id === 'team')!.type).toBe('useCaseActor');
+        expect(layout.nodes.find(node => node.id === 'included')!.data.label).toContain('Recorder context');
+        expect(layout.edges.find(edge => edge.id === 'include')!.label).toBe('«includes»');
+        expect(layout.nodes.some(node => node.id === 'unrelated')).toBe(false);
+        expect(useCaseMaxDepth(m)).toBe(1);
+        expect(useCaseActorOptions(m)).toEqual([{ id: 'team', name: 'Care team' }]);
+    });
+
     it('balances a flat set of root use cases into readable columns', () => {
         const actor = el('actor', 'Actor');
         const cases = Object.fromEntries(Array.from({ length: 8 }, (_, index) => {

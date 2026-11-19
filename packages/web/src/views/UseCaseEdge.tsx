@@ -78,7 +78,7 @@ export const UseCaseEdge = memo(function UseCaseEdge(props: EdgeProps) {
             style={highlighted ? { ...props.style, strokeWidth: baseWidth + 1.4 } : props.style}
         />
         {props.label && <EdgeLabelRenderer>
-            <div className="nodrag nopan" style={{
+            <div className={props.data?.contextInteraction ? 'nodrag nopan memo-context-edge-label' : 'nodrag nopan'} style={{
                 position: 'absolute', transform: `translate(-50%, -50%) translate(${middle.x}px,${middle.y}px)`,
                 background: '#FFFFFF', padding: '2px 5px', borderRadius: 3,
                 color: highlighted ? '#0F172A' : '#334155', fontSize: 12, pointerEvents: 'all',

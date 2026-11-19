@@ -9,7 +9,6 @@ import { WorkbenchToolbar } from './components/WorkbenchToolbar';
 import { ModeSwitcher } from './components/ModeSwitcher';
 import { ExplorerPanel } from './components/ExplorerPanel';
 import { UnifiedPropertiesPanel } from './components/UnifiedPropertiesPanel';
-import { MethodPanel } from './components/MethodPanel';
 import { BulkEditPanel } from './components/BulkEditPanel';
 import { GapBar } from './components/GapBar';
 import { CommandPalette } from './components/CommandPalette';
@@ -41,7 +40,8 @@ const Dashboard = lazy(() => import('./views/Dashboard').then(m => ({ default: m
 const CustomDashboard = lazy(() => import('./views/Dashboard').then(m => ({ default: m.CustomDashboard })));
 const DashboardList = lazy(() => import('./views/DashboardList').then(m => ({ default: m.DashboardList })));
 const ReviewDashboard = lazy(() => import('./views/ReviewDashboard').then(m => ({ default: m.ReviewDashboard })));
-const GuidePage = lazy(() => import('./views/Guide').then(m => ({ default: m.Guide })));
+const GuidedLayerPage = lazy(() => import('./views/GuidedLayer').then(m => ({ default: m.GuidedLayer })));
+const MethodMapPage = lazy(() => import('./views/MethodMap').then(m => ({ default: m.MethodMap })));
 const TabularView = lazy(() => import('./views/TabularView').then(m => ({ default: m.TabularView })));
 const ImportView = lazy(() => import('./views/ImportView').then(m => ({ default: m.ImportView })));
 const AnalysisWorkspace = lazy(() => import('./views/AnalysisWorkspace').then(m => ({ default: m.AnalysisWorkspace })));
@@ -124,8 +124,10 @@ function UnifiedCanvas() {
                 return isFeatureEnabled('custom-dashboards') ? <CustomDashboard dashboardId={activeView.dashboardId} scope={activeView.scope} /> : <Dashboard />;
             case 'review-dashboard':
                 return isFeatureEnabled('model-tools') ? <ReviewDashboard /> : <Dashboard />;
+            case 'pathway':
+                return isFeatureEnabled('guide') ? <GuidedLayerPage layer={activeView.layer} /> : <Dashboard />;
             case 'guide':
-                return isFeatureEnabled('guide') ? <GuidePage /> : <Dashboard />;
+                return isFeatureEnabled('guide') ? <MethodMapPage /> : <Dashboard />;
             case 'import':
                 return isFeatureEnabled('import') ? <ImportView /> : <Dashboard />;
             case 'analysis':
@@ -346,22 +348,9 @@ export function App() {
     // Pages that are whole pages of their own, with no tree to browse beside them: the explorer a
     // previous page left open (Viewpoints, say) would sit next to Settings and mean nothing there.
     const standalonePages: ReadonlySet<string> = new Set([
-        'settings', 'change', 'releases', 'guide', 'suspect-links', 'variability', 'model-diff',
+        'settings', 'change', 'releases', 'guide', 'pathway', 'suspect-links', 'variability', 'model-diff',
         'statistics', 'review-dashboard', 'import',
     ]);
-    // The Method panel stays open across pages once opened, as the explorer does, and is remembered per browser.
-    const [methodOpen, setMethodOpen] = useState(() => {
-        try { return localStorage.getItem('memo.methodPanel') === 'open'; } catch { return false; }
-    });
-    useEffect(() => {
-        const toggle = () => setMethodOpen(open => !open);
-        window.addEventListener('memo:toggle-method', toggle);
-        return () => window.removeEventListener('memo:toggle-method', toggle);
-    }, []);
-    useEffect(() => {
-        try { localStorage.setItem('memo.methodPanel', methodOpen ? 'open' : 'closed'); } catch { /* the panel still works */ }
-    }, [methodOpen]);
-    const showMethod = methodOpen && isFeatureEnabled('guide') && activeView.type !== 'guide';
 
     const showExplorer = !standalonePages.has(activeView.type)
         && activeView.type !== 'dsm'
@@ -499,6 +488,7 @@ export function App() {
 
                 {/* Center: route-aware canvas */}
                 <div className="flex-1 flex flex-col" style={{ minWidth: 0 }}>
+                    <DiagramReturnBar />
                     <ErrorBoundary label="This view" resetKey={resetKey}>
                     <Routes>
                         {/* Catalog routes — new deep-link pages */}
@@ -550,7 +540,6 @@ export function App() {
                 )}
 
                 {/* Right edge: the method beside the work, when opened from the toolbar */}
-                {showMethod && <MethodPanel onClose={() => setMethodOpen(false)} />}
             </div>
 
             {/* Bottom panel: Problems + Completeness (unified, collapsible) */}
@@ -608,6 +597,26 @@ function ElementPermalinkRoute() {
 }
 
 /** Renders /viewpoints/:diagramType/:diagramId */
+/** A diagram opened from a guided page, such as a scenario's, offers the way back to that page. */
+function DiagramReturnBar() {
+    const target = useModelStore(s => s.diagramReturn);
+    const activeView = useModelStore(s => s.activeView);
+    const navigate = useNavigate();
+    if (!target || activeView.type !== 'diagram' || activeView.diagramId !== target.diagramId) return null;
+    return <div role="navigation" aria-label="Return" style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '6px 16px', background: '#F4F1FB', borderBottom: '1px solid #E5E0F2', fontSize: 13 }}>
+        <button type="button" onClick={() => {
+            // The store drives the view while the person clicks, so the guided page is set as well as the address.
+            const [pathname, search = ''] = target.path.split('?');
+            const view = pathToView(pathname, search ? `?${search}` : '');
+            useModelStore.getState().setDiagramReturn(null);
+            if (view) useModelStore.getState().setActiveView(view);
+            navigate(target.path);
+        }}
+            style={{ border: 0, background: 'transparent', color: '#503688', fontWeight: 600, cursor: 'pointer', padding: 0, font: 'inherit' }}>‹ Back to {target.label}</button>
+        <span style={{ color: '#6B7280' }}>Edits here are saved to the model; the scenario page shows them when you return.</span>
+    </div>;
+}
+
 function DiagramPermalinkRoute() {
     const { diagramId = '' } = useParams<{ diagramType: string; diagramId: string }>();
     const model = useModelStore(s => s.model);
@@ -649,6 +658,7 @@ function DiagramPermalinkRoute() {
  * A saved workspace preference is never cleared by a link that does not name one.
  */
 function ScopeUrlSync() {
+    const preferencesLoaded = useModelStore(s => s.preferencesLoaded);
     const domain = useModelStore(s => s.explorerDomain);
     const setDomain = useModelStore(s => s.setExplorerDomain);
     const workspace = useModelStore(s => s.workspace);
@@ -665,6 +675,7 @@ function ScopeUrlSync() {
         // The address as the browser has it now: the router's `location` can still be the previous page for a
         // render after a push, and replacing that would undo the push.
         const here = window.location;
+        if (!preferencesLoaded && !window.__MEMO_DATA__) return;
         // On the first run the router's location is the link that was opened; the window's address may already
         // have been rewritten by the view sync, which does not carry query parameters it does not own.
         const params = new URLSearchParams(first.current ? location.search : here.search);
@@ -681,11 +692,17 @@ function ScopeUrlSync() {
         const domainLed = fromHistory || (urlDomain !== null && urlDomain !== lastUrl.current.domain);
         const workspaceLed = urlWorkspace !== null && (fromHistory || urlWorkspace !== lastUrl.current.workspace);
         lastUrl.current = { domain: urlDomain, workspace: urlWorkspace };
-        if (domainLed && urlDomain !== domain) { setDomain(urlDomain); return; }
-        if (workspaceLed && urlWorkspace !== workspace) { setWorkspace(urlWorkspace); return; }
+        // Strict Mode can replay this effect with the render that preceded an
+        // adoption. Read the live scope before writing it back to the address.
+        const { explorerDomain: currentDomain, workspace: currentWorkspace } = useModelStore.getState();
+        const adoptDomain = domainLed && urlDomain !== currentDomain;
+        const adoptWorkspace = workspaceLed && urlWorkspace !== currentWorkspace;
+        if (adoptDomain) setDomain(urlDomain);
+        if (adoptWorkspace) setWorkspace(urlWorkspace);
+        if (adoptDomain || adoptWorkspace) return;
 
         let changed = false;
-        for (const [name, value] of [['domain', domain], ['workspace', workspace]] as const) {
+        for (const [name, value] of [['domain', currentDomain], ['workspace', currentWorkspace]] as const) {
             if ((params.get(name) ?? null) === (value ?? null)) continue;
             if (value) params.set(name, value); else params.delete(name);
             changed = true;
@@ -695,7 +712,7 @@ function ScopeUrlSync() {
             navigate({ pathname: here.pathname, search: query ? `?${query}` : '', hash: here.hash }, { replace: true });
         }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [location.pathname, location.search, domain, workspace]);
+    }, [location.pathname, location.search, domain, workspace, preferencesLoaded]);
 
     return null;
 }
@@ -853,11 +870,19 @@ function UrlNavigationSync() {
             adoptedPermalink.current = location.pathname;
         }
 
+        // Guided workbenches can push a scoped link directly. React Router's
+        // location may still describe the origin during this store update.
+        if (activeView.type === 'pathway' && url && location.pathname !== window.location.pathname) {
+            const current = pathToView(window.location.pathname, window.location.search);
+            if (current?.type === 'pathway' && viewToPath(current) === url) return;
+        }
+
         // Parameters a page keeps in its own address (?focus=, ?domain=) are not this sync's to drop when it rewrites
         // the same path. The ones it does own are written from the view, so they are not carried.
         if (url && url.split('?')[0] === location.pathname) {
             const written = new URLSearchParams(url.split('?')[1] ?? '');
             const owned = new Set(['element', 'definition', 'viewpoint', 'diagram', 'scope']);
+            if (activeView.type === 'pathway') for (const name of ['view', 'work', 'artifact', 'createCase']) owned.add(name);
             for (const [name, value] of new URLSearchParams(location.search)) {
                 if (!owned.has(name) && !written.has(name)) written.set(name, value);
             }
@@ -867,7 +892,12 @@ function UrlNavigationSync() {
 
         if (url && location.pathname + location.search !== url) {
             const pathOnly = url.split('?')[0];
-            const isJustSearchChange = pathOnly === location.pathname;
+            // Clinical and system work share a layer path, so moving between them is a search change; it is still a
+            // page of its own, which Back returns from. A selection within one level only replaces the address.
+            // An address that names no level yet is only being completed, so that one is still replaced.
+            const fromLevel = new URLSearchParams(location.search).get('work');
+            const levelChange = activeView.type === 'pathway' && !!fromLevel && new URLSearchParams(url.split('?')[1] ?? '').get('work') !== fromLevel;
+            const isJustSearchChange = pathOnly === location.pathname && !levelChange;
             navigate(url, { replace: isJustSearchChange });
         }
     // eslint-disable-next-line react-hooks/exhaustive-deps

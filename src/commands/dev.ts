@@ -61,10 +61,17 @@ function architectPackageRoot(): string {
     return resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 }
 
-function clientRoot(): string {
-    const root = architectPackageRoot();
+export function resolveArchitectClientRoot(root: string, production: boolean): string {
+    if (production) {
+        if (!existsSync(resolve(root, 'dist', 'index.html'))) throw new Error('The Architect client is not built. Run pnpm build before starting a production preview.');
+        return root;
+    }
     const sourceRoot = resolve(root, 'packages', 'web');
     return existsSync(resolve(sourceRoot, 'index.html')) ? sourceRoot : root;
+}
+
+function clientRoot(): string {
+    return resolveArchitectClientRoot(architectPackageRoot(), process.env.NODE_ENV === 'production');
 }
 
 export interface ArchitectDevOptions {

@@ -13,7 +13,7 @@ const { describeFavorite, favoriteMembers } = await import('../../lib/favorites'
 
 const reset = () => useModelStore.setState({
     role: null, workspace: null, explorerSplit: '', features: [], packageFolders: true,
-    favorites: [], recentViews: [], recentlyVisited: [], preferencesLoaded: false,
+    favorites: [], recentViews: [], recentlyVisited: [], preferencesLoaded: false, lastStep: null,
 });
 
 describe('favorites and recents in the saved choices', () => {
@@ -22,6 +22,7 @@ describe('favorites and recents in the saved choices', () => {
     it('saves nothing before the saved choices arrive', () => {
         useModelStore.getState().toggleFavorite({ type: 'view', ref: 'pkg::overview' });
         useModelStore.getState().setActiveView({ type: 'diagram', diagramId: 'pkg::overview' });
+        useModelStore.getState().setLastStep('method::step');
         expect(sendUserPreferencesSave).not.toHaveBeenCalled();
     });
 
@@ -30,6 +31,15 @@ describe('favorites and recents in the saved choices', () => {
         useModelStore.getState().setRole('safetyEngineer');
         expect(sendUserPreferencesSave).toHaveBeenLastCalledWith({
             role: 'safetyEngineer', favorites: [{ type: 'element', ref: 'pkg::pump' }], recentViews: ['pkg::v1'],
+        });
+    });
+
+    it('saves the last method step with the loaded favorites and recent views', () => {
+        const favorites = [{ type: 'element' as const, ref: 'pkg::pump' }];
+        useModelStore.getState().applyUserPreferences({ favorites, recentViews: ['pkg::v1'] });
+        useModelStore.getState().setLastStep('method::step');
+        expect(sendUserPreferencesSave).toHaveBeenLastCalledWith({
+            favorites, recentViews: ['pkg::v1'], lastStep: 'method::step',
         });
     });
 

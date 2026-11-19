@@ -13,6 +13,12 @@ export function WorkbenchToolbar() {
     const setExplorerDomain = useModelStore(s => s.setExplorerDomain);
     const metadata = model?.metadata;
 
+    function openMethodMap() {
+        setActiveMode('diagram');
+        setActiveView({ type: 'guide' });
+        navigate('/method');
+    }
+
     function goHome() {
         setActiveMode('dashboard');
         setActiveView({ type: 'dashboard' });
@@ -57,12 +63,12 @@ export function WorkbenchToolbar() {
 
             {isFeatureEnabled('guide') && (
                 <button
-                    data-testid="toggle-method"
-                    onClick={() => window.dispatchEvent(new Event('memo:toggle-method'))}
-                    title="Show or hide the method: what each team can do next"
+                    data-testid="open-method-map"
+                    onClick={openMethodMap}
+                    title="The method map: every layer and discipline, and where to start"
                     style={{ background: 'rgba(45,212,168,0.12)', border: '1px solid rgba(45,212,168,0.35)', color: '#2DD4A8', borderRadius: 6, padding: '4px 10px', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
                 >
-                    Method
+                    Guided Pathways
                 </button>
             )}
 

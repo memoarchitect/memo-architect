@@ -39,10 +39,17 @@ const USER_VPS_KEY = 'memo:userViewpoints';
 const ACTIVE_VIEW_KEY = 'memo:activeView';
 
 /** Restore only stable, project-addressable navigation across browser reloads. */
-function restoreActiveView(): ActiveView {
+export function restoreActiveView(): ActiveView {
     try {
         const value = JSON.parse(sessionStorage.getItem(ACTIVE_VIEW_KEY) ?? 'null') as ActiveView | null;
         if (value?.type === 'diagram' && typeof value.diagramId === 'string') return value;
+        if (value?.type === 'guide') return { type: 'guide' };
+        if (value?.type === 'pathway' && typeof value.layer === 'string' && value.layer.trim()) {
+            return { type: 'pathway', layer: value.layer, ...(typeof value.diagramId === 'string' ? { diagramId: value.diagramId } : {}),
+                ...(value.work === 'clinical' || value.work === 'operational' ? { work: value.work } : {}),
+                ...(typeof value.artifactId === 'string' ? { artifactId: value.artifactId } : {}),
+                ...(value.createCase === true ? { createCase: true } : {}) };
+        }
     } catch { /* unavailable storage or stale value */ }
     return { type: 'welcome' };
 }
@@ -163,7 +170,8 @@ export type ActiveView =
     | { type: 'dashboards' }          // custom dashboards: list
     | { type: 'custom-dashboard'; dashboardId: string; scope?: DashboardScope } // one markdown dashboard
     | { type: 'review-dashboard' }    // N1: first-review "money shot" view (#132)
-    | { type: 'guide' }               // the Guide: where the model stands against its method
+    | { type: 'pathway'; layer: string; diagramId?: string; work?: 'clinical' | 'operational'; artifactId?: string; createCase?: boolean }
+    | { type: 'guide' }               // the method map (Pathways): the method's rows, and where to start
     | { type: 'import' }
     | { type: 'analysis' }
     | { type: 'ui-screens' }
@@ -432,6 +440,9 @@ export interface ModelState {
     setExplorerTab: (tab: ExplorerTab) => void;
     selectElement: (id: string | null) => void;
     inspectElement: (id: string | null) => void;
+    /** Where a diagram opened from a guided page returns to; its page offers the way back while that diagram is open. */
+    diagramReturn: { diagramId: string; label: string; path: string } | null;
+    setDiagramReturn: (target: { diagramId: string; label: string; path: string } | null) => void;
     inspectRelationship: (id: string | null) => void;
     toggleElementSelection: (id: string) => void;
     selectAllElements: (ids: string[]) => void;
@@ -519,9 +530,12 @@ export interface ModelState {
         elementIds?: string[];
         /** Kinds the view selects by, written as `includeElementKinds`. */
         elementKinds?: string[];
+        properties?: Record<string, string>;
         /** Relations it draws, written as `includeRelationshipKinds`. */
         relationshipTypes?: string[];
         activate?: boolean;
+        /** Report compiler or persistence diagnostics to an embedding creation flow. */
+        onError?: (message: string) => void;
     }) => string | Promise<string | undefined>;
     updateDiagramElementIds: (diagramId: string, elementIds: string[]) => void;
     addElementToDiagram: (diagramId: string, elementId: string) => void;
@@ -569,6 +583,9 @@ export interface ModelState {
     workspace: string | null;
     /** The server's copy arrived (on connect, or after a save). */
     applyUserPreferences: (preferences: UserPreferencesDTO) => void;
+    /** The method step this person last opened, by its qualified name, or null: where they continue. */
+    lastStep: string | null;
+    setLastStep: (step: string | null) => void;
     /** The experimental features this person switched on in Settings. */
     /** Package folders in the Model Explorer: on by default; off lists elements by kind alone. */
     packageFolders: boolean;
@@ -647,10 +664,11 @@ const RECENT_LIMIT = 10;
 /** The choices one person keeps for this model, as they are saved. */
 export function preferencesOf(state: {
     role: string | null; workspace: string | null; explorerSplit: string; features: string[]; packageFolders: boolean;
-    favorites: FavoriteDTO[]; recentViews: string[]; recentlyVisited: string[];
+    lastStep: string | null; favorites: FavoriteDTO[]; recentViews: string[]; recentlyVisited: string[];
 }): UserPreferencesDTO {
     return {
         ...(state.packageFolders ? {} : { packageFolders: false }),
+        ...(state.lastStep ? { lastStep: state.lastStep } : {}),
         ...(state.features.length > 0 ? { features: state.features } : {}),
         ...(state.role ? { role: state.role } : {}),
         ...(state.workspace ? { workspace: state.workspace } : {}),
@@ -786,6 +804,12 @@ export const useModelStore = create<ModelState>((set, get) => ({
         set({ packageFolders });
         saveChoices(get());
     },
+    lastStep: null,
+    setLastStep: (lastStep) => {
+        if (get().lastStep === lastStep) return;
+        set({ lastStep });
+        saveChoices(get());
+    },
     features: [],
     favorites: [],
     recentViews: [],
@@ -809,6 +833,7 @@ export const useModelStore = create<ModelState>((set, get) => ({
             recentViews: preferences.recentViews ?? [],
             recentlyVisited: preferences.recentElements ?? [],
             preferencesLoaded: true,
+            lastStep: preferences.lastStep ?? null,
         });
     },
     setFeatureEnabled: (id, enabled) => {
@@ -1139,6 +1164,8 @@ export const useModelStore = create<ModelState>((set, get) => ({
     },
     // Diagram selection updates the side properties browser without replacing
     // the active diagram with the full-page element detail route.
+    diagramReturn: null,
+    setDiagramReturn: (target) => set({ diagramReturn: target }),
     inspectElement: (id) => set((s) => ({
         selectedElementId: id,
         selectedRelationshipId: null,
@@ -1426,7 +1453,7 @@ export const useModelStore = create<ModelState>((set, get) => ({
         userViewpoints: s.userViewpoints.filter(v => v.id !== id),
         selectedViewpointId: s.selectedViewpointId === id ? null : s.selectedViewpointId,
     })),
-    createDiagram: ({ id: requestedId, name, diagramType, viewKind, viewpointId, elementIds = [], elementKinds, relationshipTypes, activate = true }) => {
+    createDiagram: ({ id: requestedId, name, diagramType, viewKind, viewpointId, elementIds = [], elementKinds, properties, relationshipTypes, activate = true, onError }) => {
         const selection = {
             ...(elementKinds?.length ? { elementKinds } : {}),
             ...(relationshipTypes?.length ? { relationshipTypes } : {}),
@@ -1436,8 +1463,8 @@ export const useModelStore = create<ModelState>((set, get) => ({
             // it, and the model then reports the element it made.
             return (async () => {
                 try {
-                    const result = await requestDiagramCreate({ name, diagramType, viewKind, viewpointId, elementIds, ...selection });
-                    if (!result.success) return undefined;
+                    const result = await requestDiagramCreate({ name, diagramType, viewKind, viewpointId, elementIds, properties, ...selection });
+                    if (!result.success) { onError?.(result.error ?? 'The server refused the new view.'); return undefined; }
                     const elementId = result.qualifiedName;
                     const listed = () => get().model?.diagrams?.find(d => d.elementId === elementId);
                     if (elementId && !listed()) {
@@ -1451,21 +1478,22 @@ export const useModelStore = create<ModelState>((set, get) => ({
                         set({ selectedDiagramId: diagram.id, activeView: { type: 'diagram', diagramId: diagram.id } });
                     }
                     return diagram?.id;
-                } catch {
+                } catch (error) {
+                    onError?.(error instanceof Error ? error.message : String(error));
                     return undefined;
                 }
             })();
         }
         const id = requestedId;
         const diagram: DiagramDTO = {
-            id, name, diagramType, viewKind, viewpointId, auto: false, elementIds, ...selection,
+            id, name, diagramType, viewKind, viewpointId, auto: false, elementIds, properties, ...selection,
         };
         set((s) => ({
             model: s.model ? { ...s.model, diagrams: [...(s.model.diagrams ?? []), diagram] } : null,
             selectedDiagramId: activate ? id : s.selectedDiagramId,
             activeView: activate ? { type: 'diagram', diagramId: id } : s.activeView,
         }));
-        sendDiagramCreate({ id, name, diagramType, viewKind, viewpointId, elementIds, ...selection });
+        sendDiagramCreate({ id, name, diagramType, viewKind, viewpointId, elementIds, properties, ...selection });
         return id;
     },
     /**

@@ -308,17 +308,17 @@ describe('computeExplorerGroupTree', () => {
     });
 
     it('puts Clinical and System above the element type, and leaves what is at neither level as it was', () => {
-        const levels: Record<string, 'clinical' | 'system'> = { uc1: 'clinical', st1: 'clinical', uc2: 'system', uc3: 'system' };
+        const levels: Record<string, 'clinical' | 'operational'> = { uc1: 'clinical', st1: 'clinical', uc2: 'operational', uc3: 'operational' };
         const groups = computeExplorerGroupTree([
             elc('uc1', 'ClinicalUseCase', 'operational', 'use case'),
             elc('st1', 'OperativeAction', 'operational', 'action'),
-            elc('uc2', 'SystemUseCase', 'operational', 'use case'),
-            elc('uc3', 'SystemUseCase', 'operational', 'use case'),
+            elc('uc2', 'OperationalUseCase', 'operational', 'use case'),
+            elc('uc3', 'OperationalUseCase', 'operational', 'use case'),
             elc('p1', 'OperationalParticipant', 'operational', 'part'),
         ], '', registryFromOntology(ONTOLOGY), [ONTOLOGY], [], undefined, [], [], { levelOf: element => levels[element.id] });
         const tree = groups[0].subGroups.find(sub => sub.id === 'operational')!.tree;
         const names = tree.map(node => node.name);
-        expect(names.slice(0, 2)).toEqual(['Clinical', 'System']);
+        expect(names.slice(0, 2)).toEqual(['Clinical', 'Operational']);
         expect(tree[0].children.length).toBeGreaterThan(0);
         expect(names.length).toBe(3);
     });

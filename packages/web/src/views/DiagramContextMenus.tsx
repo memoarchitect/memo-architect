@@ -93,6 +93,7 @@ interface NodeContextMenuProps {
     onLinkRisk?: () => void;
     onLinkRequirement?: () => void;
     // #12 additions
+    onCreateComponentFunction?: () => void;
     onShowProperties?: () => void;
     onFocusElement?: () => void;
     onShowInCatalog?: () => void;
@@ -118,7 +119,7 @@ export function NodeContextMenu({
     onAddPart, onAddPort, onConnectTo,
     onLinkRisk, onLinkRequirement,
     onShowProperties, onFocusElement, onShowInCatalog, onShowRelMatrix, onOpenSource,
-    onViewKindInOntology,
+    onViewKindInOntology, onCreateComponentFunction,
 }: NodeContextMenuProps) {
     const [showColors, setShowColors] = useState(false);
 
@@ -129,6 +130,7 @@ export function NodeContextMenu({
                 <div style={{ fontSize: '9px', color: '#D1D5DB', fontFamily: 'monospace' }}>{nodeId}</div>
             </div>
 
+            {onCreateComponentFunction && <MenuItem label="Create component function…" onClick={() => { onClose(); onCreateComponentFunction(); }} />}
             {onShowProperties && (
                 <MenuItem label="Show Properties" icon="ℹ" onClick={() => { onClose(); onShowProperties(); }} />
             )}

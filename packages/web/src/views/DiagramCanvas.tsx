@@ -1,3 +1,5 @@
+import { DiagramViewControls } from './DiagramViewControls';
+import { componentFunctionWorkspace, createComponentFunction } from '../lib/functional-authoring';
 import { affectedMovementRoutes } from '../diagram/ibd-movement-routing';
 import { answerOf, heldAnswer, holdAnswer, type AnswerOptions } from '../diagram/layout-answers';
 import { planOffThread } from '../diagram/route-off-thread';
@@ -6,7 +8,7 @@ import { nearestFreePosition } from '../diagram/nearest-free-position';
 import { spaceParts, spacePorts, type SpacingPart, type SpacingSide } from '../diagram/ibd-spacing';
 import { placementRouteConflicts } from '../diagram/ibd-placement-score';
 import { draggedPortSlot, legalPortSlot, measuredPortBounds, measurePortEnvelopes, type PortConstraintRect } from '../diagram/ibd-port-constraints';
-import { rendererModel } from '../diagram/renderer-model';
+import { DiagramUseCaseSubject, DiagramActionSubject, DiagramDisplayScope, mergeScopedMembers, useDiagramDisplayModel } from '../diagram/display-scope';
 import { shortenAutomaticPortRoutes, improvesPlacement } from '../diagram/ibd-port-placement';
 import { elbowRoute, attachedRoute, cubicRoutePath, arcRoutePath, polylinePath } from '../diagram/ibd-routing';
 import { captureMovementGeometry, movementGeometryChanges, restoreMovementGeometry, type MovementGeometry } from '../diagram/movement-history';
@@ -34,7 +36,7 @@ import { connectorEnds } from '../diagram/connector-ends';
 import { childKindOptions, declaredNameFor } from './templates/table-authoring';
 import { actionDrillSource, childrenOf, definitionSubtree, drillPath, drillTarget, enterLevel } from '../lib/system-navigator';
 import {
-    useEffect, useMemo, useState, useCallback, useRef,
+    useEffect, useMemo, useState, useCallback, useRef, useContext,
 } from 'react';
 import { FlowWalkthrough, WALK_CURRENT_CLASS, WALK_LANE_CLASS } from './FlowWalkthrough';
 import { animateLayout, layoutsDiffer } from '../lib/animate-layout';
@@ -94,7 +96,7 @@ import {
 import { assignLanes, collectActionFlowActions, commonDisplayLevels, findFloatingActions, LANE_OUTER_MARGIN, laneBoxRect, parameterOfHandle, type ActionFlowDisplayLevel, type ActionFlowLaneGrouping, type ActionFlowLaneStyle, type ActionFlowNesting } from './templates/actionflow-view';
 import { isStateElement } from './templates/statetransition-view';
 import { bendConnector, type Wall } from './templates/connector-bend';
-import { useCaseActorOptions, useCaseMaxDepth, useCaseViewOptions, type UseCaseEdgeStyle } from './templates/use-case-view';
+import { useCaseActorOptions, useCaseMaxDepth, useCaseSubjectOptions, useCaseViewOptions, type UseCaseEdgeStyle } from './templates/use-case-view';
 import { templateRegistry } from '../diagram/templates';
 import type { TemplateOptionSlices } from '../diagram/template-provider';
 import { resolveDiagramProfile } from '../diagram/diagram-profile';
@@ -119,7 +121,7 @@ import { GridView } from './GridView';
 import { BrowserView } from './BrowserView';
 import { ScreenLayoutView } from './ScreenLayoutView';
 import { DiagramInteractiveNode, type DiagramInteractiveNodeData } from './DiagramInteractiveNode';
-import { DiagramPalette, MEMO_KIND_MIME } from './DiagramPalette';
+import { DiagramPalette, MEMO_KIND_MIME, PaletteKindsContext } from './DiagramPalette';
 import { RelationshipPicker, type RelationshipChoice } from './RelationshipPicker';
 import { NodeContextMenu, EdgeContextMenu, type EdgeLineStyle } from './DiagramContextMenus';
 import { DecisionNode, ForkNode, StartEndNode } from './WorkflowNodes';
@@ -1004,8 +1006,9 @@ function DiagramCanvasInner() {
     // stray handler inside the canvas can persist anything from a read-only view.
     const embed = useDiagramEmbed();
     const readOnly = embed?.readOnly === true;
+    const highlightIds = embed?.highlightIds;
     const updateNodeInternals = useUpdateNodeInternals();
-    const model = useModelStore(s => rendererModel(s.model));
+    const model = useDiagramDisplayModel(true);
     const storeCreateRelationship = useModelStore(s => s.createRelationship);
     const createRelationship = readOnly ? (noWrite as unknown as typeof storeCreateRelationship) : storeCreateRelationship;
     const registries = useMemo(() => getRegistries(model), [model]);
@@ -1031,10 +1034,20 @@ function DiagramCanvasInner() {
     const storeUpdateDiagramElementIds = useModelStore(s => s.updateDiagramElementIds);
     const setNodeLayout = readOnly ? (noWrite as unknown as typeof storeSetNodeLayout) : storeSetNodeLayout;
     const mergeDiagramLayouts = readOnly ? (noWrite as unknown as typeof storeMergeDiagramLayouts) : storeMergeDiagramLayouts;
-    const updateDiagramElementIds = readOnly ? (noWrite as unknown as typeof storeUpdateDiagramElementIds) : storeUpdateDiagramElementIds;
+    const displayWorkspace = useContext(DiagramDisplayScope);
+    const actionSubject = useContext(DiagramActionSubject);
+    const useCaseSubject = useContext(DiagramUseCaseSubject);
+    const updateDiagramElementIds = useCallback((diagramId: string, ids: string[]) => {
+        if (readOnly) return;
+        const canonical = useModelStore.getState().model;
+        storeUpdateDiagramElementIds(diagramId, canonical ? mergeScopedMembers(canonical, displayWorkspace, diagramId, ids) : ids);
+    }, [readOnly, storeUpdateDiagramElementIds, displayWorkspace]);
     const { fitView, screenToFlowPosition, getViewport, setViewport, getNodes } = useReactFlow();
 
     const [nodes, setNodes] = useNodesState<FlowNode>([]);
+    // An embedding page's selection, drawn as selected without touching the canvas's own selection.
+    const highlightedNodes = useMemo(() => !highlightIds?.length ? nodes : nodes.map(node => highlightIds.includes(node.id)
+        ? { ...node, selected: true, className: [node.className, 'memo-node-highlight'].filter(Boolean).join(' ') } : node), [nodes, highlightIds]);
     const [edges, setEdges, onEdgesChange] = useEdgesState<FlowEdge>([]);
     const nodesRef = useRef<FlowNode[]>([]);
     const edgesRef = useRef<FlowEdge[]>([]);
@@ -1133,7 +1146,8 @@ function DiagramCanvasInner() {
         () => localStorage.getItem('memo.minimap.open') !== 'false');
     // Bumped to force a fresh layout pass (e.g. tree Reset Layout)
     const [relayoutNonce, setRelayoutNonce] = useState(0);
-    const [paletteCollapsed, setPaletteCollapsed] = useState(true);
+    const paletteKinds = useContext(PaletteKindsContext);
+    const [paletteCollapsed, setPaletteCollapsed] = useState(!paletteKinds);
     // The floating toolbar drawer starts closed: on load it covers whatever the
     // diagram placed under it, which on a wide layout is real content. But the
     // choice is REMEMBERED, like the minimap's. It used to reset on every
@@ -1163,7 +1177,7 @@ function DiagramCanvasInner() {
     const [snapEnabled, setSnapEnabled] = useState(true);
     const [gridVisible, setGridVisible] = useState(true);
     // Action Flow template (KK-4): allocation lanes are on by default.
-    const [swimlanesOn, setSwimlanesOn] = useState(true);
+    const [swimlanesOn, setSwimlanesOn] = useState(!actionSubject || !!embed?.previewDiagram);
     const [actionFlowDirection, setActionFlowDirection] = useState<'horizontal' | 'vertical'>('horizontal');
     const [walking, setWalking] = useState(false);
     const [cardDismissedFor, setCardDismissedFor] = useState<string | null>(null);
@@ -1174,6 +1188,7 @@ function DiagramCanvasInner() {
         try { localStorage.setItem('memo.diagram.neighbourCard', String(neighbourCardOn)); } catch { /* storage disabled */ }
     }, [neighbourCardOn]);
     const [actionFlowLegendOpen, setActionFlowLegendOpen] = useState(() => {
+        if (embed?.previewDiagram) return false;
         try { return localStorage.getItem('memo.diagram.legend.open') !== 'false'; } catch { return true; }
     });
     useEffect(() => {
@@ -1318,7 +1333,7 @@ function DiagramCanvasInner() {
     // Layout debounce timer
 
     // Get the selected diagram
-    const selectedDiagram = getDiagram(model, selectedDiagramId);
+    const selectedDiagram = embed?.previewDiagram ?? getDiagram(model, selectedDiagramId);
     const diagramMeta = selectedDiagram ? DIAGRAM_TYPE_META[selectedDiagram.diagramType] : null;
     const currentLayout = selectedDiagramId ? diagramLayouts[selectedDiagramId] : undefined;
     // Per-view renderer profile: a view opts into the dedicated IBD canvas via
@@ -1792,7 +1807,7 @@ function DiagramCanvasInner() {
         // A view's display is part of the view's declaration, not of its layout.
         void saveViewDisplay(selectedDiagramId, patch).catch(error => console.warn('[View] display not saved:', error));
     }, [selectedDiagramId]);
-    const [focusedActionId, setFocusedActionId] = useState<string | null>(null);
+    const [focusedActionId, setFocusedActionId] = useState<string | null>(actionSubject);
     // The levels drilled through, outermost first. A drill that lands on a definition (a usage is made of the
     // definition it is typed by) has no composition or parent-action chain back to where it came from, so the
     // way out is the way in, not a reconstruction.
@@ -1890,7 +1905,7 @@ function DiagramCanvasInner() {
         // The view's own hint sets how connectors start, and a choice made in the toolbar is written back to it.
         setUseCaseEdgeStyle(useCaseViewOptions(selectedDiagram?.properties).edgeStyle ?? 'straight');
         setHiddenUseCaseActorIds(new Set());
-        setSwimlanesOn(true);
+        setSwimlanesOn(!actionSubject || !!embed?.previewDiagram);
         // The diagram the page opened on keeps what its address asked for; any other starts from the defaults.
         if (openingDiagramRef.current === undefined && selectedDiagramId) openingDiagramRef.current = selectedDiagramId;
         if (selectedDiagramId && selectedDiagramId !== openingDiagramRef.current) {
@@ -1927,8 +1942,8 @@ function DiagramCanvasInner() {
         // (`process::**`). Auto-focus on that action so the template renders
         // its children directly — the same behaviour as drilling in from the
         // parent view.
-        let autoFocusAction: string | null = null;
-        if (model && selectedDiagram
+        let autoFocusAction: string | null = actionSubject && model?.elements[actionSubject]?.construct === 'action' ? actionSubject : null;
+        if (!autoFocusAction && model && selectedDiagram
             && (selectedDiagram.viewKind === 'actionflow' || selectedDiagram.diagramType === 'afd'
                 || selectedDiagram.diagramType === 'ofd' || selectedDiagram.diagramType === 'ffd')) {
             const viewEl = viewElementOf(model, selectedDiagram);
@@ -1952,7 +1967,7 @@ function DiagramCanvasInner() {
         setActionFlowNesting('flat');
         setFocusedStateId(null);
         positionCacheRef.current.clear();
-    }, [selectedDiagramId, selectedDiagram?.properties?.layoutHint, selectedDiagram?.properties?.styleHint, selectedDiagram?.properties?.portDisplay, selectedDiagram?.properties?.connectionDisplay]);
+    }, [selectedDiagramId, actionSubject, selectedDiagram?.properties?.layoutHint, selectedDiagram?.properties?.styleHint, selectedDiagram?.properties?.portDisplay, selectedDiagram?.properties?.connectionDisplay]);
 
     // Custom node types
     const nodeTypes = useMemo(() => ({
@@ -2021,7 +2036,7 @@ function DiagramCanvasInner() {
     const actionFlowLaneCounts = useMemo((): Record<ActionFlowLaneGrouping, number> => {
         if (!model || viewKind !== 'actionflow') return { allocation: 0, stage: 0, 'allocation-stage': 0 };
         const actions = collectActionFlowActions(model, viewpointFilter, expandedActionNodes, focusedActionId ?? undefined);
-        const count = (grouping: ActionFlowLaneGrouping) => assignLanes(actions, model, grouping, actionFlowDisplayLevel).lanes.length;
+        const count = (grouping: ActionFlowLaneGrouping) => assignLanes(actions, model, grouping, actionFlowDisplayLevel, !!embed?.previewDiagram).lanes.length;
         return { allocation: count('allocation'), stage: count('stage'), 'allocation-stage': count('allocation-stage') };
     }, [model, viewKind, viewpointFilter, expandedActionNodes, focusedActionId, actionFlowDisplayLevel]);
 
@@ -3322,8 +3337,10 @@ function DiagramCanvasInner() {
                     // A UCD selection can be derived before relationship endpoints
                     // are resolved. The template itself selects only actors linked
                     // to its visible use cases, so do not drop actors here.
-                    viewpointFilter: undefined,
-                    systemName: selectedDiagram?.name,
+                    viewpointFilter: useCaseSubject || selectedDiagram?.properties?.autoPopulate === 'false' ? viewpointFilter : undefined,
+                    ...(selectedDiagram?.properties?.layoutHint === 'use-case:catalog'
+                        ? { systemName: selectedDiagram.name }
+                        : useCaseSubjectOptions(model, useCaseSubject, selectedDiagram?.name, selectedDiagram?.elementIds)),
                     ...(selectedDiagram ? useCaseViewOptions(selectedDiagram.properties) : {}),
                     level: useCaseDisplayLevel, edgeStyle: useCaseEdgeStyle, hiddenActorIds: hiddenUseCaseActorIds,
                 },
@@ -3377,6 +3394,7 @@ function DiagramCanvasInner() {
                 actionflow: {
                     viewpointFilter,
                     swimlanes: swimlanesOn,
+                    usePerformers: !!embed?.previewDiagram,
                     laneGrouping: actionFlowLaneGrouping,
                     laneStyle: actionFlowLaneStyle,
                     displayLevel: actionFlowDisplayLevel,
@@ -3439,7 +3457,7 @@ function DiagramCanvasInner() {
         viewKind, isGeneralTemplate, generalMode, diagramProfile, swimlanesOn, relayoutNonce,
         selectedDiagram?.relationshipTypes, selectedDiagram?.diagramType, selectedDiagram?.name, useCaseDisplayLevel, useCaseEdgeStyle, hiddenUseCaseActorIds,
         layoutProviderId,
-        expandedNodes, collapsedInterconnectionNodes, focusedInterconnectionId, interconnectionPortDisplay, interconnectionConnectionDisplay, showIbdPortText, showIbdConnectionText, showActionFlowItems, activeRenderer, portWalls, activeLegend, expandedActionNodes, focusedActionId, visibleActionFlowKinds, actionFlowDirection, actionFlowLaneGrouping, actionFlowLaneStyle, actionFlowDisplayLevel, actionFlowNesting, nodeDirections,
+        expandedNodes, collapsedInterconnectionNodes, focusedInterconnectionId, interconnectionPortDisplay, interconnectionConnectionDisplay, showIbdPortText, showIbdConnectionText, showActionFlowItems, activeRenderer, portWalls, activeLegend, expandedActionNodes, focusedActionId, useCaseSubject, visibleActionFlowKinds, actionFlowDirection, actionFlowLaneGrouping, actionFlowLaneStyle, actionFlowDisplayLevel, actionFlowNesting, nodeDirections,
         collapsedStateNodes, focusedStateId, toggleStateCollapse, drillIntoState, drillIntoAction,
         toggleExpand, toggleInterconnectionCollapse, toggleActionExpand, toggleDirection, selectedDiagramId,
         drillIntoInterconnection,
@@ -3572,8 +3590,12 @@ function DiagramCanvasInner() {
     }, [model]);
 
     // The flow walkthrough: light the way taken and the ways on, ring the current step, and bring them into view.
+    // A page that embeds the flow can follow the walk; read through a ref so a new embed value does not restart it.
+    const walkFollower = useRef(embed?.onWalkStep);
+    walkFollower.current = embed?.onWalkStep;
     const onWalkStep = useCallback((trail: string[]) => {
         setWalking(trail.length > 0);
+        walkFollower.current?.(trail[trail.length - 1]);
         if (trail.length === 0) {
             dimCanvas(() => 1, () => 1);
             setNodes(prev => prev.map(n => ({ ...n, className: withoutWalkCurrent(n.className) })));
@@ -4757,33 +4779,7 @@ function DiagramCanvasInner() {
         </>
     );
 
-    /** Fit and full screen: shared by the editor's controls and an embed's. */
-    const viewControls = (
-        <>
-            <ControlButton
-                title="Fit diagram to view"
-                aria-label="Fit diagram to view"
-                onClick={() => fitDiagramFrame(250)}
-            >
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                    <path d="M8 3H3v5M16 3h5v5M21 16v5h-5M3 16v5h5" />
-                    <path d="M3 8l5-5M21 8l-5-5M21 16l-5 5M3 16l5 5" />
-                </svg>
-            </ControlButton>
-            <ControlButton
-                title="Toggle fullscreen canvas"
-                aria-label="Toggle fullscreen canvas"
-                onClick={event => {
-                    const canvas = event.currentTarget.closest('.react-flow');
-                    if (!canvas) return;
-                    if (document.fullscreenElement) void document.exitFullscreen();
-                    else void canvas.requestFullscreen?.();
-                }}
-            >
-                ⛶
-            </ControlButton>
-        </>
-    );
+    const viewControls = <DiagramViewControls onFit={() => fitDiagramFrame(250)} />;
 
     return (
         <InterconnectionRendererContext.Provider value={activeRenderer}>
@@ -4920,7 +4916,7 @@ function DiagramCanvasInner() {
 
                 {/* Drill-in breadcrumb: always visible when focused on
                     a nested action, independent of toolbar collapsed state. */}
-                {actionPath.length > 0 && !parentViewId && actionFlowMode === 'flow' && (
+                {!embed?.previewDiagram && actionPath.length > 0 && !parentViewId && actionFlowMode === 'flow' && (
                     <div
                         className="absolute top-3 left-3 z-10 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs"
                         style={{
@@ -5259,15 +5255,17 @@ function DiagramCanvasInner() {
                     onMoveStart={(event) => { setCanvasMoving(event, true); }}
                     onMoveEnd={(event) => { setCanvasMoving(event, false); }}
 
-                    nodes={nodes}
+                    nodes={highlightedNodes}
                     edges={edges}
                     nodeTypes={nodeTypes}
                     edgeTypes={edgeTypes}
                     onNodesChange={readOnly ? undefined : onNodesChangeWithResize}
                     onEdgesChange={readOnly ? undefined : onEdgesChange}
-                    onNodeClick={readOnly ? undefined : onNodeClick}
+                    onNodeClick={embed?.onExplore ? (_, node) => embed.onExplore?.({ type: 'element', id: node.id })
+                        : readOnly ? undefined : onNodeClick}
                     onNodeDoubleClick={readOnly ? undefined : onNodeDoubleClick}
-                    onEdgeClick={readOnly ? undefined : onEdgeClick}
+                    onEdgeClick={embed?.onExplore ? (_, edge) => embed.onExplore?.({ type: 'relationship', id: edge.id })
+                        : readOnly ? undefined : onEdgeClick}
                     onEdgeDoubleClick={readOnly ? undefined : onEdgeDoubleClick}
                     onPaneClick={readOnly ? undefined : onPaneClick}
                     onNodeDragStart={readOnly ? undefined : onNodeDragStart}
@@ -5430,7 +5428,7 @@ function DiagramCanvasInner() {
                             }}
                         >{miniMapOpen ? '\u2013' : '\u25A2'}</button>
                     )}
-                    {!embed && viewKind === 'actionflow' && actionFlowMode === 'flow' && !focusNodeId && !isLayouting && !layoutAnimating && (
+                    {viewKind === 'actionflow' && actionFlowMode === 'flow' && !focusNodeId && !isLayouting && !layoutAnimating && (
                         <FlowWalkthrough key={selectedDiagramId ?? ''} diagramId={selectedDiagramId ?? ''} nodes={nodes} edges={edges} model={model} onStep={onWalkStep}
                             title={selectedDiagram?.name ?? selectedDiagramId ?? ''} />
                     )}
@@ -5521,6 +5519,7 @@ function DiagramCanvasInner() {
                     y={nodeCtx.y}
                     nodeId={nodeCtx.nodeId}
                     nodeKind={nodeCtx.nodeKind}
+                    onCreateComponentFunction={!readOnly && model && componentFunctionWorkspace(model, nodeCtx.nodeId, useModelStore.getState().workspace) ? () => { void createComponentFunction(nodeCtx.nodeId); } : undefined}
                     onClose={() => setNodeCtx(null)}
                     onEditName={() => {
                         // Trigger inline edit via node data update

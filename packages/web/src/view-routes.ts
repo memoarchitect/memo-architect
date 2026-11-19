@@ -40,7 +40,7 @@ const STATIC_VIEW_PATHS: Record<string, string> = {
     ask: '/ask',
     'sysml-generator': '/generate',
     'review-dashboard': '/review',
-    guide: '/guide',
+    guide: '/method',
     import: '/import',
     analysis: '/analysis',
     'ui-screens': '/ui-screens',
@@ -59,8 +59,9 @@ const STATIC_VIEW_PATHS: Record<string, string> = {
 const ALIAS_PATHS: Record<string, string> = {
     '/dashboard': 'dashboard',
     '/scenarios': 'scenario-editor',
-    // The Workflow Wizard this page replaced.
+    // The Workflow Wizard, then the Guide page, that the method map replaced.
     '/workflow': 'guide',
+    '/guide': 'guide',
 };
 
 /** Reverse of STATIC_VIEW_PATHS, plus the aliases. Built once. */
@@ -100,6 +101,16 @@ export function viewToPath(view: ActiveView): string | null {
             if (view.b) params.set('b', view.b);
             const query = params.toString();
             return query ? `/interfaces?${query}` : '/interfaces';
+        }
+        // A row and an optional authored view can be bookmarked together.
+        case 'pathway': {
+            const params = new URLSearchParams();
+            if (view.diagramId) params.set('view', view.diagramId);
+            if (view.work) params.set('work', view.work);
+            if (view.artifactId) params.set('artifact', view.artifactId);
+            if (view.createCase) params.set('createCase', 'true');
+            const query = params.toString();
+            return `/method/${encodeURIComponent(view.layer)}${query ? `?${query}` : ''}`;
         }
         // The tab rides in the path, so each settings page can be linked to.
         case 'settings':
@@ -165,6 +176,19 @@ export function pathToView(pathname: string, search = ''): ActiveView | null {
     }
 
     const segments = path.split('/').filter(Boolean);
+
+    if (segments[0] === 'method' && segments.length === 2) {
+        const params = new URLSearchParams(search);
+        const diagramId = params.get('view');
+        const work = params.get('work');
+        const artifactId = params.get('artifact');
+        return { type: 'pathway', layer: decodeURIComponent(segments[1]),
+            ...(diagramId ? { diagramId } : {}),
+            // `work=system` is the operational level's earlier name; a saved address still opens it.
+            ...(work === 'clinical' || work === 'operational' ? { work } : work === 'system' ? { work: 'operational' as const } : {}),
+            ...(artifactId ? { artifactId } : {}),
+            ...(params.get('createCase') === 'true' ? { createCase: true } : {}) };
+    }
 
     // /documents/:docId — but /documents and /documents/legacy are static and matched above.
     if (segments[0] === 'documents' && segments.length === 2) {
@@ -256,6 +280,6 @@ export function addressableViewTypes(): string[] {
         ...Object.keys(STATIC_VIEW_PATHS),
         'welcome',
         'ontology-detail', 'dhf-document', 'tabular', 'custom-dashboard', 'feature',
-        'element-detail', 'diagram',
+        'element-detail', 'diagram', 'pathway',
     ];
 }
