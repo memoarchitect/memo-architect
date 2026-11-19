@@ -56,7 +56,10 @@ describe('no full-page reload path', () => {
         )
             .split('\n')
             // This file names the call in order to forbid it.
-            .filter(line => line.trim() && !line.includes('vite-watch-boundary.test.ts'));
+            .filter(line => line.trim() && !line.includes('vite-watch-boundary.test.ts'))
+            // The one recovery fallback: the error boundary's button reloads only when a dynamic import failed,
+            // which is the bundle version mismatch this rule allows.
+            .filter(line => !(line.includes('components/ErrorBoundary.tsx') && line.includes('if (failedImport) window.location.reload()')));
         expect(hits).toEqual([]);
     });
 });
