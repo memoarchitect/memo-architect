@@ -2,10 +2,18 @@
 
 Versioned under [semantic versioning](https://semver.org/). Before 1.0 a breaking change to the ontology raises the minor number; any other release raises the patch. Every release is tagged in the repository. The notes for all three packages are also on [memoarchitect.com/releases.html](https://memoarchitect.com/releases.html).
 
-## Unreleased
+## 0.23.0
+
+### Breaking
+
+- Follows the ontology: `SystemUseCase` and `SystemWorkflow` are now `OperationalUseCase` and `OperationalWorkflow`, and a workflow has no entry or completion condition.
+- **Guided Pathways** replaces the Guide page and the Method panel, and `/guide` opens its method map. It is an experimental feature: it shows with `--experimental` or when a person turns on Guided Pathways.
 
 ### Added
 
+- **Pathways.** A method map of every layer for the chosen system or the whole model, with bookmarkable rows. Each layer opens a guided workbench scoped to the system: context, clinical and operational use cases, workflows and scenarios, function trees and flows, logical responsibilities, implementation and deployment.
+- The Context workbench adds and links actors, external systems, locations and environments from small icons in its header, and groups its links by type; every group collapses.
+- A use case page, workflows shown as groups, and a scenario page that draws the scenario alone, with its steps, performers and the functions behind them.
 - Style a port's name and a connector's label (colour, size, weight), and turn any label, a part's title included, to read bottom to top.
 - Show, hide and drag a connector's label; a moved label stays put when the connector is rerouted.
 - **Reset to default** in the Style section clears every style choice on the selection.
