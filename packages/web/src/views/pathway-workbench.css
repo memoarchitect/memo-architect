@@ -611,27 +611,38 @@
 
 .pathway-context-setup {
     display: grid;
-    gap: 14px;
+    gap: 8px;
     width: min(100%, 1020px);
 }
 
 .pathway-context-group {
     border: 1px solid var(--pathway-line);
-    border-radius: 12px;
+    border-radius: 9px;
     background: var(--pathway-surface);
     overflow: hidden;
 }
 
-.pathway-context-group > header,
 .pathway-context-row {
     display: flex;
     align-items: center;
-    gap: 12px;
-    padding: 12px 16px;
+    gap: 10px;
+    padding: 4px 6px 4px 12px;
+    font-size: 13px;
+}
+
+.pathway-context-row > div {
+    min-width: 0;
 }
 
 .pathway-context-group > header {
-    background: #f6f9f8;
+    display: flex;
+    background: #f7f6fb;
+}
+
+.pathway-context-group > header .pathway-context-group-toggle {
+    flex: 1;
+    padding: 7px 12px;
+    border-radius: 0;
 }
 
 .pathway-context-group h2 {
@@ -664,16 +675,17 @@
 }
 
 .pathway-context-row small {
-    display: block;
-    margin-top: 3px;
+    margin-left: 8px;
     color: var(--pathway-muted);
+    font-size: 12px;
 }
 
 .pathway-context-empty,
 .pathway-context-notice {
     color: var(--pathway-muted);
     margin: 0;
-    padding: 12px 16px;
+    padding: 8px 12px;
+    font-size: 13px;
 }
 
 .pathway-context-notice[role="alert"] {
@@ -681,12 +693,12 @@
 }
 
 .pathway-context-remove {
-    padding: 5px 8px;
+    padding: 2px 7px;
     background: transparent;
     border: 1px solid transparent;
     border-radius: 5px;
     font: inherit;
-    font-size: 13px;
+    font-size: 12px;
     color: #715253;
     cursor: pointer;
 }
@@ -720,7 +732,7 @@
 }
 
 .pathway-context-environments {
-    margin: 0 16px 12px 28px;
+    margin: 0 12px 6px 24px;
     padding-left: 12px;
     border-left: 2px solid #dae8e4;
 }
@@ -738,7 +750,7 @@
     --studio-line: #e2e1ed;
     --studio-accent: #6046ab;
     display: grid;
-    grid-template-columns: minmax(155px, 200px) minmax(0, 1fr) minmax(220px, 280px);
+    grid-template-columns: minmax(0, 1fr) minmax(220px, 300px);
     align-items: start;
     gap: 14px;
 }
@@ -751,7 +763,6 @@
     box-shadow: 0 3px 12px #27204b08;
 }
 
-.pathway-context-palette,
 .pathway-context-properties {
     display: grid;
     gap: 10px;
@@ -763,70 +774,112 @@
     margin: 0;
 }
 
-.pathway-context-palette h2 {
-    margin-bottom: 5px;
+.pathway-context-tone--actor { --tone-fill: #e8f2ff; --tone-line: #98bbf5; --tone-ink: #234b89; }
+.pathway-context-tone--system { --tone-fill: #ebf7ec; --tone-line: #a9ccae; --tone-ink: #245237; }
+.pathway-context-tone--setting { --tone-fill: #fff3df; --tone-line: #ebc683; --tone-ink: #75501b; }
+.pathway-context-tone--environment { --tone-fill: #eef1f5; --tone-line: #b7c0cd; --tone-ink: #3c4859; }
+
+.pathway-context-add {
+    display: flex;
+    gap: 6px;
+    margin-left: auto;
 }
 
-.pathway-context-tool {
-    display: grid;
-    grid-template-columns: 21px 1fr auto;
-    gap: 8px;
+.pathway-context-add > * {
+    display: inline-flex;
     align-items: center;
-    text-align: left;
+    gap: 5px;
+    height: 30px;
+    padding: 0 9px 0 7px;
+    border: 1px solid var(--tone-line);
+    border-radius: 15px;
+    background: var(--tone-fill);
+    color: var(--tone-ink);
+    font: inherit;
+    font-size: 12px;
+    font-weight: 650;
+}
+
+.pathway-context-add > button { cursor: pointer; }
+.pathway-context-add > button:hover:not(:disabled) { box-shadow: 0 0 0 2px var(--tone-line); }
+.pathway-context-add > button:disabled { opacity: 0.45; cursor: default; }
+.pathway-context-add > button[aria-pressed="true"] { box-shadow: 0 0 0 2px var(--tone-ink); }
+.pathway-context-add svg { width: 16px; height: 16px; }
+.pathway-context-add > button::after { content: "+"; font-size: 15px; line-height: 1; margin-left: 1px; }
+
+.pathway-context-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    padding: 2px 0 6px 18px;
+}
+
+.pathway-context-group-toggle {
+    display: flex;
+    align-items: center;
+    gap: 6px;
     width: 100%;
-    padding: 10px;
-    border: 1px solid var(--tool-line);
-    border-radius: 9px;
-    background: var(--tool-fill);
-    color: var(--tool-ink);
+    padding: 4px 2px;
+    border: 0;
+    background: transparent;
+    color: var(--tone-ink);
     font: inherit;
     font-size: 13px;
-}
-
-.pathway-context-tool-hint {
-    grid-column: 2 / -1;
-    margin: 0;
-    font-size: 12px;
-    line-height: 1.4;
-}
-
-.pathway-context-tile-actions {
-    grid-column: 2 / -1;
-    display: flex;
-    justify-content: flex-end;
-    gap: 6px;
-}
-
-.pathway-context-tile-actions button {
-    width: 28px;
-    height: 28px;
-    border: 1px solid var(--tool-line);
-    border-radius: 6px;
-    background: white;
-    color: inherit;
-    font-size: 18px;
-    line-height: 1;
+    font-weight: 650;
+    text-align: left;
     cursor: pointer;
 }
 
-.pathway-context-tile-actions button:disabled {
-    opacity: 0.45;
-    cursor: default;
+.pathway-context-group-toggle svg { width: 15px; height: 15px; }
+.pathway-context-group-toggle .pathway-context-count { margin-left: 2px; background: var(--tone-fill); color: var(--tone-ink); }
+.pathway-context-chevron { flex-shrink: 0; width: 6px; height: 6px; margin: 0 3px 3px 1px; border-right: 1.6px solid currentColor; border-bottom: 1.6px solid currentColor; transform: rotate(45deg); transition: transform .12s; }
+.pathway-context-group-toggle[aria-expanded="false"] .pathway-context-chevron { margin: 0 3px 0 0; transform: rotate(-45deg); }
+
+.pathway-context-setup-tools {
+    display: flex;
+    justify-content: flex-end;
 }
 
-.pathway-context-removal-list {
-    list-style: none;
-    padding: 0;
+.pathway-context-collapse-all {
+    justify-self: end;
+    padding: 2px 6px;
+    border: 0;
+    background: transparent;
+    color: var(--studio-accent, #6046ab);
+    font: inherit;
+    font-size: 12px;
+    cursor: pointer;
 }
 
-.pathway-context-tool--actor { --tool-fill: #edf3ff; --tool-line: #dce7fc; --tool-ink: #284e89; }
-.pathway-context-tool--system { --tool-fill: #ecf6ef; --tool-line: #d8eadf; --tool-ink: #286342; }
-.pathway-context-tool--setting { --tool-fill: #fbf4e8; --tool-line: #f0e4c9; --tool-ink: #79571d; }
-
-.pathway-context-tile-actions button[aria-pressed="true"] {
-    outline: 2px solid currentColor;
-    outline-offset: -2px;
+.pathway-context-properties-section > button.pathway-context-collapse-all {
+    display: block;
+    width: auto;
+    margin: -2px 0 2px auto;
+    padding: 2px 6px;
+    border: 0;
+    background: transparent;
+    color: var(--studio-accent, #6046ab);
 }
+
+.pathway-context-collapse-all:hover { text-decoration: underline; }
+
+.pathway-context-properties-section .pathway-context-chips > button {
+    display: inline-flex;
+    align-items: center;
+    max-width: 100%;
+    padding: 2px 8px;
+    border: 1px solid var(--tone-line);
+    border-radius: 11px;
+    background: var(--tone-fill);
+    color: var(--tone-ink);
+    font: inherit;
+    font-size: 11.5px;
+    line-height: 1.35;
+    text-align: left;
+    cursor: pointer;
+}
+
+.pathway-context-properties-section .pathway-context-chips > button:hover { box-shadow: 0 0 0 1px var(--tone-ink); }
 
 .pathway-context-stage {
     overflow: hidden;
@@ -927,23 +980,6 @@
 
 .pathway-context-name:hover {
     text-decoration: underline;
-}
-
-@media (max-width: 1120px) {
-    .pathway-context-studio {
-        grid-template-columns: minmax(0, 1fr) minmax(210px, 260px);
-    }
-
-    .pathway-context-palette {
-        grid-column: 1 / -1;
-        display: flex;
-        flex-wrap: wrap;
-        align-items: center;
-    }
-
-    .pathway-context-tool {
-        width: auto;
-    }
 }
 
 @media (max-width: 730px) {
@@ -1141,7 +1177,6 @@
     font-weight: 700;
 }
 
-.pathway-context-studio .pathway-context-palette,
 .pathway-context-studio .pathway-context-properties {
     align-content: start;
     padding: 16px;

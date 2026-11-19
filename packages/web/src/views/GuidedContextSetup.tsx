@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useState, type FormEvent, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { PathwayPartCreate } from './PathwayPartCreate';
 import { ScopedContextDiagram } from './ScopedContextDiagram';
@@ -26,7 +26,12 @@ export function GuidedContextSetup({ model, system, canWrite, diagram, diagramSu
     const [view, setView] = useState<'diagram' | 'table'>('diagram');
     const [selection, setSelection] = useState<Parameters<NonNullable<DiagramEmbed['onExplore']>>[0]>();
     const [picker, setPicker] = useState<{ category: Category; settingId?: string }>();
-    const [removing, setRemoving] = useState<Category>();
+    const [collapsed, setCollapsed] = useState<ReadonlySet<Category>>(new Set());
+    const toggle = (category: Category) => setCollapsed(current => {
+        const next = new Set(current);
+        if (!next.delete(category)) next.add(category);
+        return next;
+    });
     const [candidateId, setCandidateId] = useState('');
     const [boundaryId, setBoundaryId] = useState('');
     const [busy, setBusy] = useState(false);
@@ -63,7 +68,6 @@ export function GuidedContextSetup({ model, system, canWrite, diagram, diagramSu
         setBoundaryId(targets.length === 1 ? targets[0].id : linkedTargets.length === 1 ? linkedTargets[0] : '');
         setCandidateId('');
         setNotice(undefined);
-        setRemoving(undefined);
         setPicker({ category, settingId });
     };
     const readyToWrite = () => {
@@ -111,7 +115,7 @@ export function GuidedContextSetup({ model, system, canWrite, diagram, diagramSu
         try {
             if (!await confirmDialog({ title: `Remove ${name}?`, message: 'This removes the link. The element stays in the model.',
                 confirmLabel: 'Remove link', danger: true }) || !readyToWrite()) return;
-            if (await save(() => useModelStore.getState().deleteRelationship(edge.id), 'Link removed.')) setRemoving(undefined);
+            await save(() => useModelStore.getState().deleteRelationship(edge.id), 'Link removed.');
         } finally { setBusy(false); }
     };
     const removeButton = (edge: Relationship, name: string) => canWrite && <button type="button"
@@ -153,18 +157,33 @@ export function GuidedContextSetup({ model, system, canWrite, diagram, diagramSu
         </form>}
     </div>;
 
-    const removalRows = removing === 'environment' ? settingIds.flatMap(forSetting)
-        : sections.find(section => section.category === removing)?.rows ?? [];
+    const environmentRows = settingIds.flatMap(forSetting);
+    const addTools = [
+        ...sections.map(({ category, icon, rows }) => ({ category, icon, count: new Set(rows.map(edge => edge.sourceId)).size })),
+        { category: 'environment' as const, icon: ControlIcon.location, count: new Set(environmentRows.map(edge => edge.targetId)).size },
+    ];
+    const toolHint = { actor: 'People who use or are affected by the system.', system: 'Other systems it exchanges with.',
+        setting: 'Where it is used, for example at home, in an operating room or in an EP lab.',
+        environment: settingIds.length ? 'Conditions of use, such as lighting and noise.' : 'Add a location first.' };
+    const toolName = (category: Category) => category === 'environment' ? 'Environments' : headings[category];
+    const allCollapsed = sections.every(({ category }) => collapsed.has(category));
+    const collapseAll = <button type="button" className="pathway-context-collapse-all"
+        onClick={() => setCollapsed(allCollapsed ? new Set() : new Set(sections.map(({ category }) => category)))}>
+        {allCollapsed ? 'Expand all' : 'Collapse all'}
+    </button>;
+    const groupToggle = (category: Exclude<Category, 'environment'>, icon: ReactNode, count: number) => <button type="button"
+        className={`pathway-context-group-toggle pathway-context-tone--${category}`} aria-expanded={!collapsed.has(category)}
+        onClick={() => toggle(category)}>
+        <span className="pathway-context-chevron" aria-hidden="true" />
+        <span aria-hidden="true">{icon}</span>{headings[category]}
+        <span className="pathway-context-count" aria-label={`${count} links`}>{count}</span>
+    </button>;
     const table = <div className="pathway-context-setup">
+        <div className="pathway-context-setup-tools">{collapseAll}</div>
         {sections.map(({ category, icon, rows, empty }) => <section className="pathway-context-group" key={category} aria-label={headings[category]}>
-            <header>
-                <span className="pathway-icon" aria-hidden="true">{icon}</span>
-                <h2>{headings[category]}</h2>
-                <span className="pathway-context-count" aria-label={`${rows.length} links`}>{rows.length}</span>
-
-            </header>
-            {rows.length === 0 && <p className="pathway-context-empty">{empty}</p>}
-            {rows.length > 0 && <ul>{rows.map(edge => {
+            <header>{groupToggle(category, icon, rows.length)}</header>
+            {!collapsed.has(category) && rows.length === 0 && <p className="pathway-context-empty">{empty}</p>}
+            {!collapsed.has(category) && rows.length > 0 && <ul>{rows.map(edge => {
                 const item = model.elements[edge.sourceId];
                 const name = nameOf(item);
                 const attributes = { ...model.elements[definitionOf[item.id] ?? item.provenance?.classifier?.qualifiedName ?? '']?.attributes, ...item.attributes };
@@ -202,35 +221,22 @@ export function GuidedContextSetup({ model, system, canWrite, diagram, diagramSu
     const editableLinks = new Set([...interactions, ...settings, ...settings.flatMap(edge => forSetting(edge.sourceId))].map(edge => edge.id));
 
     return <div className="pathway-context-studio">
-        <aside className="pathway-context-studio-panel pathway-context-palette" aria-label="Context summary">
-            <h2>Context summary</h2>
-            {[...sections, {
-                category: 'environment' as const, icon: ControlIcon.location, rows: settingIds.flatMap(forSetting),
-            }].map(({ category, icon, rows }) => {
-                const needsUseContext = category === 'environment' && !settingIds.length;
-                const count = new Set(rows.map(edge => category === 'environment' ? edge.targetId : edge.sourceId)).size;
-                return <div key={category} className={`pathway-context-tool pathway-context-tool--${category === 'environment' ? 'setting' : category}`}>
-                    <span aria-hidden="true">{icon}</span>
-                    <strong>{category === 'setting' ? headings.setting : labels[category][0].toUpperCase() + labels[category].slice(1)}</strong>
-                    <small>{count}</small>
-                    {category === 'setting' && <p className="pathway-context-tool-hint">For example, at home, in an operating room, or in an EP lab.</p>}
-                    {category === 'environment' && <p className="pathway-context-tool-hint">{needsUseContext && canWrite
-                        ? 'Add a location first.'
-                        : 'Conditions of use, such as lighting and noise.'}</p>}
-                    {canWrite && <div className="pathway-context-tile-actions">
-                        <button type="button" aria-label={`Add ${labels[category]}`} title={`Add ${labels[category]}`}
-                            disabled={busy || needsUseContext} aria-pressed={picker?.category === category}
-                            onClick={() => openPicker(category, category === 'environment' ? settingIds[0] : undefined)}>+</button>
-                        <button type="button" aria-label={`Remove ${labels[category]} link`} title={`Remove ${labels[category]} link`}
-                            disabled={busy || !rows.length} aria-pressed={removing === category}
-                            onClick={() => { setPicker(undefined); setNotice(undefined); setRemoving(category); }}>−</button>
-                    </div>}
-                </div>;
-            })}
-        </aside>
         <section className="pathway-context-studio-panel pathway-context-stage" aria-label="Context workspace">
             <header>
                 <div><small className="pathway-context-studio-label">Direct context</small><h2>{system.name}</h2></div>
+                <div className="pathway-context-add" role="group" aria-label="Context elements">
+                    {addTools.map(({ category, icon, count }) => {
+                        const content = <><span aria-hidden="true">{icon}</span><span className="pathway-context-add-count">{count}</span></>;
+                        const tone = `pathway-context-tone--${category}`;
+                        return canWrite
+                            ? <button type="button" key={category} className={tone}
+                                aria-label={`Add ${labels[category]}`} title={`Add ${labels[category]} (${count} linked). ${toolHint[category]}`}
+                                disabled={busy || (category === 'environment' && !settingIds.length)} aria-pressed={picker?.category === category}
+                                onClick={() => openPicker(category, category === 'environment' ? settingIds[0] : undefined)}>{content}</button>
+                            : <span key={category} className={tone} title={`${toolName(category)}: ${count}`}
+                                aria-label={`${toolName(category)}: ${count}`}>{content}</span>;
+                    })}
+                </div>
                 <div className="pathway-context-view-switch" aria-label="Context view">
                     <button type="button" aria-pressed={view === 'diagram'} onClick={() => setView('diagram')}>Diagram</button>
                     <button type="button" aria-pressed={view === 'table'} onClick={() => setView('table')}>Table</button>
@@ -253,23 +259,13 @@ export function GuidedContextSetup({ model, system, canWrite, diagram, diagramSu
             {notice && <p className="pathway-context-notice" role={notice.error ? 'alert' : 'status'}>{notice.message}</p>}
             {picker ? <>
                 <h2>Add {labels[picker.category]}</h2>
+                <p>{toolHint[picker.category]}</p>
                 {form}
                 <PathwayPartCreate key={picker.category} model={model} partKinds={creationKinds[picker.category]}
                     initiallyOpen={!choices.length} disabled={busy || (!picker.settingId && !boundaryId)}
                     preferredFile={picker.settingId ? model.elements[picker.settingId]?.file : (model.elements[boundaryId]?.file ?? system.file)}
                     addLabel={`Create new ${labels[picker.category]}`} saveLabel="Create and link"
                     onCreated={id => linkContext(id, true)} onCancel={() => { if (!choices.length) setPicker(undefined); }} />
-            </> : removing ? <>
-                <h2>Remove {labels[removing]} link</h2>
-                <ul className="pathway-context-removal-list">{removalRows.map(edge => {
-                    const item = model.elements[removing === 'environment' ? edge.targetId : edge.sourceId];
-                    const other = model.elements[removing === 'environment' ? edge.sourceId : edge.targetId];
-                    return <li className="pathway-context-row" key={edge.id}>
-                        <span>{nameOf(item)}{removalRows.length > 1 && other ? ` · ${other.id}` : ''}</span>
-                        {removeButton(edge, nameOf(item))}
-                    </li>;
-                })}</ul>
-                <button type="button" className="pathway-button" disabled={busy} onClick={() => setRemoving(undefined)}>Cancel</button>
             </> : <>
                 <h2>{selectedEdge ? 'Interaction' : selectedElement ? 'Element' : 'Selected system'}</h2>
                 <div className="pathway-context-properties-summary">
@@ -284,10 +280,18 @@ export function GuidedContextSetup({ model, system, canWrite, diagram, diagramSu
                     </details>}
                     <details open className="pathway-context-properties-section">
                         <summary>Direct context links ({interactions.length + settings.length})</summary>
-                        {[...interactions, ...settings].map(edge => <button type="button" key={edge.id}
-                            onClick={() => setSelection({ type: 'relationship', id: edge.id })}>
-                            {nameOf(model.elements[edge.sourceId])}
-                        </button>)}
+                        {(interactions.length > 0 || settings.length > 0) && <>
+                            {collapseAll}
+                            {sections.filter(({ rows }) => rows.length).map(({ category, icon, rows }) => <div key={category} className="pathway-context-link-group">
+                                {groupToggle(category, icon, rows.length)}
+                                {!collapsed.has(category) && <div className="pathway-context-chips">
+                                    {rows.map(edge => <button type="button" key={edge.id} className={`pathway-context-tone--${category}`}
+                                        onClick={() => setSelection({ type: 'relationship', id: edge.id })}>
+                                        {nameOf(model.elements[edge.sourceId])}
+                                    </button>)}
+                                </div>}
+                            </div>)}
+                        </>}
                         {!interactions.length && !settings.length && <p>No context links for this system yet.</p>}
                         {diagramSubject && <p>For interactions recorded at the parent system, open its wider context diagram.</p>}
                     </details>
