@@ -183,11 +183,20 @@ export interface SelectionStylePatch {
     fontWeight?: number;
     textAlign?: 'left' | 'center' | 'right';
     verticalAlign?: 'top' | 'middle' | 'bottom';
+    /** Which way the label runs. `auto` clears the choice; on a connector that lets the label follow its line. */
+    textOrientation?: 'horizontal' | 'vertical' | 'auto';
+    /** A connector's label: shown or hidden, and back to where routing puts it. */
+    labelVisible?: boolean;
+    resetLabelPosition?: boolean;
+    /** Clears every override above, so the selection is drawn as the notation draws it. */
+    resetStyle?: boolean;
 }
 
 /** What the properties panel needs to style the canvas selection. */
 export interface SelectionStyleHandle {
-    /** How many blocks the change would land on. */
+    /** What the change lands on: boxes, connectors' labels, or one port's name. */
+    target: 'boxes' | 'connectors' | 'port';
+    /** How many of them. */
     count: number;
     /** Current fill opacity, so the slider opens where the selection is. */
     opacity: number;

@@ -16,8 +16,9 @@ import type { CompartmentEntry } from './templates/composition-tree';
 import { isPersonKind, PersonGlyph } from './PersonGlyph';
 import { typeLabel } from '../lib/ontology-labels';
 import { useModelStore } from '../store/model-store';
+import { boxTitleOverrides, type BoxTextStyle } from './label-style';
 
-export interface DiagramInteractiveNodeData extends Record<string, unknown> {
+export interface DiagramInteractiveNodeData extends Record<string, unknown>, BoxTextStyle {
     label: string;
     kind: string;
     layer: string;
@@ -141,6 +142,7 @@ export const DiagramInteractiveNode = memo(function DiagramInteractiveNode(
                         <div style={{
                             fontSize: FONT.sm, fontWeight: 500, color: '#1a1a1a',
                             lineHeight: 1.3, wordBreak: 'break-word',
+                            ...boxTitleOverrides(d),
                         }}>
                             {d.label || typeLabel(useModelStore.getState().model, d.kind)}
                         </div>

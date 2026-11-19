@@ -688,10 +688,6 @@ export interface InterconnectionOptions {
     portDisplay?: PortDisplay;
     showPortText?: boolean;
     showConnectionText?: boolean;
-    /** Per-edge label override (edge id → visible). Where an edge has an entry it
-     *  wins over the global `showConnectionText`, so a dense IBD can name the few
-     *  flows that carry the story while the rest stay unlabelled. */
-    labelVisibility?: Record<string, boolean>;
     /** When the renderer draws every port at one size (ignoring authored
      *  `port.size`), this is that size — connector anchoring uses it so the line
      *  meets the RENDERED square, not the authored one. */
@@ -1796,9 +1792,8 @@ export async function computeInterconnectionLayout(
             ...edge.data,
             points: routes.get(edge.id) ?? [],
             labelPoint: labelPoints.get(edge.id),
-            showLabel: typeof options?.labelVisibility?.[edge.id] === 'boolean'
-                ? options.labelVisibility[edge.id]
-                : options?.showConnectionText !== false,
+            // A connector's own shown/hidden choice is the view's, and the edge reads it from the layout itself.
+            showLabel: options?.showConnectionText !== false,
         },
     }));
 

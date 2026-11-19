@@ -42,7 +42,13 @@ export function SelectionStyleSection() {
     // Nothing selected on a canvas means nothing to style. The section is
     // absent rather than disabled: a greyed-out palette invites clicking.
     if (!selectionStyle) return null;
-    const { count, opacity, apply } = selectionStyle;
+    const { target, count, opacity, apply } = selectionStyle;
+    // A connector's label and a port's name are text only: no fill, border or box alignment.
+    const boxes = target === 'boxes';
+    const what = target === 'port' ? 'port' : target === 'connectors' ? (count === 1 ? 'connector' : 'connectors') : 'selected';
+    const orientations = target === 'connectors'
+        ? [['auto', 'Auto', 'Label follows its line'], ['horizontal', 'Across', 'Label runs across the page'], ['vertical', 'Up', 'Label reads bottom to top']] as const
+        : [['horizontal', 'Across', 'Text runs across the page'], ['vertical', 'Up', 'Text reads bottom to top']] as const;
 
     return (
         <div style={{ borderTop: `1px solid ${COLOR.borderLight}`, padding: '10px 12px' }}>
@@ -59,12 +65,43 @@ export function SelectionStyleSection() {
                 <span style={{ fontSize: 9 }}>{open ? '▾' : '▸'}</span>
                 Style
                 <span style={{ marginLeft: 'auto', fontWeight: 600, textTransform: 'none', letterSpacing: 0 }}>
-                    {count} selected
+                    {target === 'port' ? 'port name' : `${count} ${what}`}
                 </span>
             </button>
 
             {open && (
                 <div style={{ marginTop: 10 }}>
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 8 }}>
+                        <button
+                            title="Clear every style choice on the selection"
+                            onClick={() => apply({ resetStyle: true })}
+                            style={{ border: `1px solid ${COLOR.border}`, background: COLOR.surface, borderRadius: 4, fontSize: 11, padding: '2px 8px', cursor: 'pointer', color: COLOR.secondary }}
+                        >
+                            Reset to default
+                        </button>
+                    </div>
+                    {target === 'connectors' && (
+                        <div style={rowStyle}>
+                            <span style={labelStyle}>Label</span>
+                            {([
+                                ['Show', 'Show the connector label', { labelVisible: true }],
+                                ['Hide', 'Hide the connector label', { labelVisible: false }],
+                                ['Reset', 'Put the label back where routing places it; drag a label to move it', { resetLabelPosition: true }],
+                            ] as const).map(([text, title, patch]) => (
+                                <button
+                                    key={text}
+                                    title={title}
+                                    aria-label={title}
+                                    onClick={() => apply(patch)}
+                                    style={{ height: 22, border: `1px solid ${COLOR.border}`, background: COLOR.surface, borderRadius: 4, fontSize: 11, padding: '2px 7px', cursor: 'pointer', color: COLOR.secondary }}
+                                >
+                                    {text}
+                                </button>
+                            ))}
+                        </div>
+                    )}
+
+                    {boxes && <>
                     <div style={rowStyle}>
                         <span style={labelStyle}>Fill</span>
                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, flex: 1 }}>
@@ -115,6 +152,8 @@ export function SelectionStyleSection() {
                         </button>
                     </div>
 
+                    </>}
+
                     <div style={rowStyle}>
                         <span style={labelStyle}>Text</span>
                         <input
@@ -141,6 +180,22 @@ export function SelectionStyleSection() {
                         </button>
                     </div>
 
+                    <div style={rowStyle}>
+                        <span style={labelStyle}>Direction</span>
+                        {orientations.map(([value, text, title]) => (
+                            <button
+                                key={value}
+                                title={title}
+                                aria-label={title}
+                                onClick={() => apply({ textOrientation: value })}
+                                style={{ height: 22, border: `1px solid ${COLOR.border}`, background: COLOR.surface, borderRadius: 4, fontSize: 11, padding: '2px 7px', cursor: 'pointer', color: COLOR.secondary }}
+                            >
+                                {text}
+                            </button>
+                        ))}
+                    </div>
+
+                    {boxes && <>
                     <div style={rowStyle}>
                         <span style={labelStyle}>Align</span>
                         {([
@@ -188,6 +243,7 @@ export function SelectionStyleSection() {
                             {Math.round(opacity * 100)}%
                         </span>
                     </label>
+                    </>}
                 </div>
             )}
         </div>

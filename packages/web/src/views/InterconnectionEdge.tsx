@@ -7,6 +7,7 @@ import { BaseEdge, EdgeLabelRenderer, useReactFlow, useStore, type EdgeProps } f
 import { FONT } from '../styles/tokens';
 import { useConnectorHighlighted, useConnectorHoverActive } from './connector-hover';
 import { useInterconnectionRenderer } from '../diagram/renderers/interconnection-renderer';
+import { labelTextOverrides, useEdgeLabelStyle, useMoveEdgeLabel } from './label-style';
 
 interface Point { x: number; y: number }
 interface RouteSegment { index: number; a: Point; b: Point; straight: boolean }
@@ -83,6 +84,12 @@ function InterconnectionEdgeInner(props: EdgeProps) {
     const cancelGesture = useRef<(() => void) | null>(null);
     useEffect(() => () => cancelGesture.current?.(), []);
     const renderer = useInterconnectionRenderer();
+    const labelStyle = useEdgeLabelStyle(props.id);
+    const moveLabel = useMoveEdgeLabel();
+    // Where the label is while it is being dragged; it is committed on release.
+    const [labelDrag, setLabelDrag] = useState<Point | null>(null);
+    const cancelLabelDrag = useRef<(() => void) | null>(null);
+    useEffect(() => () => cancelLabelDrag.current?.(), []);
     const clipId = `ibd-hit-${useId().replaceAll(':', '')}`;
     const hitClip = useStore(state => ibdEdgeHitClip(state.nodes, state.transform[2]));
     const allEdges = useStore(state => state.edges);
@@ -136,9 +143,43 @@ function InterconnectionEdgeInner(props: EdgeProps) {
         : { ...props.style, stroke };
     // A template that placed all its labels together supplies the point; a
     // lone edge falls back to its own longest segment.
-    const anchor = (props.data?.labelPoint as Point | undefined) ?? labelAnchor(points);
-    // A label sitting on a vertical run reads along the line, not across it.
-    const labelRotation = (() => {
+    const anchor = labelDrag ?? (props.data?.labelPoint as Point | undefined) ?? labelAnchor(points);
+    // The view's own choice wins over the diagram-wide connection-text toggle.
+    const labelShown = Boolean(props.label) && (labelStyle?.labelVisible ?? props.data?.showLabel !== false);
+    const beginLabelDrag = (event: ReactPointerEvent<HTMLDivElement>) => {
+        if (!moveLabel || event.button !== 0) return;
+        event.stopPropagation();
+        const start = screenToFlowPosition({ x: event.clientX, y: event.clientY });
+        const origin = anchor;
+        let last = origin, moved = false;
+        const move = (next: PointerEvent) => {
+            // A click or double-click is not a drag.
+            if (!moved && Math.hypot(next.clientX - event.clientX, next.clientY - event.clientY) <= 3) return;
+            moved = true;
+            const at = screenToFlowPosition({ x: next.clientX, y: next.clientY });
+            last = { x: origin.x + at.x - start.x, y: origin.y + at.y - start.y };
+            setLabelDrag(last);
+        };
+        const cleanup = () => {
+            window.removeEventListener('pointermove', move);
+            window.removeEventListener('pointerup', stop);
+            window.removeEventListener('pointercancel', cancel);
+            window.removeEventListener('keydown', key);
+            cancelLabelDrag.current = null;
+        };
+        const cancel = () => { cleanup(); setLabelDrag(null); };
+        const key = (next: KeyboardEvent) => { if (next.key === 'Escape') cancel(); };
+        const stop = () => { cleanup(); if (moved) moveLabel(props.id, last); setLabelDrag(null); };
+        window.addEventListener('pointermove', move);
+        window.addEventListener('pointerup', stop, { once: true });
+        window.addEventListener('pointercancel', cancel);
+        window.addEventListener('keydown', key);
+        cancelLabelDrag.current = cancel;
+    };
+    // A label sitting on a vertical run reads along the line, not across it,
+    // unless the person chose which way it runs.
+    const labelRotation = labelStyle?.textOrientation === 'horizontal' ? ''
+        : labelStyle?.textOrientation === 'vertical' ? ' rotate(-90deg)' : (() => {
         for (let i = 0; i < points.length - 1; i++) {
             const p = points[i], q = points[i + 1];
             if (anchor.x >= Math.min(p.x, q.x) - 8 && anchor.x <= Math.max(p.x, q.x) + 8 &&
@@ -339,18 +380,20 @@ function InterconnectionEdgeInner(props: EdgeProps) {
                     }}
                 />
             )}
-            {props.label && props.data?.showLabel !== false ? (
+            {labelShown ? (
                 <EdgeLabelRenderer>
-                    <div onDoubleClick={event => { event.stopPropagation();
+                    <div className="nodrag nopan" onPointerDown={beginLabelDrag} title={moveLabel ? 'Drag to move the label' : undefined} onDoubleClick={event => { event.stopPropagation();
                         (props.data?.onInspect as (() => void) | undefined)?.(); }} style={{
                         position: 'absolute',
                         transform: `translate(-50%, -50%) translate(${anchor.x}px, ${anchor.y}px)${labelRotation}`,
                         fontSize: FONT.badge, fontWeight: highlighted ? 700 : 600,
                         color: highlighted ? '#0F172A' : '#475569',
+                        ...labelTextOverrides(labelStyle),
                         background: 'rgba(255,255,255,0.96)',
                         border: `1px solid ${highlighted ? stroke : '#E2E8F0'}`,
                         opacity: labelDimmed ? 0.25 : 1,
                         padding: '1px 4px', borderRadius: 4, pointerEvents: 'all',
+                        cursor: moveLabel ? 'move' : undefined, touchAction: 'none',
                         // Above the parts, as the connector itself is: a link between two nested parts is labelled
                         // over its container, and without this the container's fill hid the label.
                         zIndex: 20,

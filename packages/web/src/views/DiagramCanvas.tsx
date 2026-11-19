@@ -63,7 +63,8 @@ type RFAny = any;
 
 import type { MemoElement, MemoModelDTO, DiagramLayout, ViewKind } from '@memoarchitect/tools/browser';
 import { computeImpact } from '@memoarchitect/tools/browser';
-import { useModelStore, getDiagram, getRegistries } from '../store/model-store';
+import { useModelStore, getDiagram, getRegistries, type SelectionStylePatch } from '../store/model-store';
+import { DiagramLabelStyleContext, labelStylesOf } from './label-style';
 import { requestRelationshipUpdate, saveViewDisplay, sendElementCreate, sendDiagramLayoutUpdate as sendDiagramLayoutUpdateToServer, sendElementUpdate } from '../store/ws-client';
 import { useDiagramEmbed } from '../diagram/diagram-embed-context';
 import { LAYER_COLORS, REL_COLORS, DIAGRAM_TYPE_META } from '../constants';
@@ -272,15 +273,30 @@ const OPPOSITE_SIDE: Record<PortSide, PortSide> = {
     bottom: 'top',
 };
 
+/**
+ * An edge's data without a label position the router computed. A replanned
+ * route makes that position describe a line that no longer exists; a label a
+ * person placed is theirs, and stays.
+ */
+function withoutComputedLabel(data: FlowEdge['data']): Record<string, unknown> {
+    if (data?.manualLabel) return { ...data };
+    const { labelPoint: _stale, ...rest } = data ?? {};
+    return rest;
+}
+
 /** Re-route explicit orthogonal edges after saved/user node positions overlay. */
 /** One owner for rendered edge persistence, including automatic movement
  * geometry. Opaque fields remain alongside the geometry this client owns. */
 function captureEdgeLayout(edge: FlowEdge, previous?: DiagramLayout['edges'][string]) {
-    const { points: _points, manualRoute: _manual, routingType: _type, routingOverride: _override, labelPoint: _label,
+    const { points: _points, manualRoute: _manual, routingType: _type, routingOverride: _override, labelPoint: _label, manualLabel: _manualLabel,
         manualLanding: _landing, sourceSide: _ss, targetSide: _ts, sourceT: _st, targetT: _tt, sourceOffset: oldSourceOffset, targetOffset: oldTargetOffset,
         ...opaque } = (previous ?? {}) as Record<string, unknown>;
     const points = edge.data?.points as Array<{x:number;y:number}> | undefined;
-    const override: Record<string, unknown> = edge.data?.routingOverride ? { routingOverride: edge.data.routingOverride } : {};
+    const override: Record<string, unknown> = {
+        ...(edge.data?.routingOverride ? { routingOverride: edge.data.routingOverride } : {}),
+        // A label a person placed is kept whether or not its connector's route is.
+        ...(edge.data?.manualLabel && edge.data?.labelPoint ? { manualLabel: true, labelPoint: edge.data.labelPoint } : {}),
+    };
     if (!points?.length) return { ...opaque, ...override };
     return { ...opaque, ...override, points: points.map(point => ({ ...point })),
         manualRoute: Boolean(edge.data?.manualRoute), routingType: edge.data?.routingType,
@@ -322,7 +338,7 @@ function likeliestChildKind(model: MemoModelDTO, parent: MemoElement, what: 'par
 }
 
 /** What a drawn connector's route consists of, carried over when the diagram is redrawn after a model refresh. */
-const DRAWN_ROUTE_FIELDS = ['points', 'labelPoint', 'sourceSide', 'targetSide', 'sourceOffset', 'targetOffset',
+const DRAWN_ROUTE_FIELDS = ['points', 'labelPoint', 'manualLabel', 'sourceSide', 'targetSide', 'sourceOffset', 'targetOffset',
     'routingType', 'manualRoute', 'manualLanding', 'sourceT', 'targetT'] as const;
 
 /** What planning a board's connectors takes: the input of `routeClearOfPorts`, and the key its answer is held under. */
@@ -466,7 +482,7 @@ function reroutePositionedEdges(
             const first = points[0], last = points[points.length-1];
             if (first.x === request.source.x && first.y === request.source.y
                 && last.x === request.target.x && last.y === request.target.y) return edge;
-            const { labelPoint: _stale, ...data } = edge.data ?? {};
+            const data = withoutComputedLabel(edge.data);
             return { ...edge, data: { ...data, points: reconnectRoute(points, request.source, request.target) } };
         });
     }
@@ -554,7 +570,7 @@ function reroutePositionedEdges(
     // pass re-derives proper anchors below, where labels are placed together and
     // can avoid each other.
     const withRoute = (edge: FlowEdge, points: Array<{ x: number; y: number }>): FlowEdge => {
-        const { labelPoint: _stale, ...data } = edge.data ?? {};
+        const data = withoutComputedLabel(edge.data);
         const request = requestById.get(edge.id);
         const automaticMovement = movement && (!edge.data?.manualRoute || replacingManual);
         const automaticRoute = automaticMovement || !edge.data?.manualRoute;
@@ -601,7 +617,7 @@ function reroutePositionedEdges(
         }),
         obstacles,
     );
-    return routed.map(edge => affected && !affected.has(edge.id) || fixedEdgeIds?.has(edge.id) && !staleSaved.has(edge.id) ? edge : labelled.has(edge.id)
+    return routed.map(edge => edge.data?.manualLabel || affected && !affected.has(edge.id) || fixedEdgeIds?.has(edge.id) && !staleSaved.has(edge.id) ? edge : labelled.has(edge.id)
         ? { ...edge, data: { ...edge.data, labelPoint: labelled.get(edge.id) } }
         : edge);
 }
@@ -1357,18 +1373,16 @@ function DiagramCanvasInner() {
             });
         return entries.length > 0 ? new Map<string, PortSide>(entries) : undefined;
     }, [declaredPortWalls]);
-    // Per-edge label overrides authored on the view's layout edges
-    // (`DiagramEdgeLayout.labelVisible`). With `showConnectionText` on, these let
-    // a dense IBD name only the few flows that carry the story.
-    const declaredEdges = currentLayout?.edges;
-    const edgeLabelVisibility = useMemo(() => {
-        const entries = Object.entries(declaredEdges ?? {})
-            .flatMap(([edgeId, layout]) => {
-                const visible = (layout as { labelVisible?: boolean } | undefined)?.labelVisible;
-                return typeof visible === 'boolean' ? [[edgeId, visible] as const] : [];
-            });
-        return entries.length > 0 ? Object.fromEntries(entries) : undefined;
-    }, [declaredEdges]);
+    // A dragged label is the person's: it is marked so routing leaves it where they put it.
+    const moveEdgeLabel = useCallback((edgeId: string, point: { x: number; y: number }) => {
+        setEdges(previous => previous.map(edge => edge.id === edgeId
+            ? { ...edge, data: { ...edge.data, labelPoint: point, manualLabel: true } } : edge));
+        setLayoutEditVersion(version => version + 1);
+    }, [setEdges]);
+    // Connector and port label styles, and whether each connector's label shows, read
+    // straight from the view's layout, so changing one never rebuilds the diagram.
+    const labelStyles = useMemo(() => ({ ...labelStylesOf(currentLayout), moveEdgeLabel: readOnly ? undefined : moveEdgeLabel }),
+        [currentLayout, readOnly, moveEdgeLabel]);
     // A view names the enum and the attribute that carries its literal. Colours
     const persistAnnotationText = useCallback((annotationId: string, text: string) => {
         if (!selectedDiagramId) return;
@@ -2482,6 +2496,7 @@ function DiagramCanvasInner() {
                     ...(pos.fontWeight !== undefined ? { fontWeight: pos.fontWeight || undefined } : {}),
                     ...(pos.textAlign !== undefined ? { textAlign: pos.textAlign } : {}),
                     ...(pos.verticalAlign !== undefined ? { verticalAlign: pos.verticalAlign } : {}),
+                    ...(pos.textOrientation !== undefined ? { textOrientation: pos.textOrientation } : {}),
                     ...(pos.ports ? {
                         // Authored port positions are honoured (a hand-placed board is
                         // the point of a manual layout). A nested PIN is derived from
@@ -3174,6 +3189,8 @@ function DiagramCanvasInner() {
                             ...(savedRouting?.targetOffset ? {targetOffset:savedRouting.targetOffset} : {}),
                             ...(savedRouting?.labelPoint ? { labelPoint: savedRouting.labelPoint } : { labelPoint: undefined }),
                         } : {}),
+                        // A label a person placed comes back where they put it, whether or not the route was saved.
+                        ...(savedEdge?.manualLabel && savedEdge.labelPoint ? { labelPoint: savedEdge.labelPoint, manualLabel: true } : {}),
                         // The landing comes back with the route. Without it the
                         // points alone are restored, and the first time the box
                         // moves the connector goes back to the template's
@@ -3328,7 +3345,6 @@ function DiagramCanvasInner() {
                     connectionDisplay: interconnectionConnectionDisplay,
                     showPortText: showIbdPortText,
                     showConnectionText: showIbdConnectionText,
-                    labelVisibility: edgeLabelVisibility,
                     forcedPortSize: activeRenderer.forcedPortSize,
                     portWalls,
                     // What the view saved is what `apply` draws, so the template need not arrange or route it again.
@@ -3423,7 +3439,7 @@ function DiagramCanvasInner() {
         viewKind, isGeneralTemplate, generalMode, diagramProfile, swimlanesOn, relayoutNonce,
         selectedDiagram?.relationshipTypes, selectedDiagram?.diagramType, selectedDiagram?.name, useCaseDisplayLevel, useCaseEdgeStyle, hiddenUseCaseActorIds,
         layoutProviderId,
-        expandedNodes, collapsedInterconnectionNodes, focusedInterconnectionId, interconnectionPortDisplay, interconnectionConnectionDisplay, showIbdPortText, showIbdConnectionText, showActionFlowItems, edgeLabelVisibility, activeRenderer, portWalls, activeLegend, expandedActionNodes, focusedActionId, visibleActionFlowKinds, actionFlowDirection, actionFlowLaneGrouping, actionFlowLaneStyle, actionFlowDisplayLevel, actionFlowNesting, nodeDirections,
+        expandedNodes, collapsedInterconnectionNodes, focusedInterconnectionId, interconnectionPortDisplay, interconnectionConnectionDisplay, showIbdPortText, showIbdConnectionText, showActionFlowItems, activeRenderer, portWalls, activeLegend, expandedActionNodes, focusedActionId, visibleActionFlowKinds, actionFlowDirection, actionFlowLaneGrouping, actionFlowLaneStyle, actionFlowDisplayLevel, actionFlowNesting, nodeDirections,
         collapsedStateNodes, focusedStateId, toggleStateCollapse, drillIntoState, drillIntoAction,
         toggleExpand, toggleInterconnectionCollapse, toggleActionExpand, toggleDirection, selectedDiagramId,
         drillIntoInterconnection,
@@ -4465,27 +4481,62 @@ function DiagramCanvasInner() {
     }, [applyArrange, selectionBoxes]);
 
     /** Block styling rides in the layout companion beside position. */
-    const styleSelection = useCallback((patch: {
-        color?: string; opacity?: number; borderColor?: string; textColor?: string;
-        fontSize?: number; fontWeight?: number; textAlign?: 'left' | 'center' | 'right';
-        verticalAlign?: 'top' | 'middle' | 'bottom';
-    }) => {
-        if (!selectedDiagramId || selectedNodes.length === 0) return;
+    const styleSelection = useCallback((requested: SelectionStylePatch) => {
+        if (!selectedDiagramId) return;
+        // Every override set back to "none", which each target below already reads as its default.
+        const patch: SelectionStylePatch = requested.resetStyle
+            ? { color: '', borderColor: '', textColor: '', fontSize: 0, fontWeight: 0, textOrientation: 'auto',
+                textAlign: undefined, verticalAlign: undefined, opacity: undefined, labelVisible: undefined, resetLabelPosition: true }
+            : requested;
+        const reset = requested.resetStyle === true;
+        // An empty value clears the override rather than storing "", and `auto` clears the orientation.
+        const text = {
+            ...(patch.textColor !== undefined ? { textColor: patch.textColor || undefined } : {}),
+            ...(patch.fontSize !== undefined ? { fontSize: patch.fontSize || undefined } : {}),
+            ...(patch.fontWeight !== undefined ? { fontWeight: patch.fontWeight || undefined } : {}),
+            ...(patch.textOrientation !== undefined
+                ? { textOrientation: patch.textOrientation === 'auto' ? undefined : patch.textOrientation } : {}),
+        };
+        const layouts = useModelStore.getState().diagramLayouts[selectedDiagramId] ?? { nodes: {}, edges: {} };
+        if (selectedNodes.length === 0) {
+            // A connector's label and a port's name take text style only; it is
+            // kept on the layout entry, which the save carries through untouched.
+            if (selectedConnectorIds.length > 0) {
+                const visibility = patch.labelVisible !== undefined || reset ? { labelVisible: patch.labelVisible } : {};
+                mergeDiagramLayouts({ [selectedDiagramId]: { ...layouts, edges: { ...layouts.edges,
+                    ...Object.fromEntries(selectedConnectorIds.map(id => [id, { ...layouts.edges?.[id], ...text, ...visibility }])) } } });
+                if (patch.resetLabelPosition) {
+                    const ids = new Set(selectedConnectorIds);
+                    setEdges(previous => previous.map(edge => ids.has(edge.id)
+                        ? { ...edge, data: { ...edge.data, labelPoint: undefined, manualLabel: undefined } } : edge));
+                }
+                setLayoutEditVersion(version => version + 1);
+                return;
+            }
+            const portId = canvasPortSelection;
+            const owner = portId ? getNodes().find(node => ((node.data as { ports?: PortInfo[] }).ports ?? []).some(port => port.id === portId)) : undefined;
+            const port = owner && ((owner.data as { ports?: PortInfo[] }).ports ?? []).find(candidate => candidate.id === portId);
+            if (!owner || !port || !portId) return;
+            // The entry has to hold a position for the layout to write it, so a
+            // port and box placed automatically are given where they are drawn.
+            const ownerLayout = layouts.nodes[owner.id] ?? { x: owner.position.x, y: owner.position.y, parent: owner.parentId ?? null };
+            const portLayout = ownerLayout.ports?.[portId] ?? { x: port.x, y: port.y, side: port.side };
+            mergeDiagramLayouts({ [selectedDiagramId]: { ...layouts, nodes: { ...layouts.nodes,
+                [owner.id]: { ...ownerLayout, ports: { ...ownerLayout.ports, [portId]: { ...portLayout, ...text } } } } } });
+            setLayoutEditVersion(version => version + 1);
+            return;
+        }
         markManualLayout();
-        const layouts = useModelStore.getState().diagramLayouts[selectedDiagramId];
         for (const node of selectedNodes) {
-            const existing = layouts?.nodes[node.id] ?? { x: node.position.x, y: node.position.y };
+            const existing = layouts.nodes[node.id] ?? { x: node.position.x, y: node.position.y };
             setNodeLayout(selectedDiagramId, node.id, {
                 ...existing,
-                // An empty colour clears the override rather than storing "".
                 ...(patch.color !== undefined ? { color: patch.color || undefined } : {}),
-                ...(patch.opacity !== undefined ? { opacity: patch.opacity } : {}),
+                ...(patch.opacity !== undefined || reset ? { opacity: patch.opacity } : {}),
                 ...(patch.borderColor !== undefined ? { borderColor: patch.borderColor || undefined } : {}),
-                ...(patch.textColor !== undefined ? { textColor: patch.textColor || undefined } : {}),
-                ...(patch.fontSize !== undefined ? { fontSize: patch.fontSize || undefined } : {}),
-                ...(patch.fontWeight !== undefined ? { fontWeight: patch.fontWeight || undefined } : {}),
-                ...(patch.textAlign !== undefined ? { textAlign: patch.textAlign } : {}),
-                ...(patch.verticalAlign !== undefined ? { verticalAlign: patch.verticalAlign } : {}),
+                ...text,
+                ...(patch.textAlign !== undefined || reset ? { textAlign: patch.textAlign } : {}),
+                ...(patch.verticalAlign !== undefined || reset ? { verticalAlign: patch.verticalAlign } : {}),
             });
         }
         const ids = new Set(selectedNodes.map(node => node.id));
@@ -4495,18 +4546,16 @@ function DiagramCanvasInner() {
                 data: {
                     ...node.data,
                     ...(patch.color !== undefined ? { bgColor: patch.color || undefined } : {}),
-                    ...(patch.opacity !== undefined ? { fillOpacity: patch.opacity } : {}),
+                    ...(patch.opacity !== undefined || reset ? { fillOpacity: patch.opacity } : {}),
                     ...(patch.borderColor !== undefined ? { borderColor: patch.borderColor || undefined } : {}),
-                    ...(patch.textColor !== undefined ? { textColor: patch.textColor || undefined } : {}),
-                    ...(patch.fontSize !== undefined ? { fontSize: patch.fontSize || undefined } : {}),
-                    ...(patch.fontWeight !== undefined ? { fontWeight: patch.fontWeight || undefined } : {}),
-                    ...(patch.textAlign !== undefined ? { textAlign: patch.textAlign } : {}),
-                    ...(patch.verticalAlign !== undefined ? { verticalAlign: patch.verticalAlign } : {}),
+                    ...text,
+                    ...(patch.textAlign !== undefined || reset ? { textAlign: patch.textAlign } : {}),
+                    ...(patch.verticalAlign !== undefined || reset ? { verticalAlign: patch.verticalAlign } : {}),
                 },
             }
             : node));
         setLayoutEditVersion(version => version + 1);
-    }, [selectedDiagramId, selectedNodes, markManualLayout, setNodeLayout, setNodes]);
+    }, [selectedDiagramId, selectedNodes, selectedConnectorIds, canvasPortSelection, getNodes, markManualLayout, setNodeLayout, setNodes, setEdges, mergeDiagramLayouts]);
 
     /** Shown on the slider: the shared value, or full when the selection differs. */
     const selectionOpacity = useMemo(() => {
@@ -4523,9 +4572,13 @@ function DiagramCanvasInner() {
     const setSelectionStyle = useModelStore(s => s.setSelectionStyle);
     useEffect(() => {
         setSelectionStyle(selectedNodes.length > 0
-            ? { count: selectedNodes.length, opacity: selectionOpacity, apply: styleSelection }
+            ? { target: 'boxes', count: selectedNodes.length, opacity: selectionOpacity, apply: styleSelection }
+            : selectedConnectorIds.length > 0
+            ? { target: 'connectors', count: selectedConnectorIds.length, opacity: 1, apply: styleSelection }
+            : canvasPortSelection
+            ? { target: 'port', count: 1, opacity: 1, apply: styleSelection }
             : null);
-    }, [selectedNodes.length, selectionOpacity, styleSelection, setSelectionStyle]);
+    }, [selectedNodes.length, selectedConnectorIds.length, canvasPortSelection, selectionOpacity, styleSelection, setSelectionStyle]);
     useEffect(() => () => setSelectionStyle(null), [setSelectionStyle]);
 
     const handleRemoveFromDiagram = useCallback((nodeId: string) => {
@@ -5200,6 +5253,7 @@ function DiagramCanvasInner() {
                     );
                 })()}
                 <ActionFlowVariantContext.Provider value={variantState}>
+                <DiagramLabelStyleContext.Provider value={labelStyles}>
                 <ReactFlow
                     className="memo-diagram-canvas"
                     onMoveStart={(event) => { setCanvasMoving(event, true); }}
@@ -5381,6 +5435,7 @@ function DiagramCanvasInner() {
                             title={selectedDiagram?.name ?? selectedDiagramId ?? ''} />
                     )}
                 </ReactFlow>
+                </DiagramLabelStyleContext.Provider>
                 </ActionFlowVariantContext.Provider>
 
                 {viewKind === 'actionflow' && flowVariants.length > 0 && (

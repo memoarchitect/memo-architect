@@ -2,6 +2,15 @@
 
 Versioned under [semantic versioning](https://semver.org/). Before 1.0 a breaking change to the ontology raises the minor number; any other release raises the patch. Every release is tagged in the repository. The notes for all three packages are also on [memoarchitect.com/releases.html](https://memoarchitect.com/releases.html).
 
+## Unreleased
+
+### Added
+
+- Style a port's name and a connector's label (colour, size, weight), and turn any label, a part's title included, to read bottom to top.
+- Show, hide and drag a connector's label; a moved label stays put when the connector is rerouted.
+- **Reset to default** in the Style section clears every style choice on the selection.
+- Text colour, size and direction now also apply to boxes on general and decomposition views.
+
 ## 0.22.0
 
 ### Breaking

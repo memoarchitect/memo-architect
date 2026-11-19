@@ -107,6 +107,15 @@ A logical IBD uses the same symbols for implementation-neutral parts:
   **Auto-route** reroutes them.
 - **Part spacing** and **Port spacing** open up a crowded automatic layout.
   Every automatic change is one Undo step.
+- Drag a connector's label to move it; it stays where you put it when the
+  connector is rerouted.
+- **Style** in the properties panel styles whatever is selected. For a part it
+  sets the fill, border, text and alignment. For a port's name or a
+  connector's label it sets the text colour, size and weight. Everywhere it
+  also sets **Direction**: **Across**, or **Up** to read bottom to top. A
+  connector's label also has **Auto**, which turns it along a vertical run,
+  and **Label** shows, hides or resets it. **Reset to default** clears every
+  style choice on the selection.
 - The layout is saved inside the view's own source, so it travels with the
   model.
 

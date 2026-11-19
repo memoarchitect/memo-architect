@@ -21,6 +21,7 @@ import { isPersonKind, PersonGlyph } from './PersonGlyph';
 import { setConnectorHover, useConnectorHoverActive, useEndpointHighlighted } from './connector-hover';
 import { BaseHandle } from '../components/base-handle';
 import { useModelStore } from '../store/model-store';
+import { labelTextOverrides, usePortLabelStyle, VERTICAL_TEXT } from './label-style';
 import type { PortInfo, PortSide } from './templates/interconnection-view';
 import {
     INTERCONNECTION_PORT_SIZE, INNER_HANDLE_SUFFIX, PORT_DIR_COLORS,
@@ -73,6 +74,7 @@ export interface InterconnectionNodeData extends Record<string, unknown> {
     fontWeight?: number;
     textAlign?: 'left' | 'center' | 'right';
     verticalAlign?: 'top' | 'middle' | 'bottom';
+    textOrientation?: 'horizontal' | 'vertical';
 }
 
 const SIDE_TO_POSITION: Record<PortSide, Position> = {
@@ -228,6 +230,8 @@ function BoundaryPort({ port, onMove, onBeginDrag, onCommit, onCancel, onResize,
     const zoom = useStore(state => state.transform[2]);
     const highlighted = useEndpointHighlighted(port.id);
     const selected = useModelStore(state => state.canvasPortSelection === port.id);
+    const chosenStyle = usePortLabelStyle(port.id);
+    const vertical = chosenStyle?.textOrientation === 'vertical';
     const suppressSelectRef = useRef(false);
     const cancelPortDrag = useRef<(() => void) | null>(null);
     useEffect(() => () => cancelPortDrag.current?.(), []);
@@ -289,7 +293,8 @@ function BoundaryPort({ port, onMove, onBeginDrag, onCommit, onCancel, onResize,
         overflow: 'hidden',
         display: 'flex',
         flexDirection: 'column',
-        width: horizontal ? (port.labelWidth ?? PORT_LABEL_MAX) : PORT_LABEL_STACKED_WIDTH,
+        width: vertical ? 'auto' : horizontal ? (port.labelWidth ?? PORT_LABEL_MAX) : PORT_LABEL_STACKED_WIDTH,
+        ...(vertical ? { maxHeight: PORT_LABEL_MAX } : {}),
         background: 'rgba(255,255,255,0.94)',
         padding: '1px 3px',
         borderRadius: 4,
@@ -300,6 +305,10 @@ function BoundaryPort({ port, onMove, onBeginDrag, onCommit, onCancel, onResize,
         // it OUTSIDE the box, and is what keeps a top-wall port from printing
         // its name over its owner's title bar.
         ...renderer.portLabelPlacement(port, { labelOffset }),
+        // Upright beside a side wall, the caption is centred on the port: sitting
+        // above the centreline, as a flat caption does, would run it up into the title.
+        ...(vertical && horizontal ? { bottom: 'auto', top: '50%', marginBottom: 0, transform: 'translateY(-50%)' } : {}),
+        ...labelTextOverrides(chosenStyle),
     };
     // The caption's total height is a layout constant (PORT_CAPTION_HEIGHT
     // drives BOTTOM_GUTTER, PORT_CAPTION_CLEARANCE and the vertical port
@@ -312,6 +321,7 @@ function BoundaryPort({ port, onMove, onBeginDrag, onCommit, onCancel, onResize,
         display: '-webkit-box',
         WebkitBoxOrient: 'vertical',
         WebkitLineClamp: port.connectorType ? 1 : 2,
+        ...(vertical ? VERTICAL_TEXT : {}),
     };
     const connectorStyle: React.CSSProperties = {
         fontSize: port.nested ? '8.5px' : '9px',
@@ -321,6 +331,7 @@ function BoundaryPort({ port, onMove, onBeginDrag, onCommit, onCancel, onResize,
         whiteSpace: 'nowrap',
         overflow: 'hidden',
         textOverflow: 'ellipsis',
+        ...(vertical ? VERTICAL_TEXT : {}),
     };
 
     return (
@@ -448,11 +459,11 @@ function TypedLabel({ name, kind, nameColor, typeColor, frame = false, singleLin
     name: string; kind: string; nameColor: string; typeColor: string; frame?: boolean;
     /** One name line, so the header keeps the height the layout reserved for it. */
     singleLine?: boolean;
-    style?: Pick<InterconnectionNodeData, 'textColor' | 'fontSize' | 'fontWeight' | 'textAlign'>;
+    style?: Pick<InterconnectionNodeData, 'textColor' | 'fontSize' | 'fontWeight' | 'textAlign' | 'textOrientation'>;
 }) {
     const textAlign = style?.textAlign ?? 'left';
     return (
-        <span title={`${name} : ${typeLabel(useModelStore.getState().model, kind)}`} style={{ display: 'flex', flexDirection: frame ? 'row' : 'column', alignItems: textAlign === 'right' ? 'flex-end' : textAlign === 'center' ? 'center' : frame ? 'baseline' : 'flex-start', gap: frame ? 6 : 1, minWidth: 0, overflow: 'hidden', flex: 1, textAlign }}>
+        <span title={`${name} : ${typeLabel(useModelStore.getState().model, kind)}`} style={{ display: 'flex', flexDirection: frame ? 'row' : 'column', alignItems: textAlign === 'right' ? 'flex-end' : textAlign === 'center' ? 'center' : frame ? 'baseline' : 'flex-start', gap: frame ? 6 : 1, minWidth: 0, overflow: 'hidden', flex: 1, textAlign, ...(style?.textOrientation === 'vertical' ? { ...VERTICAL_TEXT, maxHeight: '100%', flex: '0 0 auto' } : {}) }}>
             <span style={{
                 // In the frame bar the name and type share one row: the name takes only its own width, and when the
                 // row is short the type gives way first, so neither is squeezed to an ellipsis while there is room.
@@ -579,7 +590,7 @@ function InterconnectionNodeInner({ id, data, selected, height }: NodeProps) {
     const {
         label, kind, color, isContainer, isFrame, ports, implicitIn, implicitOut,
         onPortMove, onPortCommit, onPortCancel, onPortResize, onPortSelect, showPortText, hasChildren, isCollapsed, onToggleCollapse, onDrillIn, onNavigateToView,
-        bgColor, fillOpacity, borderColor, textColor, fontSize, fontWeight, textAlign, verticalAlign,
+        bgColor, fillOpacity, borderColor, textColor, fontSize, fontWeight, textAlign, verticalAlign, textOrientation,
     } = d;
     const [hovered, setHovered] = useState(false);
     const showsParts = isContainer && !!hasChildren && !isCollapsed;
@@ -727,7 +738,7 @@ function InterconnectionNodeInner({ id, data, selected, height }: NodeProps) {
                     borderRadius: '9px 9px 0 0',
                 }}>
                     <span style={{ padding: '2px 6px', borderRadius: 4, background: renderer.frameBadgeBackground(color), color: '#FFFFFF', fontSize: 9, fontWeight: 800, letterSpacing: '0.08em' }}>IBD</span>
-                    <TypedLabel name={label} kind={kind} nameColor="#0F172A" typeColor="#64748B" frame style={{ textColor, fontSize, fontWeight, textAlign }} />
+                    <TypedLabel name={label} kind={kind} nameColor="#0F172A" typeColor="#64748B" frame style={{ textColor, fontSize, fontWeight, textAlign, textOrientation }} />
                     {/* The frame is already the diagram's root, so it offers no
                         drill-in — descending into it would change nothing. */}
                     {hasChildren && onToggleCollapse && (
@@ -751,7 +762,7 @@ function InterconnectionNodeInner({ id, data, selected, height }: NodeProps) {
                         name={label} kind={kind} singleLine={showsParts}
                         nameColor="#0F172A"
                         typeColor={isContainer ? color : '#64748B'}
-                        style={{ textColor, fontSize, fontWeight, textAlign }}
+                        style={{ textColor, fontSize, fontWeight, textAlign, textOrientation }}
                     />
                     {/* The drill button is the template's decision: it sets onDrillIn only for a part that opens a level. Both controls sit on a part that owns parts, folded or
                         not: a collapsed part is still worth descending into. */}

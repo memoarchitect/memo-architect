@@ -12,8 +12,9 @@ import { FONT } from '../styles/tokens';
 import { isPersonKind, PersonGlyph } from './PersonGlyph';
 import { typeLabel } from '../lib/ontology-labels';
 import { useModelStore } from '../store/model-store';
+import { boxTitleOverrides, type BoxTextStyle } from './label-style';
 
-export interface DecompositionNodeData {
+export interface DecompositionNodeData extends BoxTextStyle {
     element: MemoElement;
     layerColor: string;
     isExpanded: boolean;
@@ -132,6 +133,7 @@ function DecompositionNodeInner({ data }: NodeProps) {
                     whiteSpace: 'nowrap',
                     overflow: 'hidden',
                     textOverflow: 'ellipsis',
+                    ...boxTitleOverrides(d),
                 }}>
                     {/* `label` is the name resolved the way the explorer resolves
                         it: a definition's `name` is its identifier
