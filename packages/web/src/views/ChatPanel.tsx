@@ -57,9 +57,13 @@ export function ChatPanel() {
     const bottomRef = useRef<HTMLDivElement>(null);
     const inputRef = useRef<HTMLTextAreaElement>(null);
 
+    // The answer as the model writes it, shown until the turn's result replaces it.
+    const [streamId, setStreamId] = useState<string | null>(null);
+    const streamed = useModelStore(s => (streamId ? s.llmStreams[streamId] : undefined));
+
     useEffect(() => {
         bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }, [bubbles, loading]);
+    }, [bubbles, loading, streamed]);
 
     /** Await a server reply keyed by request id, with a timeout so the UI can't wedge. */
     const request = useCallback(<T,>(requestId: string, send: () => void): Promise<T> => {
@@ -79,6 +83,7 @@ export function ChatPanel() {
         setApplyNote(null);
 
         const requestId = `chat-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+        setStreamId(requestId);
 
         try {
             const result = await request<{
@@ -109,6 +114,7 @@ export function ChatPanel() {
             setBubbles(prev => [...prev, { role: 'assistant', content: e?.message ?? 'Unknown error', error: true }]);
         } finally {
             setLoading(false);
+            setStreamId(null);
         }
     }, [loading, history, allowEdits, request]);
 
@@ -308,12 +314,21 @@ export function ChatPanel() {
                             background: '#2DD4A815', display: 'flex', alignItems: 'center',
                             justifyContent: 'center', fontSize: '10px', color: '#2DD4A8', fontWeight: 700,
                         }}>✦</div>
-                        <div style={{
-                            padding: '10px 14px', borderRadius: '10px', background: '#fff',
-                            border: '1px solid #E5E5E0', display: 'flex', gap: '4px', alignItems: 'center',
-                        }}>
-                            <LoadingDots />
-                        </div>
+                        {streamed ? (
+                            <div style={{
+                                maxWidth: '85%', padding: '10px 12px', borderRadius: '10px', background: '#fff',
+                                color: '#1B3A4B', fontSize: '13px', lineHeight: '1.6', border: '1px solid #E5E5E0', whiteSpace: 'pre-wrap',
+                            }}>
+                                <AnswerText text={streamed} />
+                            </div>
+                        ) : (
+                            <div style={{
+                                padding: '10px 14px', borderRadius: '10px', background: '#fff',
+                                border: '1px solid #E5E5E0', display: 'flex', gap: '4px', alignItems: 'center',
+                            }}>
+                                <LoadingDots />
+                            </div>
+                        )}
                     </div>
                 )}
 

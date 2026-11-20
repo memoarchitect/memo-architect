@@ -659,6 +659,9 @@ export interface ModelState {
     registerLlmRequest: (requestId: string, resolve: (v: any) => void, reject: (e: Error) => void) => void;
     resolveLlmRequest: (requestId: string, value: any) => void;
     rejectLlmRequest: (requestId: string, error: string) => void;
+    /** The assistant's answer so far, per chat request, while the model is writing it. */
+    llmStreams: Record<string, string>;
+    appendLlmStream: (requestId: string, text: string) => void;
     /** Proposals AI coding tools made over MCP, waiting for the engineer (memo.ai-proposals.json). */
     aiProposals: QueuedProposal[];
     setAiProposals: (proposals: QueuedProposal[]) => void;
@@ -941,6 +944,8 @@ export const useModelStore = create<ModelState>((set, get) => ({
     llmPending: new Map(),
     toolchainSettings: null,
     setToolchainSettings: (settings) => set({ toolchainSettings: settings }),
+    llmStreams: {},
+    appendLlmStream: (requestId, text) => set(state => ({ llmStreams: { ...state.llmStreams, [requestId]: (state.llmStreams[requestId] ?? '') + text } })),
     aiProposals: [],
     setAiProposals: (proposals) => set({ aiProposals: proposals }),
     aiClients: [],

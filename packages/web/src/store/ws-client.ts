@@ -517,6 +517,9 @@ function handleMessage(msg: ExtendedServerMessage): void {
         case 'ai:proposals':
             store.setAiProposals(msg.payload.proposals);
             break;
+        case 'llm:chat:delta':
+            store.appendLlmStream(msg.payload.requestId, msg.payload.text);
+            break;
         case 'ai:clients':
             store.setAiClients(msg.payload.clients, msg.payload.error, msg.payload.projectRoot);
             break;
