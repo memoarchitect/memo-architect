@@ -1,6 +1,6 @@
 import { actionMembers, functionMembers } from '../lib/operational-presentation';
 import { lazy, Suspense, useEffect, useMemo, useState, useRef, type CSSProperties, type FormEvent } from 'react';
-import { canonicalFunctionId, functionalCatalog, functionalFlowFunctions, functionalFlowsInScope, functionalFlowSteps, functionalScopes, functionalStructure, realizingFunctions, operationalWorkLevel, indexKinds, kindConformsTo, type MemoModelDTO, type FunctionalStepInput } from '@memoarchitect/tools/browser';
+import { canonicalFunctionId, functionTrees, functionalCatalog, functionalFlowFunctions, functionalFlowsInScope, functionalFlowSteps, functionalScopes, functionalStructure, realizingFunctions, operationalWorkLevel, indexKinds, kindConformsTo, type MemoModelDTO, type FunctionalStepInput } from '@memoarchitect/tools/browser';
 import type { GuideLayer } from '../lib/pathways';
 import { kindsOfLayer, diagramTypeFor } from '../lib/pathways';
 import { useModelStore } from '../store/model-store';
@@ -9,6 +9,9 @@ import { DiagramActionSubject, DiagramDisplayScope } from '../diagram/display-sc
 import { PaletteKindsContext } from './DiagramPalette';
 import { COLOR } from '../styles/tokens';
 import './pathway-workbench.css';
+import { FunctionalAllocation, type FunctionRow } from './FunctionalAllocation';
+import { FunctionalOverview, FunctionTreeChooser } from './FunctionalPages';
+import { allocationIndex, allocationSummary, allocationTargets, readableId } from '../lib/functional-allocation';
 const DiagramEditor = lazy(() => import('./DiagramEditor').then(module => ({ default: module.DiagramEditor })));
 const button: CSSProperties = { padding: '8px 12px', background: 'white', border: `1px solid ${COLOR.border}`, borderRadius: 6, color: COLOR.primary, font: 'inherit', cursor: 'pointer' };
 const input: CSSProperties = { ...button, cursor: 'text', width: '100%', boxSizing: 'border-box' };
@@ -32,6 +35,7 @@ export function FunctionalWorkbench({ model, row, workspace, canWrite, artifactI
     const previousScope = useRef(workspace);
     const openedWith = useRef(artifactId);
     const [taskId, setTaskId] = useState(startsWithFlow ? flowTask?.id : treeTask?.id ?? tasks[0]?.id);
+    const [page, setPage] = useState<'overview' | 'task' | 'allocation'>('task');
     const task = tasks.find(task => task.id === taskId) ?? treeTask;
     const contextRef = useRef('');
     const [presentation, setPresentation] = useState<'details' | 'visual'>('details');
@@ -59,13 +63,14 @@ export function FunctionalWorkbench({ model, row, workspace, canWrite, artifactI
     ))];
     const componentFunctions = useMemo(() => functionalCatalog(model, workspace, realizationTask?.implementationKind ?? 'ComponentFunction'), [model, workspace, realizationTask?.implementationKind]);
     const registry = useMemo(() => indexKinds(model.registries?.kinds ?? []), [model.registries]);
-    const components = Object.values(model.elements).filter(element => !element.isDefinition && kindConformsTo(element.kind, realizationTask?.allocationKind ?? 'LogicalComponent', registry)
+    const components = Object.values(model.elements).filter(element => !element.isDefinition && (realizationTask?.allocationKinds ?? []).some(kind => kindConformsTo(element.kind, kind, registry))
         && (!workspace || model.workspaceMembership?.membership[element.id]?.includes(workspace)));
-    const gaps = (id: string) => { const implementations = realizingFunctions(model, id, realizationTask?.implementationKind); return !implementations.length || implementations.some(item => !item.components.length); };
+    const allocations = useMemo(() => allocationIndex(model), [model]);
     const flowMode = task?.kind === 'sequence';
     const items = flowMode ? flows : functions;
-    const selected = items.find(item => item.id === selectedId);
-    const visible = items.filter(element => element.name.toLowerCase().includes(filter.toLowerCase()) && (!review || flowMode || gaps(element.id)));
+    // With nothing chosen, the tree opens on its top function rather than an empty panel.
+    const selected = items.find(item => item.id === selectedId) ?? (!flowMode && selectedId === undefined ? items.find(item => item.id === structure?.root?.id) : undefined);
+    const visible = items.filter(element => (element.name.toLowerCase().includes(filter.toLowerCase()) || readableId(element).toLowerCase().includes(filter.toLowerCase())) && (!review || flowMode || !(allocations.get(element.id) ?? []).length));
     useEffect(() => {
         if (previousScope.current === workspace) return;
         previousScope.current = workspace;
@@ -118,6 +123,7 @@ export function FunctionalWorkbench({ model, row, workspace, canWrite, artifactI
     useEffect(() => { if (presentation !== 'visual' || !visualSubject || busy || openingVisual.current === visualKey) return; openingVisual.current = visualKey; openVisualDiagram(); }, [presentation, visualKey, busy, canWrite]);
     const openFunction = (id: string) => {
         if (!treeTask) return;
+        setPage('task');
         if (!functions.some(fn => fn.id === id)) { onFunctional?.(id); return; }
         changeTask(treeTask.id);
         setSelectedId(id);
@@ -125,6 +131,7 @@ export function FunctionalWorkbench({ model, row, workspace, canWrite, artifactI
     };
     const openFlow = (id: string) => {
         if (!flowTask) return;
+        setPage('task');
         if (!flows.some(flow => flow.id === id)) { onFunctional?.(id); return; }
         changeTask(flowTask.id);
         setSelectedId(id);
@@ -172,6 +179,12 @@ export function FunctionalWorkbench({ model, row, workspace, canWrite, artifactI
     const operationalButton = (id: string) => onOperational && operationalWorkLevel(model, id)
         ? <button type="button" className="pathway-resource" onClick={() => onOperational(id)}>{model.elements[id].name}</button>
         : <span>{model.elements[id].name}{!operationalWorkLevel(model, id) && <small style={{ color: COLOR.muted }}> · not placed in a clinical or operational workflow</small>}</span>;
+    const allocationChip = (id: string) => {
+        const targets = allocations.get(id) ?? [];
+        if (!targets.length) return <span className="fx-chip fx-chip--open">Not allocated</span>;
+        const first = model.elements[targets[0]];
+        return <span className="fx-chip fx-chip--ok" title={targets.map(target => model.elements[target]?.name ?? target).join(', ')}>{readableId(first) || first?.name}{targets.length > 1 ? ` +${targets.length - 1}` : ''}</span>;
+    };
     const treeRow = (id: string, ancestors: Set<string>): React.ReactNode => {
         if (ancestors.has(id)) return null;
         const element = model.elements[id]; if (!element) return null;
@@ -180,17 +193,27 @@ export function FunctionalWorkbench({ model, row, workspace, canWrite, artifactI
         const descendants = (child: string, seen = new Set<string>()): boolean => { if (seen.has(child)) return false; seen.add(child); return visible.some(fn => fn.id === child) || functions.some(fn => parents.get(fn.id) === child && descendants(fn.id, seen)); };
         if (!matches && !children.some(child => descendants(child.id))) return null;
         const open = !!filter || review || id === root?.id || expanded.has(id);
-        return <li key={id}><div style={{ display: 'flex', gap: 4 }}>{!!children.length && id !== root?.id && <button type="button" aria-label={`${open ? 'Collapse' : 'Expand'} ${element.name}`} aria-expanded={open} style={button} onClick={() => setExpanded(previous => { const next = new Set(previous); if (next.has(id)) next.delete(id); else next.add(id); return next; })}>{open ? '⌄' : '›'}</button>}<button style={{ ...button, width: '100%', textAlign: 'left', marginBottom: 5, background: selectedId === id ? '#e8f8f3' : 'white' }} aria-pressed={selectedId === id} onClick={() => { setSelectedId(id); setAdding(false); }}>{element.name}{review && gaps(id) ? ' · Needs review' : ''}</button></div>
+        return <li key={id}><div style={{ display: 'flex', gap: 4 }}>{!!children.length && id !== root?.id && <button type="button" aria-label={`${open ? 'Collapse' : 'Expand'} ${element.name}`} aria-expanded={open} className="fx-expand" onClick={() => setExpanded(previous => { const next = new Set(previous); if (next.has(id)) next.delete(id); else next.add(id); return next; })}>{open ? '⌄' : '›'}</button>}<button className="fx-row fx-tree-row" aria-label={element.name} aria-pressed={selectedId === id} onClick={() => { setSelectedId(id); setAdding(false); }}><span className="fx-name">{element.name}</span><span className="fx-id">{readableId(element)}</span>{!!children.length && <span className="fx-count">{children.length}</span>}{allocationChip(id)}</button></div>
             {open && !!children.length && <ul style={{ listStyle: 'none', paddingLeft: 18 }}>{children.map(child => treeRow(child.id, new Set([...ancestors, id])))}</ul>}</li>;
     };
     const addLabel = flowMode ? '+ Flow' : '+ Function';
     const canAdd = canWrite && !busy && !!workspace && !!root;
+    const flowStrip = flowMode && selected && !adding && flows.some(flow => flow.id === selected.id) ? <div className="fx-strip fx-strip--flow" aria-label="Steps in order">
+        <span className="fx-terminal" aria-hidden="true" /><span className="fx-muted fx-small">Start</span>
+        {functionalFlowSteps(model, selected.id).steps.map((item, index) => { const fn = item.functionId ? model.elements[item.functionId] : undefined;
+            return <span key={item.step.id} className="fx-strip-step"><span aria-hidden="true">→</span>
+                <button type="button" className="fx-box" aria-label={`Step ${index + 1}: ${fn?.name ?? item.step.name}`} disabled={!fn} onClick={() => fn && openFunction(fn.id)}>
+                    <span className="fx-id">Step {index + 1}{fn && readableId(fn) ? ` · ${readableId(fn)}` : ''}</span><strong>{fn?.name ?? item.step.name}</strong>{fn && allocationChip(fn.id)}</button></span>; })}
+        <span aria-hidden="true">→</span><span className="fx-terminal fx-terminal--end" aria-hidden="true" /><span className="fx-muted fx-small">End</span>
+    </div> : null;
     const detail = (<section aria-label="Current functional task" style={card}>
+                    {flowStrip}
                     {adding && root && workspace && !flowMode ? <FunctionForm key={selectedId ?? root.id} parentId={selected && functions.some(fn => fn.id === selected.id) ? selected.id : root.id} functions={functions} disabled={!canWrite || busy} onCancel={() => setAdding(false)} onSave={(name, parentFunctionId) => void save(() => writeFunctionalWork({ workspace, operation: 'system-function', parentFunctionId }, name), id => { setSelectedId(id); setAdding(false); })} />
                     : flowMode && (adding || selected && flows.some(flow => flow.id === selected.id)) ? <FlowForm key={adding ? 'new' : selected!.id + JSON.stringify(functionalFlowSteps(model, selected!.id))} model={model} flowId={adding ? undefined : selected!.id} functions={stepFunctions} systemsFor={systemsFor}
                         canOpenFunction={id => !!onFunctional || functions.some(fn => fn.id === id)} disabled={!canWrite || busy || !workspace || adding && !root || selected?.provenance?.declaration.writable === false} onCancel={() => { setAdding(false); setSelectedId(undefined); }} canOpenDiagram={!!flowTask?.viewpoint} onDiagram={presentation === 'visual' ? undefined : showVisual}
                         onFunction={openFunction} destination={(adding ? structure?.home : selected)?.file} onSave={(name, steps) => void save(() => writeFunctionalWork({ workspace: workspace!, operation: adding ? 'flow' : 'update-flow', ...(adding ? {} : { flowId: selected!.id }), steps }, name), id => { setSelectedId(id); setAdding(false); })} />
-                    : selected && !flowMode ? <FunctionDetail key={selected.id} model={model} id={selected.id} workspace={workspace ?? ''} components={components} componentFunctions={componentFunctions} disabled={!canWrite || busy || !workspace || !root} realizationKind={realizationTask?.implementationKind} reviewDescription={realizationTask?.review} onLogical={realizationTask?.implementationKind === 'ComponentFunction' ? onLogical : undefined} save={save} onAddChild={() => setAdding(true)} />
+                    : selected && !flowMode ? <FunctionDetail key={selected.id} model={model} id={selected.id} workspace={workspace ?? ''} components={components} componentFunctions={componentFunctions} disabled={!canWrite || busy || !workspace || !root} realizationKind={realizationTask?.implementationKind} reviewDescription={realizationTask?.review} onLogical={realizationTask?.implementationKind === 'ComponentFunction' ? onLogical : undefined} save={save} onAddChild={() => setAdding(true)}
+                        parentId={parents.get(selected.id)} childIds={functions.filter(fn => parents.get(fn.id) === selected.id).map(fn => fn.id)} targets={workspace ? allocationTargets(model, workspace, treeTask?.allocationKinds ?? [], functions).map(item => item.element) : []} allocated={allocations.get(selected.id) ?? []} onOpen={openFunction} />
                     : <><h2 style={{ fontSize: 20 }}>{flowMode ? 'How should the functions work together?' : 'What does this system need to do?'}</h2><p>{flowMode ? 'Choose a flow to review its steps, or create one from existing system functions.' : 'Choose a function to review its purpose, decomposition and implementation.'}</p></>}
                     {!adding && !!relatedFlows.length && <section className="pathway-related" aria-label="Flows using this function"><h3>Used in flows</h3>
                         <div className="pathway-resources">{relatedFlows.map(flow => <button key={flow.id} type="button" className="pathway-resource" onClick={() => openFlow(flow.id)}>{flow.name}</button>)}</div>
@@ -204,33 +227,62 @@ export function FunctionalWorkbench({ model, row, workspace, canWrite, artifactI
                                     ? <button type="button" className="pathway-button" onClick={() => openFlow(link.via!.flowId)}>{link.via!.flow}</button> : link.via!.flow}</>}</small></li>)}</ul></>}
                     </section>}
                 </section>);
+    const systemName = workspace ? model.elements[workspace]?.name ?? workspace : 'Whole model';
+    const summary = allocationSummary(model, functions);
+    const allocationKinds = treeTask?.allocationKinds ?? [];
+    const rows: FunctionRow[] = [];
+    const walk = (id: string, depth: number, seen: Set<string>) => {
+        if (seen.has(id) || !model.elements[id]) return; seen.add(id);
+        rows.push({ element: model.elements[id], depth });
+        for (const child of functions.filter(fn => parents.get(fn.id) === id)) walk(child.id, depth + 1, seen);
+    };
+    const walked = new Set<string>();
+    for (const top of functions.filter(fn => !functions.some(parent => parent.id === parents.get(fn.id)))) walk(top.id, 0, walked);
+    const openPage = (next: 'overview' | 'allocation') => { setPage(next); setAdding(false); setPresentation('details'); };
+    const showTask = (id: string) => { setPage('task'); changeTask(id); };
     return <section className="pathway-workspace" data-testid="functional-workbench" style={{ flex: 1, minHeight: 0, overflow: 'auto', padding: 20 }}>
-        <div style={{ maxWidth: presentation === 'visual' ? undefined : 1400, margin: '0 auto' }}>
-            <header className="pathway-header">
-                <div><h1>{task?.label ?? row.label}</h1><p>{workspace ? flowMode ? `Flows involving ${model.elements[workspace]?.name ?? workspace}` : model.elements[workspace]?.name : 'Whole model'}</p></div>
+        <div style={{ maxWidth: presentation === 'visual' && page === 'task' ? undefined : 1400, margin: '0 auto' }}>
+            <header className="pathway-header fx-header">
+                <div className="fx-header-icon" aria-hidden="true"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="3" width="6" height="5" rx="1" /><rect x="3" y="16" width="6" height="5" rx="1" /><rect x="15" y="16" width="6" height="5" rx="1" /><path d="M12 8v4M6 16v-2h12v2" /></svg></div>
+                <div className="fx-header-text"><h1>{row.label}{page === 'task' && task ? ` — ${task.label}` : page === 'allocation' ? ' — Allocation' : ''}</h1>
+                    <p>{workspace ? `What ${systemName} must do, in what order, and where each function is allocated.` : 'Choose a system to work on its functions.'}</p>
+                    {workspace && root && <div className="fx-chips">
+                        <span className="fx-chip fx-chip--ok">{summary.allocated} of {summary.total} functions allocated</span>
+                        <span className="fx-chip">{summary.withPurpose} of {summary.total} have a purpose</span>
+                        <span className="fx-chip">{flows.length} {flows.length === 1 ? 'flow' : 'flows'}</span>
+                    </div>}</div>
                 <div>
-                    <button type="button" className="pathway-button pathway-button--primary" disabled={!canAdd} onClick={() => setAdding(true)}>{addLabel}</button>
-                    {flowMode && workspace && !root && canWrite && treeTask && <button type="button" className="pathway-button" style={{ marginLeft: 8 }}
-                        onClick={() => changeTask(treeTask.id)}>Set up the function tree</button>}
+                    {page === 'task' && <button type="button" className="pathway-button pathway-button--primary" disabled={!canAdd} onClick={() => setAdding(true)}>{addLabel}</button>}
                 </div>
             </header>
             <div className="pathway-toolbar">
-                <nav aria-label="Functional tasks" className="pathway-segments">{tasks.filter(item => item.primary).map(item => <button key={item.id} type="button" aria-pressed={task?.id === item.id} onClick={() => changeTask(item.id)}>{item.label}</button>)}</nav>
-                <nav aria-label="Functional presentation" className="pathway-segments"><button type="button" aria-pressed={presentation === 'details'} onClick={() => setPresentation('details')}>{flowMode ? 'Table' : 'Tree'}</button><button type="button" aria-pressed={presentation === 'visual'} onClick={showVisual}>Visual</button></nav>
+                <nav aria-label="Functional tasks" className="pathway-segments fx-tabs">
+                    <button type="button" aria-pressed={page === 'overview'} onClick={() => openPage('overview')}>Overview</button>
+                    {tasks.filter(item => item.primary).map(item => <button key={item.id} type="button" aria-pressed={page === 'task' && task?.id === item.id} onClick={() => showTask(item.id)}>{item.label}</button>)}
+                    {!!allocationKinds.length && <button type="button" aria-pressed={page === 'allocation'} onClick={() => openPage('allocation')}>Allocation</button>}
+                </nav>
+                {page === 'task' && <nav aria-label="Functional presentation" className="pathway-segments"><button type="button" aria-pressed={presentation === 'details'} onClick={() => setPresentation('details')}>{flowMode ? 'Table' : 'Tree'}</button><button type="button" aria-pressed={presentation === 'visual'} onClick={showVisual}>Visual</button></nav>}
             </div>
             {notice && <p role="status">{notice}</p>}
-            {!workspace && flowMode && <p>Choose where to save the flow. Its steps can use functions from any system.</p>}
-            {!workspace && !flowMode && <section style={card} aria-label="Choose a system function tree">
+            {!workspace && (!flowMode || page !== 'task') && <section style={card} aria-label="Choose a system function tree">
                 <h2 style={{ marginTop: 0 }}>Choose a system function tree</h2>
+                <p className="fx-muted">Each system has its own function tree.</p>
                 <div className="pathway-resources pathway-resources--browse">{model.workspaceMembership?.workspaces.map(system =>
                     <button key={system.root} type="button" className="pathway-resource"
                         onClick={() => useModelStore.getState().setWorkspace(system.root)}>{system.name}</button>)}</div>
             </section>}
-            {workspace && !root && !flowMode && <div style={card}><h2>Set up the function tree</h2><p>The parent function groups what this system needs to do.</p>{!!structure?.candidates.length && <p>{structure.candidates.length === 1 ? 'The function listed below is' : `The ${structure.candidates.length} functions listed below are`} placed under it as references. Each stays declared where it is now.</p>}{structure?.home?.file && <p>Save in <code>{structure.home.file}</code></p>}<button className="pathway-button" disabled={!canWrite || busy} onClick={() => void save(() => writeFunctionalWork({ workspace, operation: 'root' }))}>Set up parent function</button></div>}
-            {(workspace || flowMode) && (presentation === 'details' ? <div className="pathway-columns">
+            {!workspace && flowMode && page === 'task' && <p>Choose where to save the flow. Its steps can use functions from any system.</p>}
+            {workspace && !root && !(page === 'task' && flowMode) && <FunctionTreeChooser key={workspace} model={model} workspace={workspace} candidates={structure?.candidates.length ?? 0} home={structure?.home?.file} disabled={!canWrite || busy}
+                onAdopt={rootFunctionId => void save(() => writeFunctionalWork({ workspace, operation: 'root', rootFunctionId }))}
+                onStart={() => void save(() => writeFunctionalWork({ workspace, operation: 'root' }))} />}
+            {workspace && root && page === 'overview' && <FunctionalOverview model={model} systemName={systemName} rows={rows} flows={flows} allocations={allocations} summary={summary}
+                treeLabel={treeTask?.label} flowLabel={flowTask?.label} canAllocate={!!allocationKinds.length}
+                onTree={() => treeTask && showTask(treeTask.id)} onFlows={() => flowTask && showTask(flowTask.id)} onAllocation={() => openPage('allocation')} onOpen={openFunction} />}
+            {workspace && root && page === 'allocation' && <FunctionalAllocation model={model} workspace={workspace} rows={rows} kinds={allocationKinds} realizationKind={realizationTask?.implementationKind} canWrite={canWrite} onOpen={openFunction} />}
+            {page === 'task' && (workspace && root || flowMode) && (presentation === 'details' ? <div className="pathway-columns pathway-columns--functional">
                 <section aria-label={flowMode ? 'Functional flows' : 'Functional tree'} style={{ ...card, minWidth: 0 }}>
                     <input aria-label={flowMode ? 'Filter flows' : 'Filter functions'} placeholder={flowMode ? 'Find a flow…' : 'Find a function…'} style={input} value={filter} onChange={event => setFilter(event.target.value)} />
-                    {!flowMode && <label style={{ display: 'block', margin: '12px 0' }}><input type="checkbox" checked={review} onChange={event => setReview(event.target.checked)} /> Needs realization or allocation</label>}
+                    {!flowMode && <label className="fx-field fx-inline">Show <select aria-label="Show functions" value={review ? 'open' : 'all'} onChange={event => setReview(event.target.value === 'open')}><option value="all">All functions</option><option value="open">Not allocated</option></select></label>}
                     <div className="pathway-resources--browse">
                         {flowMode ? <div className="pathway-resources">{visible.map(flow => {
                             const steps = functionalFlowSteps(model, flow.id).steps;
@@ -240,7 +292,7 @@ export function FunctionalWorkbench({ model, row, workspace, canWrite, artifactI
                         })}</div>
                             : <ul style={{ listStyle: 'none', padding: 0 }}>{functions.filter(fn => !functions.some(parent => parent.id === parents.get(fn.id))).map(fn => treeRow(fn.id, new Set()))}</ul>}
                     </div>
-                    {!visible.length && <p>{filter ? 'No matching work.' : flowMode ? 'Create a flow using functions from the tree.' : review ? 'No functions need review.' : 'No functions in this scope yet.'}</p>}
+                    {!visible.length && <p>{filter ? 'No matching work.' : flowMode ? 'Create a flow using functions from the tree.' : review ? 'Every function is allocated.' : 'No functions in this scope yet.'}</p>}
                 </section>
                 {detail}
             </div> : <><div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', marginBottom: 12 }}><label>{flowMode ? 'Flow' : 'Function'} <select aria-label="Functional visual subject" style={button} value={visualSubject?.id ?? ''} onChange={event => { setSelectedId(event.target.value); setAdding(false); }}><option value="">Choose a {flowMode ? 'flow' : 'function'}…</option>{items.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label></div>
@@ -266,25 +318,66 @@ function FunctionForm({ parentId, functions, disabled, onSave, onCancel }: { par
     const [name, setName] = useState(''); const [parent, setParent] = useState(parentId);
     return <form onSubmit={event => { event.preventDefault(); onSave(name, parent); }}><h2>Add a system function</h2><label>Function name<input autoFocus required style={input} value={name} onChange={event => setName(event.target.value)} /></label><label>Parent function<select aria-label="Parent function" style={input} value={parent} onChange={event => setParent(event.target.value)}>{functions.map(fn => <option key={fn.id} value={fn.id}>{fn.name}</option>)}</select></label>{functions.find(fn => fn.id === parent)?.file && <p>Save in <code>{functions.find(fn => fn.id === parent)?.file}</code></p>}<p><button style={button} disabled={disabled || !name.trim()}>Add function</button> <button type="button" style={button} onClick={onCancel}>Cancel</button></p></form>;
 }
-function FunctionDetail({ model, id, workspace, components, componentFunctions, disabled, realizationKind, reviewDescription, onLogical, save, onAddChild }: { model: MemoModelDTO; id: string; workspace: string; components: Element[]; componentFunctions: Element[]; disabled: boolean; realizationKind?: string; reviewDescription?: string; onLogical?: (id: string) => void; save: (work: () => Promise<string | undefined>, after?: (id?: string) => void) => Promise<void>; onAddChild: () => void }) {
+function FunctionDetail({ model, id, workspace, components, componentFunctions, disabled, realizationKind, reviewDescription, onLogical, save, onAddChild, parentId, childIds, targets, allocated, onOpen }: { model: MemoModelDTO; id: string; workspace: string; components: Element[]; componentFunctions: Element[]; disabled: boolean; realizationKind?: string; reviewDescription?: string; onLogical?: (id: string) => void; save: (work: () => Promise<string | undefined>, after?: (id?: string) => void) => Promise<void>; onAddChild: () => void; parentId?: string; childIds: string[]; targets: Element[]; allocated: string[]; onOpen: (id: string) => void }) {
     const element = model.elements[id];
+    const createRelationship = useModelStore(s => s.createRelationship);
     const implementations = realizingFunctions(model, id, realizationKind);
     const [mode, setMode] = useState<'new' | 'existing' | null>(null);
     const [name, setName] = useState(''); const [implementation, setImplementation] = useState(''); const [component, setComponent] = useState('');
+    const [allocating, setAllocating] = useState(false); const [target, setTarget] = useState(''); const [problem, setProblem] = useState('');
     const existingAllocations = mode === 'existing' ? model.relationships.filter(edge => edge.type === 'allocatedTo' && edge.sourceId === implementation).map(edge => edge.targetId) : [];
     const chosenComponent = existingAllocations[0] ?? component;
     const submit = (event: FormEvent) => { event.preventDefault(); void save(() => writeFunctionalWork({ workspace, operation: mode === 'existing' ? 'link-realization' : 'component-function', systemFunctionId: id, ...(mode === 'existing' ? { componentFunctionId: implementation } : {}), componentId: chosenComponent }, name), () => { setMode(null); setName(''); setImplementation(''); setComponent(''); }); };
-    return <><h2 style={{ marginTop: 0 }}>{element.name}</h2><p style={{ whiteSpace: 'pre-wrap', color: COLOR.muted }}>{element.doc || 'No purpose described yet.'}</p><button style={button} disabled={disabled} onClick={onAddChild}>+ Child function</button>
-        <h3>Realization and allocation</h3><p style={{ color: COLOR.muted }}>{reviewDescription}</p>
-        {implementations.length ? <ul style={{ paddingLeft: 18 }}>{implementations.map(item => <li key={item.element.id} style={{ marginBottom: 12 }}>{onLogical ? <button type="button" style={button} onClick={() => onLogical(item.element.id)}>{item.element.name}</button> : <strong>{item.element.name}</strong>} → {item.components.length ? item.components.map(component => component.name).join(', ') : <><span>Needs a component</span> <button style={button} disabled={disabled} onClick={() => { setImplementation(item.element.id); setMode('existing'); }}>Allocate…</button></>}</li>)}</ul> : <p>This system function has no component function realizing it yet.</p>}
-        {!mode ? <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}><button style={button} disabled={disabled} onClick={() => { setMode('new'); setImplementation(''); setComponent(''); }}>+ Component function</button><button style={button} disabled={disabled || !componentFunctions.length} onClick={() => setMode('existing')}>Use existing component function</button></div> : <form onSubmit={submit}>
-            <h4>{mode === 'new' ? 'Realize this system function' : 'Link and allocate a component function'}</h4>
-            {mode === 'new' ? <label>Component function name<input required style={input} value={name} onChange={event => setName(event.target.value)} /></label> : <label>Component function<select aria-label="Component function" required style={input} value={implementation} onChange={event => setImplementation(event.target.value)}><option value="">Choose a component function…</option>{componentFunctions.map(fn => <option key={fn.id} value={fn.id}>{fn.name}</option>)}</select></label>}
-            <label>Allocated component<select aria-label="Allocated component" required disabled={!!existingAllocations.length} style={input} value={chosenComponent} onChange={event => setComponent(event.target.value)}><option value="">Choose a component…</option>{components.map(component => <option key={component.id} value={component.id}>{component.name}</option>)}</select></label>
-            {!components.length && <p>Add a logical component in the Logical layer first.</p>}
-            <p><button style={button} disabled={disabled || !chosenComponent || (mode === 'new' ? !name.trim() : !implementation)}>Save realization and allocation</button> <button type="button" style={button} onClick={() => { setMode(null); setImplementation(''); setComponent(''); setName(''); }}>Cancel</button></p>
-        </form>}
-    </>;
+    const allocate = async (event: FormEvent) => {
+        event.preventDefault(); if (!target) return; setProblem('');
+        const result = await createRelationship({ type: 'allocatedTo', sourceId: id, targetId: target, direction: 'outgoing', selectedElementId: id });
+        if (result.success) { setAllocating(false); setTarget(''); } else setProblem(result.error ?? 'The allocation could not be saved.');
+    };
+    const requirements = model.relationships.filter(edge => edge.type === 'satisfiedBy' && edge.targetId === id && model.elements[edge.sourceId]).map(edge => model.elements[edge.sourceId]);
+    const kindOf = (item: Element) => model.registries?.kinds.find(kind => kind.name === item.kind)?.label ?? item.kind;
+    return <div className="fx-detail">
+        <div className="fx-detail-head">
+            {parentId && model.elements[parentId] && <p className="fx-muted fx-small">Part of <button type="button" className="fx-link" onClick={() => onOpen(parentId)}>{model.elements[parentId].name}</button> {readableId(model.elements[parentId])}</p>}
+            <h2 style={{ margin: 0 }}>{element.name}</h2>
+            <p className="fx-muted fx-small">{kindOf(element)}{readableId(element) ? ` · ${readableId(element)}` : ''}</p>
+        </div>
+        <section className="fx-purpose" aria-label="What it must do"><h3>What it must do</h3>
+            {element.doc?.trim() ? <p style={{ whiteSpace: 'pre-wrap' }}>{element.doc}</p> : <p className="fx-warn">Not written yet. One sentence a reviewer can check: what goes in, what comes out, what must hold.</p>}
+            <button type="button" className="fx-link fx-small" onClick={() => useModelStore.getState().inspectElement(id)}>All properties</button>
+        </section>
+        <div className="fx-grid2">
+            <div className="fx-stack">
+                <section className="fx-section" aria-label="Breaks down into"><h3>Breaks down into</h3>
+                    {childIds.length ? <ul className="fx-list">{childIds.map(child => <li key={child}><button type="button" className="fx-row fx-row--card" aria-label={model.elements[child].name} onClick={() => onOpen(child)}><span className="fx-name">{model.elements[child].name}</span><span className="fx-id">{readableId(model.elements[child])}</span></button></li>)}</ul>
+                        : <p className="fx-muted fx-small">Nothing below it. That is fine when one target can do it all.</p>}
+                    <button className="pathway-button" disabled={disabled} onClick={onAddChild}>+ Child function</button>
+                </section>
+            </div>
+            <div className="fx-stack">
+                <section className="fx-section" aria-label="Allocated to"><h3>Allocated to</h3>
+                    {allocated.length ? <ul className="fx-list">{allocated.map(targetId => <li key={targetId} className="fx-target fx-target--static"><span>{model.elements[targetId]?.name ?? targetId}<span className="fx-muted fx-small fx-block">{model.elements[targetId] ? kindOf(model.elements[targetId]) : ''}</span></span><span className="fx-id">{readableId(model.elements[targetId])}</span></li>)}</ul>
+                        : <p className="fx-warn fx-small">Not allocated yet.</p>}
+                    {allocating ? <form onSubmit={event => void allocate(event)} className="fx-inline-form">
+                        <select aria-label="Allocate to" value={target} onChange={event => setTarget(event.target.value)}><option value="">Choose a target…</option>{targets.filter(item => !allocated.includes(item.id)).map(item => <option key={item.id} value={item.id}>{item.name}{readableId(item) ? ` · ${readableId(item)}` : ''}</option>)}</select>
+                        <button className="pathway-button pathway-button--primary" disabled={disabled || !target}>Allocate</button><button type="button" className="pathway-button" onClick={() => { setAllocating(false); setProblem(''); }}>Cancel</button>
+                    </form> : <button type="button" className="pathway-button" disabled={disabled || !targets.length} onClick={() => setAllocating(true)}>+ Allocate</button>}
+                    {problem && <p role="alert" className="fx-warn fx-small">{problem}</p>}
+                </section>
+                <section className="fx-section" aria-label="Realized by"><h3>Realized by</h3><p className="fx-muted fx-small">{reviewDescription}</p>
+                    {implementations.length ? <ul style={{ paddingLeft: 18 }}>{implementations.map(item => <li key={item.element.id} style={{ marginBottom: 12 }}>{onLogical ? <button type="button" style={button} onClick={() => onLogical(item.element.id)}>{item.element.name}</button> : <strong>{item.element.name}</strong>} → {item.components.length ? item.components.map(component => component.name).join(', ') : <><span>Needs a component</span> <button style={button} disabled={disabled} onClick={() => { setImplementation(item.element.id); setMode('existing'); }}>Allocate…</button></>}</li>)}</ul> : <p className="fx-muted fx-small">No component function realizes it yet.</p>}
+                    {!mode ? <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}><button style={button} disabled={disabled} onClick={() => { setMode('new'); setImplementation(''); setComponent(''); }}>+ Component function</button><button style={button} disabled={disabled || !componentFunctions.length} onClick={() => setMode('existing')}>Use existing component function</button></div> : <form onSubmit={submit}>
+                        <h4>{mode === 'new' ? 'Realize this system function' : 'Link and allocate a component function'}</h4>
+                        {mode === 'new' ? <label>Component function name<input required style={input} value={name} onChange={event => setName(event.target.value)} /></label> : <label>Component function<select aria-label="Component function" required style={input} value={implementation} onChange={event => setImplementation(event.target.value)}><option value="">Choose a component function…</option>{componentFunctions.map(fn => <option key={fn.id} value={fn.id}>{fn.name}</option>)}</select></label>}
+                        <label>Allocated component<select aria-label="Allocated component" required disabled={!!existingAllocations.length} style={input} value={chosenComponent} onChange={event => setComponent(event.target.value)}><option value="">Choose a component…</option>{components.map(component => <option key={component.id} value={component.id}>{component.name}</option>)}</select></label>
+                        {!components.length && <p>Add a software or hardware component in the Implementation layer first.</p>}
+                        <p><button style={button} disabled={disabled || !chosenComponent || (mode === 'new' ? !name.trim() : !implementation)}>Save realization and allocation</button> <button type="button" style={button} onClick={() => { setMode(null); setImplementation(''); setComponent(''); setName(''); }}>Cancel</button></p>
+                    </form>}
+                </section>
+                {!!requirements.length && <section className="fx-section" aria-label="Requirements it satisfies"><h3>Requirements</h3>
+                    <ul className="fx-list">{requirements.map(requirement => <li key={requirement.id} className="fx-small"><strong>{readableId(requirement) || requirement.name}</strong> {requirement.name}</li>)}</ul></section>}
+            </div>
+        </div>
+    </div>;
 }
 function FlowForm({ model, flowId, functions, disabled, onSave, onCancel, onDiagram, canOpenDiagram, onFunction, destination, systemsFor, canOpenFunction }: { model: MemoModelDTO; flowId?: string; functions: Element[]; disabled: boolean; onSave: (name: string, steps: FunctionalStepInput[]) => void; onCancel: () => void; onDiagram?: () => void; canOpenDiagram: boolean; onFunction: (id: string) => void; destination?: string; systemsFor: (id: string) => string[]; canOpenFunction: (id: string) => boolean }) {
     const current = flowId ? functionalFlowSteps(model, flowId) : undefined;

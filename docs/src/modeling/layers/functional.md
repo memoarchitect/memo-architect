@@ -67,29 +67,41 @@ allocate infusionDeliveryFlow.acquireSensors to gpcaDevice.gpcaDeviceSensors;
 ## In Architect
 
 Choose a system in **Working on**, then open **Functional** from the method map.
-The method offers two primary tasks:
+Choose a system in **Working on**. The page has four tabs:
 
-- **Functional tree**: select the system parent function, add child system
-  functions, or select an existing function to review its purpose and implementation.
-  Set up the explicit parent first if the model does not declare one. Existing
-  functions retain their identities.
-- **Functional flows**: create a named flow and choose its ordered steps from
-  the same system functions. Reorder or remove steps with the sequence controls.
-  Repeated steps reference the same function; they have their own execution identities.
-  **Table** shows the ordered steps and their system functions. **Visual** opens
-  the flow's activity diagram for branches and richer behavior.
+- **Overview**: how many functions the system has, how many are allocated, how many
+  say what they must do, the flows, and the next steps the method asks for.
+- **Functional tree**: the system's functions, each with its id and where it is
+  allocated. Select one to see what it must do, the functions it breaks down into,
+  where it is allocated, the component functions that realize it, the flows and
+  activities that use it, and the requirements it satisfies. **All properties** opens
+  the properties panel. Switch from **Tree** to **Visual** for a block definition
+  diagram (BDD) of the selected function's decomposition.
+- **Functional flows**: create a named flow and choose its ordered steps from the
+  system functions. The flow is drawn as a strip of steps, each with where its
+  function is allocated; reorder or remove steps with the sequence controls.
+  **Visual** opens the flow's activity diagram for branches and richer behavior.
+- **Allocation**: allocate functions one at a time (pick or drag a function onto a
+  target, or use the form), or see every function against every target in the
+  **Matrix**, with the coverage below it.
 
-In **Function tree**, switch from **Tree** to **Visual** for a block definition
-diagram (BDD) of the selected function's decomposition. The task and presentation
-controls stay visible while a diagram is open.
+A system function is allocated to a system, a system of systems or a logical
+component, and may be allocated to more than one. A system is allocated to through
+its usage, because SysML allocates between features. The method lists the kinds a
+function may go to, and the ontology's relationship rules decide what is legal.
 
-Selecting a system function shows **Realization and allocation**. Create a
-component function and choose its logical component in one operation, or link an
-existing component function. The resulting model contains a native refinement
-from the component function to the system function and an allocation from the
-component function to the component. **Needs realization or allocation** narrows
-review to incomplete chains.
+A component function realizes a system function and is allocated to exactly one
+software or hardware component. In **Realized by**, create a component function and
+choose its component in one operation, or link an existing one. The model then holds
+a native refinement from the component function to the system function and an
+allocation from the component function to the component.
 
+**A system with no function tree.** A system's functions are the tree it is given.
+When it has none, the page offers the trees already allocated to it and the trees no
+system has: choosing one writes a `FunctionalRoot` from the system to the tree's top
+function, and nothing is copied or moved. Or start a new tree, which creates the top
+function and places the functions already allocated to the system under it as
+references.
 
 - A **function flow diagram** (`ffd`) and an **activity diagram** (`act`, `afd`)
   are [action flow views](../views/action-flow.md).

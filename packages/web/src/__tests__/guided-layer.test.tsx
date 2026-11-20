@@ -49,7 +49,9 @@ function prepareFunctionalWorkbench() {
         next.elements.controller = { ...element('controller', 'LogicalComponent', 'Controller'), owner: 'host' };
         next.elements.flow = { ...element('flow', 'FunctionalFlow', 'Run measurement'), parentAction: 'root' };
         next.elements.step = { ...element('step', 'SystemFunction', 'Measure here'), parentAction: 'flow' };
-        for (const id of ['root', 'implementation', 'controller', 'flow', 'step']) next.workspaceMembership!.membership[id] = ['host'];
+        next.elements.hostUnit = element('hostUnit', 'System', 'Host unit');
+        next.workspaceMembership!.definitionOf = { hostUnit: 'host' };
+        for (const id of ['root', 'implementation', 'controller', 'flow', 'step', 'hostUnit']) next.workspaceMembership!.membership[id] = ['host'];
         next.relationships.push(...[
             { id: 'root-link', type: 'functionalRoot', sourceId: 'host', targetId: 'root' },
             { id: 'fn-child', type: 'composes', sourceId: 'root', targetId: 'fn' },
@@ -62,9 +64,9 @@ function prepareFunctionalWorkbench() {
         ] as never[]);
         answer.layers[0].workbench = 'functional';
         answer.layers[0].tasks = [
-            { id: 'tree', kind: 'decomposition', label: 'Function tree', primary: true, subjectKind: 'SystemFunction', viewpoint: viewpoints[0] },
+            { id: 'tree', kind: 'decomposition', label: 'Function tree', primary: true, subjectKind: 'SystemFunction', allocationKinds: ['System', 'LogicalComponent'], viewpoint: viewpoints[0] },
             { id: 'flows', kind: 'sequence', label: 'Function flows', primary: true, subjectKind: 'FunctionalFlow', referenceKind: 'SystemFunction', viewpoint: { id: 'catalog::vpFlow', name: 'vpFlow', label: 'Flow', viewKind: 'actionflow' } },
-            { id: 'realize', kind: 'realization', label: 'Realization', primary: false, subjectKind: 'SystemFunction', implementationKind: 'ComponentFunction', allocationKind: 'LogicalComponent' },
+            { id: 'realize', kind: 'realization', label: 'Realization', primary: false, subjectKind: 'SystemFunction', implementationKind: 'ComponentFunction', allocationKinds: ['LogicalComponent'] },
         ];
         useModelStore.setState({ model: next });
 }
@@ -89,13 +91,14 @@ describe('the guided layer workspace', () => {
         expect((useModelStore.getState().activeView as { artifactId?: string }).artifactId).toBeUndefined();
     });
 
-    it('says that setting up the parent places existing functions under it as references', async () => {
+    it('offers an existing tree or a new one, and says a new one places existing functions under it as references', async () => {
         prepareFunctionalWorkbench();
         const next = useModelStore.getState().model!;
         useModelStore.setState({ model: { ...next, relationships: next.relationships.filter(edge => edge.type !== 'functionalRoot') } });
         await render();
-        const card = [...container.querySelectorAll('h2')].find(heading => heading.textContent === 'Set up the function tree')?.parentElement;
-        expect(card?.textContent).toMatch(/placed under it as references/);
+        const start = container.querySelector('[aria-label="Start a new tree"]');
+        expect(start?.textContent).toMatch(/placed under it as references/);
+        expect(container.querySelector('[aria-label="Use a function tree that already exists"]')).not.toBeNull();
     });
 
     it('records a selection made inside the workbench in the address without reopening the workbench', async () => {
@@ -245,6 +248,40 @@ describe('the guided layer workspace', () => {
         expect(container.querySelector('[aria-label="Elements in this layer"]')!.textContent!.match(/Compute signal/g)).toHaveLength(1);
     });
 
+    it('shows the functional overview with progress and next steps from the model', async () => {
+        prepareFunctionalWorkbench(); await render(); await click('Overview');
+        const overview = container.querySelector('[aria-label="Functional overview"]')!;
+        expect(overview.textContent).toContain('Functions');
+        expect(overview.textContent).toMatch(/Allocate \d+ function/);
+        await click('Allocate functions');
+        expect(container.querySelector('[aria-label="Allocation"]')).not.toBeNull();
+    });
+
+    it('allocates a function to a target from the matrix through the relationship write', async () => {
+        prepareFunctionalWorkbench();
+        const createRelationship = vi.fn(async () => ({ success: true }));
+        useModelStore.setState({ createRelationship } as never);
+        await render(); await click('Allocation'); await click('Matrix');
+        await click('Allocate Compute signal to Host unit');
+        expect(createRelationship).toHaveBeenCalledWith(expect.objectContaining({ type: 'allocatedTo', sourceId: 'fn', targetId: 'hostUnit', direction: 'outgoing' }));
+    });
+
+    it('gives a system with no tree an existing tree that no system has', async () => {
+        prepareFunctionalWorkbench();
+        const next = useModelStore.getState().model!;
+        next.elements.loose = element('loose', 'SystemFunction', 'Dock the pump');
+        next.elements.looseChild = { ...element('looseChild', 'SystemFunction', 'Charge'), parentAction: 'loose' };
+        useModelStore.setState({ model: { ...next, relationships: next.relationships.filter(edge => edge.type !== 'functionalRoot') } });
+        await render();
+        const trees = container.querySelector('[aria-label="Function trees"]')!;
+        expect(trees.textContent).toContain('Dock the pump');
+        expect(trees.textContent).toContain('allocated to Host');
+        const radio = [...trees.querySelectorAll('label')].find(label => label.textContent?.includes('Dock the pump'))!.querySelector('input')!;
+        act(() => radio.click()); await settle();
+        await click('Use this tree for Host');
+        expect(sendElementCreate).toHaveBeenCalledWith(expect.objectContaining({ functionContext: expect.objectContaining({ workspace: 'host', operation: 'root', rootFunctionId: 'loose' }) }));
+    });
+
     it('offers native allocated function creation on component right-click', async () => {
         const next = model();
         next.registries!.kinds.push({ name: 'LogicalComponent', label: 'Logical component' } as never);
@@ -252,13 +289,14 @@ describe('the guided layer workspace', () => {
         next.elements.controller = { ...element('controller', 'LogicalComponent', 'Controller'), owner: 'host' };
         next.workspaceMembership!.membership.controller = ['host'];
         answer.layers[0].elementKinds = ['LogicalComponent'];
+        answer.layers[0].tasks = [{ id: 'realize', kind: 'realization', label: 'Realization', primary: false, subjectKind: 'SystemFunction', implementationKind: 'ComponentFunction', allocationKinds: ['LogicalComponent'] }];
         next.relationships.push({ id: 'alloc', type: 'allocatedTo', sourceId: 'fn', targetId: 'controller' } as never);
         useModelStore.setState({ model: next });
         await render();
         expect(buttons('Controller')[0].parentElement!.textContent).toContain('Compute signal');
         act(() => buttons('Controller')[0].dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, clientX: 30, clientY: 30 })));
         await settle(); await click('Create component function…');
-        expect(sendElementCreate).toHaveBeenCalledWith(expect.objectContaining({ id: '', construct: 'action', functionContext: { workspace: 'host', componentId: 'controller' } }));
+        expect(sendElementCreate).toHaveBeenCalledWith(expect.objectContaining({ id: '', construct: 'action', functionContext: { workspace: 'host', componentId: 'controller', componentKinds: ['LogicalComponent'] } }));
         expect(useModelStore.getState().activeView).toMatchObject({ type: 'pathway', layer: 'layerWork' });
     });
 

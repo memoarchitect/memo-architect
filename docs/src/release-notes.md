@@ -7,6 +7,11 @@ Versioned under [semantic versioning](https://semver.org/). Before 1.0 a breakin
 ### Changed
 
 - **Guided Pathways** and **Custom Dashboards** are on for everyone; they no longer need `--experimental` or a switch in Settings.
+- **The Functional layer is redesigned** for engineers who do not model. Tabs: Overview (progress and next steps), Functional tree (ids and allocation on every row; a function's purpose, children, allocation, realization, uses and requirements), Functional flows (each flow drawn as a strip of steps) and Allocation (pick or drag a function onto a target, or a matrix with coverage).
+- **A system with no function tree** offers the trees already allocated to it and the trees no system has, or a new tree. Choosing one links the system to it; nothing is copied.
+- **Allocation follows the ontology.** A system function is allocated to a system (through its usage), a system of systems or a logical component, as the method and the ontology's relationship rules allow; a component function to a software or hardware component.
+- Saved choices and links name elements by short id, so they survive a rename or a package move.
+- A saved system that the model no longer has falls back to the whole model instead of a stuck "Loading selected system".
 
 ## 0.23.0
 

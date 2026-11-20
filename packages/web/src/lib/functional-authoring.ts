@@ -5,7 +5,8 @@ import { sendElementCreate } from '../store/ws-client';
 
 export function componentFunctionWorkspace(model: MemoModelDTO, componentId: string, chosen: string | null): string | undefined {
     const element = model.elements[componentId];
-    if (!element || element.isDefinition || !kindConformsTo(element.kind, 'LogicalComponent', indexKinds(model.registries?.kinds ?? []))) return undefined;
+    const registry = indexKinds(model.registries?.kinds ?? []);
+    if (!element || element.isDefinition || !componentFunctionKinds().some(kind => kindConformsTo(element.kind, kind, registry))) return undefined;
     const roots = model.workspaceMembership?.membership[componentId] ?? [];
     if (chosen && roots.includes(chosen)) return chosen;
     const systems = model.workspaceMembership?.workspaces.filter(workspace => workspace.scope === 'system' && roots.includes(workspace.root)) ?? [];
@@ -26,6 +27,12 @@ export function componentAllocationSource(model: MemoModelDTO, componentId: stri
     return undefined;
 }
 
+/** The kinds a component function may be allocated to: the method's realization task says, not this file. */
+export function componentFunctionKinds(): string[] {
+    const guide = useModelStore.getState().guide;
+    return guide?.layers.flatMap(layer => layer.tasks ?? []).find(task => task.kind === 'realization')?.allocationKinds ?? [];
+}
+
 /** The server chooses the declared name and returns the compiler's canonical identity. */
 export async function createNativeFunction(workspace: string, componentId?: string) {
     const state = useModelStore.getState();
@@ -38,7 +45,7 @@ export async function createNativeFunction(workspace: string, componentId?: stri
     if (name === null || (componentId && !name.trim())) return;
     try {
         const result = await sendElementCreate({ id: '', name, kind: componentId ? 'ComponentFunction' : 'SystemFunction', construct: 'action',
-            file: home.file, functionContext: { workspace, ...(componentId ? { componentId, ...(componentSourceHash ? { componentSourceHash } : {}) } : {}) } });
+            file: home.file, functionContext: { workspace, ...(componentId ? { componentId, componentKinds: componentFunctionKinds(), ...(componentSourceHash ? { componentSourceHash } : {}) } : {}) } });
         if (!result.success) throw new Error(result.error ?? 'The function could not be created.');
         if (result.elementId) useModelStore.getState().inspectElement(result.elementId);
     } catch (error) { await alertDialog(error instanceof Error ? error.message : String(error)); }
@@ -55,12 +62,12 @@ export async function writeFunctionalWork(context: FunctionalWriteContext, name 
     const state = useModelStore.getState();
     if (!state.model || !state.connected || state.pinned) throw new Error('Connect to a writable model first.');
     const structure = functionalStructure(state.model, context.workspace);
-    const homeId = context.flowId ?? context.componentFunctionId ?? context.parentFunctionId;
+    const homeId = context.flowId ?? context.componentFunctionId ?? context.parentFunctionId ?? context.rootFunctionId;
     const home = homeId ? state.model.elements[homeId] : structure.home;
     if (!home) throw new Error('Choose a system with a writable function source.');
     const component = context.componentId ? componentAllocationSource(state.model, context.componentId) ?? home : undefined;
     const result = await sendElementCreate({ id: '', name, kind: context.operation === 'flow' ? 'FunctionalFlow' : 'SystemFunction', construct: 'action', file: home.file,
-        functionContext: { ...context, ...(component ? { componentSourceHash: state.model.sourceHashes?.[component.file] } : {}) } });
+        functionContext: { ...context, ...(component ? { componentKinds: componentFunctionKinds(), componentSourceHash: state.model.sourceHashes?.[component.file] } : {}) } });
     if (!result.success) throw new Error(result.error ?? 'The change could not be saved.');
     // A write acknowledgement can precede the watcher's model broadcast. Keep the next task
     // from submitting a stale source hash while the new semantic state is still on its way.
