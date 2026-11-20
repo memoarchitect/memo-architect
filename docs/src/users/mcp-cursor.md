@@ -70,6 +70,16 @@ question the same way. The two that change outcomes most are `memo_ontology`, wh
 the agent inventing kinds your project does not define, and `memo_validate`, which lets it
 check its own edit rather than declaring success.
 
+### Prompts and resources
+
+The server also offers a **prompt for each step of the model's method**, such as "Declare the systems"
+or "Decide the controls". Picking one gives the agent the step's objective, entry and exit criteria,
+the kinds it uses and produces, the rules that say it is done, where the model stands on it, and how
+to work it and check the result. A prompt can take a `system` to work in.
+
+It offers the model as **resources** too: `memo://ontology`, `memo://guide`, `memo://systems`,
+`memo://summary`, and `memo://element/{id}` for one element by qualified name or short id.
+
 ---
 
 ## Letting a tool propose edits
