@@ -76,6 +76,20 @@ memo compile .
 `memo validate` runs the compiler (stage 1) and then MEMO's closure rules.
 See [Validation and Closure](validation.md).
 
+## Check a change in CI
+
+```bash
+memo-architect check-change --base main
+memo-architect check-change --base main --fail-on breaking,errors,release --json
+```
+
+Measures the working tree against the commit it branched from on `--base`, as Architect's
+Projects and Impact view does: what the change reaches, the interface contracts it breaks,
+releases that need a new release, method steps it reopens, and the rule findings it adds or
+clears. It exits 1 when something `--fail-on` names is found (breaking interface changes and
+new errors by default; also `warnings` and `release`), so a pull request job can run it as is.
+The job needs the git history back to the base (`fetch-depth: 0` on GitHub).
+
 ## Choose the compiler
 
 ```bash
@@ -146,3 +160,6 @@ memo-architect build --output review-viewer --standalone
 
 Keep the source commit, the lock file and the build command with the review
 record.
+
+The build also writes `llms.txt` and `model.md` beside `index.html`: the same model as text,
+for an AI agent that reads the build without an MCP client.
