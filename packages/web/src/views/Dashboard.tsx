@@ -11,7 +11,6 @@ import { DashboardPage } from './DashboardPage';
 import { HOME_DASHBOARD_ID, viewpointDashboardId } from '../dashboard/dashboards';
 import { computeExplorerGroupTree, explorerRowCounts } from '../components/ExplorerPanel';
 import { useOpenDomain } from '../lib/open-domain';
-import { PathwaysEntry } from '../components/PathwaysEntry';
 import { FavoritesWidget, RecentElementsWidget, RecentViewsWidget } from '../components/FavoritesWidgets';
 
 // ─── Dashboard — Home View (#36 + #131) ────────────────────────────────────
@@ -535,7 +534,7 @@ const DASHBOARD_PAGE_WIDGETS = { ...DASHBOARD_WIDGETS, ...PERSONAL_WIDGETS };
 export function Dashboard() {
     // Re-render when a feature is switched on or off in Settings: isFeatureEnabled reads the saved list.
     useModelStore(state => state.features);
-    return <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0, minHeight: 0 }}><PathwaysEntry /><DashboardPage dashboardId={HOME_DASHBOARD_ID} widgets={DASHBOARD_PAGE_WIDGETS} /></div>;
+    return <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0, minHeight: 0 }}><DashboardPage dashboardId={HOME_DASHBOARD_ID} widgets={DASHBOARD_PAGE_WIDGETS} /></div>;
 }
 
 /** Any custom dashboard, by id; `scope` pins a shadowed shared copy. */

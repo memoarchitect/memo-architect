@@ -9,7 +9,6 @@ import { useModelStore } from '../store/model-store';
 import { useDiagramDisplayModel } from '../diagram/display-scope';
 import { GuidedLayer } from '../views/GuidedLayer';
 import { sendElementCreate } from '../store/ws-client';
-import { PathwaysEntry } from '../components/PathwaysEntry';
 import type { GuideResult, GuideStepStatus } from '../lib/guide-view';
 
 let answer: GuideResult;
@@ -315,13 +314,6 @@ describe('the guided layer workspace', () => {
         try { await render(); await click('New work architecture view'); expect(container.textContent).toContain('The compiler rejected the declaration.'); expect(container.querySelector('[data-testid="editor"]')?.textContent).toBe('first:first:host,fn,scenario'); }
         finally { useModelStore.setState({ createDiagram: previous }); }
     });
-    it('offers a clear route from the dashboard into Guided Pathways', async () => {
-        container = document.createElement('div'); document.body.append(container); root = createRoot(container);
-        act(() => root.render(<MemoryRouter><PathwaysEntry /></MemoryRouter>));
-        await click('Open Guided Pathways');
-        expect(useModelStore.getState().activeView).toEqual({ type: 'guide' });
-    });
-
     it('requires a chosen system for a new view and lets the working scope reset', async () => {
         await render(); await choose('Working scope', ''); await click('New work architecture view');
         expect(container.textContent).toContain('Choose a system above before creating a view.');
