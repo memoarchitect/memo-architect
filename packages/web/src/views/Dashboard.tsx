@@ -2,6 +2,7 @@ import { useEffect, useMemo, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useModelStore } from '../store/model-store';
 import { isFeatureEnabled } from '../config/feature-flags';
+import { guideWorkspaceName } from '../lib/workspace-scope';
 import { requestGuide } from '../store/ws-client';
 import { nextStep, stepsForRole } from '../lib/guide-view';
 import { useScopedModel, useScopedValidation } from '../store/scoped-model';
@@ -357,7 +358,7 @@ function NextActionPanel({ compact }: { stats?: DashboardStats; compact?: boolea
     const revision = model?.revision;
     useEffect(() => {
         if (!connected) return;
-        requestGuide(workspace ? model?.elements[workspace]?.name ?? workspace : null).catch(() => undefined);
+        requestGuide(guideWorkspaceName(model, workspace)).catch(() => undefined);
     }, [connected, workspace, revision]); // eslint-disable-line react-hooks/exhaustive-deps
     const steps = stepsForRole(guide?.steps ?? [], role);
     const next = nextStep(steps);

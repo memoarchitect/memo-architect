@@ -66,6 +66,8 @@ export function GuidedLayer({ layer }: { layer: string }) {
     const step = currentStep(steps, lastStep);
     const options = useMemo(() => workspaceOptions(model?.workspaceMembership), [model?.workspaceMembership]);
     const chosen = options.find(candidate => candidate.root === workspace);
+    // A saved system still loading, as opposed to one the model no longer has, which shows the whole model.
+    const pending = !!workspace && !model?.workspaceMembership;
     const operationalEntry = activeView.type === 'pathway' && activeView.layer === layer ? activeView : undefined;
     // A selection made inside a workbench is written to the address so a bookmark or Back returns to it. That write
     // must not remount the workbench, so the key stays the one it was opened with until a link brings other work.
@@ -104,7 +106,7 @@ export function GuidedLayer({ layer }: { layer: string }) {
         if (defaultSystemScope) setWorkspace(defaultSystemScope.root);
     }, [defaultSystemScope, setWorkspace]);
     const scope = model && chosen ? scopePath(scopeTree(model), chosen.root).map(node => node.name).join(' › ') || chosen.name
-        : requiresSystem ? defaultSystemScope?.name ?? 'Choose a system boundary' : workspace ? 'Loading selected system…' : 'Whole model';
+        : requiresSystem ? defaultSystemScope?.name ?? 'Choose a system boundary' : pending ? 'Loading selected system…' : 'Whole model';
     const inScope = useMemo(() => { const ids = idsInWorkspace(model?.workspaceMembership, workspace); return model && workspace && ids ? functionalDisplayIds(model, workspace, ids) : ids; }, [model, workspace]);
     const views = useMemo(() => model && row ? layerViews(model, row).filter(({ diagram }) => !inScope
         || diagram.elementIds?.some(id => inScope.has(id) || id === workspace)) : [], [model, row, inScope, workspace]);
@@ -270,7 +272,7 @@ export function GuidedLayer({ layer }: { layer: string }) {
                         </optgroup>)}
                 </> : <>
                     <option value="">Whole model</option>
-                    {workspace && !chosen && <option value={workspace}>Selected system (loading…)</option>}
+                    {pending && <option value={workspace}>Selected system (loading…)</option>}
                     {options.map(option => <option key={option.root} value={option.root}>{option.name}</option>)}
                 </>}
             </select></label>
@@ -279,7 +281,7 @@ export function GuidedLayer({ layer }: { layer: string }) {
             {!contextWorkbench && !taskWorkbench && <button type="button" style={button} aria-expanded={viewpointsOpen} onClick={() => setViewpointsOpen(value => !value)}>{viewpointsOpen ? 'Hide layer browser' : 'Show layer browser'}</button>}
         </header>
         {problem && <p role="alert" style={{ margin: 12, color: '#B42318' }}>{problem}</p>}{notice && <p role="status" style={{ margin: 12 }}>{notice}</p>}
-        {!guide || !model || (workspace && !chosen) ? <p style={{ padding: 20 }}>Reading the method…</p> : !row ? <p style={{ padding: 20 }}>This layer is not part of the selected method. Choose another layer above.</p> : contextWorkbench ? <div style={{ flex: 1, overflow: 'auto', minHeight: 0 }}>
+        {!guide || !model || pending ? <p style={{ padding: 20 }}>Reading the method…</p> : !row ? <p style={{ padding: 20 }}>This layer is not part of the selected method. Choose another layer above.</p> : contextWorkbench ? <div style={{ flex: 1, overflow: 'auto', minHeight: 0 }}>
             <ContextWorkbench key={workspace ?? ''} model={model} workspace={workspace} canWrite={canWrite} guided
                 boundaryId={boundaryId} onBoundary={setBoundaryChoice}
                 diagram={contextDiagram} diagramSubject={contextView?.distance ? contextView.subject : undefined}

@@ -9,6 +9,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useModelStore } from '../store/model-store';
 import { requestGuide } from '../store/ws-client';
+import { guideWorkspaceName } from './workspace-scope';
 import type { GuideStepStatus } from './guide-view';
 
 /** Ask for the Guide while connected, and say why when it cannot be evaluated. */
@@ -21,7 +22,7 @@ export function useGuideEvaluation(): string | null {
     useEffect(() => {
         if (!connected) return;
         let current = true;
-        requestGuide(workspace ? model?.elements[workspace]?.name ?? workspace : null)
+        requestGuide(guideWorkspaceName(model, workspace))
             .then(result => { if (current) setProblem(result.error ?? null); })
             .catch(error => { if (current) setProblem(error instanceof Error ? error.message : String(error)); });
         return () => { current = false; };

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { MemoElement, MemoModelDTO, MemoRelationship, WorkspaceMembershipDTO } from '@memoarchitect/tools/browser';
 import { explorerTaxonomy } from '../components/ExplorerPanel';
-import { idsInWorkspace, scopeModel, validationForWorkspace, workspaceOptions } from '../lib/workspace-scope';
+import { guideWorkspaceName, idsInWorkspace, scopeModel, validationForWorkspace, workspaceOptions } from '../lib/workspace-scope';
 
 const el = (id: string): MemoElement => ({
     id, name: id, kind: 'LogicalComponent', construct: 'part', layer: 'logical', file: 'm.sysml', attributes: {},
@@ -68,6 +68,13 @@ describe('which part of the model a workspace shows', () => {
         expect(scopeModel(model, null)).toBe(model);
         expect(scopeModel(model, 'Removed')).toBe(model);
         expect(scopeModel({ ...model, workspaceMembership: undefined }, 'Pump').elements).toBe(model.elements);
+    });
+
+    it('asks the Guide for the whole model when the saved system is no longer in it', () => {
+        expect(guideWorkspaceName(model, 'Gen')).toBe('Gen');
+        expect(guideWorkspaceName(model, 'Removed')).toBeNull();
+        expect(guideWorkspaceName(model, null)).toBeNull();
+        expect(guideWorkspaceName(undefined, 'Pump')).toBeNull();
     });
 
     it('returns the same scoped model for the same choice', () => {

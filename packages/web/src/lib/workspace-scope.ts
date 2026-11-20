@@ -54,6 +54,15 @@ export function groupWorkspaces(
     return groups.filter(group => group.options.length > 0);
 }
 
+/**
+ * The name to ask the server's Guide for, or null for the whole model. A saved choice for a system the
+ * model no longer has is the whole model, as `scopeModel` treats it, rather than a request the server refuses.
+ */
+export function guideWorkspaceName(model: MemoModelDTO | null | undefined, workspace: string | null): string | null {
+    if (!workspace || !model?.workspaceMembership?.workspaces.some(candidate => candidate.root === workspace)) return null;
+    return model.elements[workspace]?.name ?? workspace;
+}
+
 /** The set of element ids a workspace shows, or undefined when the whole model is shown. */
 export function idsInWorkspace(membership: WorkspaceMembershipDTO | undefined, workspace: string | null): Set<string> | undefined {
     if (!workspace || !membership) return undefined;
