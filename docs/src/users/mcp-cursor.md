@@ -71,8 +71,8 @@ Read-only by default:
 | `memo_ontology` | Every legal element kind with its SysML construct and layer, and every legal relationship type |
 | `memo_search_elements` | Find elements by name/id substring, kind, or layer |
 | `memo_get_element` | One element in full: attributes, docs, source file, every relationship, its violations |
-| `memo_trace` | Follow the relationship chain out of an element, to a given depth |
-| `memo_validate` | Run the closure rules and return every violation |
+| `memo_trace` | Follow relationship chains from an element to a given depth: downstream (edges out of it), upstream (edges into it, such as what verifies it) or both |
+| `memo_validate` | Run the project's effective rule set, the one `memo validate` and Architect run, and return every violation |
 
 The two that change outcomes most are `memo_ontology` — which stops the agent inventing
 kinds your project does not define — and `memo_validate`, which lets it check its own
