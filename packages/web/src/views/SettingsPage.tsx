@@ -270,6 +270,7 @@ function AiCodingToolsSection() {
     const setProposes = (on: boolean) => {
         for (const client of clients) if (client.connected) sendAiClientsSet(client.id, true, on);
     };
+    const projectRoot = useModelStore(s => s.projectRoot);
     const registerLlmRequest = useModelStore(s => s.registerLlmRequest);
     const [checks, setChecks] = useState<Record<string, AiClientCheck | { error: string }>>({});
     const [checking, setChecking] = useState<string | null>(null);
@@ -298,6 +299,7 @@ function AiCodingToolsSection() {
             {clients.map(client => (
                 <Row key={client.id} title={client.label} hint={checkHint(client.file, checks[client.id], checking === client.id)}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                        {client.connected && projectRoot && <OpenInTool id={client.id} label={client.label} projectRoot={projectRoot} />}
                         {client.connected && (
                             <button style={buttonStyle} disabled={checking !== null} onClick={() => check(client.id)}
                                 title="Runs the server as the tool would. The first run may download Architect.">
@@ -322,6 +324,33 @@ function AiCodingToolsSection() {
             )}
             {error && <div style={{ padding: '8px 0', fontSize: FONT.md, color: '#DC2626' }}>{error}</div>}
         </Group>
+    );
+}
+
+/**
+ * Opens the model in an AI coding tool: VS Code and Cursor through the links they register
+ * (`vscode://file/…`, `cursor://file/…`); Claude Code runs in a terminal, so it gets the command to copy.
+ */
+function OpenInTool({ id, label, projectRoot }: { id: string; label: string; projectRoot: string }) {
+    const [copied, setCopied] = useState(false);
+    if (id === 'claude-code') {
+        const command = `cd "${projectRoot}" && claude`;
+        return (
+            <button style={buttonStyle} title={command}
+                onClick={() => { void navigator.clipboard?.writeText(command); setCopied(true); setTimeout(() => setCopied(false), 2000); }}>
+                {copied ? 'Copied' : 'Copy command'}
+            </button>
+        );
+    }
+    const scheme = id === 'vscode' ? 'vscode' : id === 'cursor' ? 'cursor' : undefined;
+    if (!scheme) return null;
+    // A Windows folder (C:\x) is written with forward slashes, as both editors expect.
+    const path = projectRoot.replace(/\\/g, '/').split('/').map(segment => /^[A-Za-z]:$/.test(segment) ? segment : encodeURIComponent(segment)).join('/');
+    return (
+        <a style={{ ...buttonStyle, textDecoration: 'none' }} href={`${scheme}://file${path.startsWith('/') ? '' : '/'}${path}`}
+            title={`Opens this model in ${label}`}>
+            Open in {label}
+        </a>
     );
 }
 

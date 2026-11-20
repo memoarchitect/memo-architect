@@ -665,7 +665,9 @@ export interface ModelState {
     /** The AI coding tools connected to this model, and why the last change to them failed, if it did. */
     aiClients: AiClientStatus[];
     aiClientsError: string | undefined;
-    setAiClients: (clients: AiClientStatus[], error?: string) => void;
+    /** The model's folder on this machine, which an AI coding tool is opened on. */
+    projectRoot: string | undefined;
+    setAiClients: (clients: AiClientStatus[], error?: string, projectRoot?: string) => void;
 }
 
 const restoredActiveView = restoreActiveView();
@@ -943,7 +945,8 @@ export const useModelStore = create<ModelState>((set, get) => ({
     setAiProposals: (proposals) => set({ aiProposals: proposals }),
     aiClients: [],
     aiClientsError: undefined,
-    setAiClients: (clients, error) => set({ aiClients: clients, aiClientsError: error }),
+    projectRoot: undefined,
+    setAiClients: (clients, error, projectRoot) => set(state => ({ aiClients: clients, aiClientsError: error, projectRoot: projectRoot ?? state.projectRoot })),
     llmSettings: null,
     setLlmSettings: (settings) => set({
         llmSettings: settings,

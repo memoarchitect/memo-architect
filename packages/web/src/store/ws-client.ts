@@ -518,7 +518,7 @@ function handleMessage(msg: ExtendedServerMessage): void {
             store.setAiProposals(msg.payload.proposals);
             break;
         case 'ai:clients':
-            store.setAiClients(msg.payload.clients, msg.payload.error);
+            store.setAiClients(msg.payload.clients, msg.payload.error, msg.payload.projectRoot);
             break;
         case 'ai:clients:check:result':
             store.resolveLlmRequest(msg.payload.requestId, msg.payload.check);
