@@ -2,6 +2,12 @@
 
 Versioned under [semantic versioning](https://semver.org/). Before 1.0 a breaking change to the ontology raises the minor number; any other release raises the patch. Every release is tagged in the repository. The notes for all three packages are also on [memoarchitect.com/releases.html](https://memoarchitect.com/releases.html).
 
+## Unreleased
+
+### Changed
+
+- **Guided Pathways** and **Custom Dashboards** are on for everyone; they no longer need `--experimental` or a switch in Settings.
+
 ## 0.23.0
 
 ### Breaking

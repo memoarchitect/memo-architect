@@ -39,12 +39,16 @@ describe('feature flag registry', () => {
         expect(isFeatureEnabled('import')).toBe(false);
         expect(isFeatureEnabled('model-tools')).toBe(false);
         expect(isFeatureEnabled('analysis')).toBe(true);
+        expect(isFeatureEnabled('guide')).toBe(true);
+        expect(isFeatureEnabled('custom-dashboards')).toBe(true);
 
         grant({ experimental: true });
         expect(isFeatureEnabled('ontology')).toBe(true);
         expect(isFeatureEnabled('import')).toBe(true);
         expect(isFeatureEnabled('model-tools')).toBe(true);
         expect(isFeatureEnabled('analysis')).toBe(true);
+        expect(isFeatureEnabled('guide')).toBe(true);
+        expect(isFeatureEnabled('custom-dashboards')).toBe(true);
     });
 
     it('treats a non-true grant as absent, so a truthy string cannot unlock a feature', () => {
@@ -109,14 +113,16 @@ describe('AI tools stay behind the gate', () => {
 describe('features a person switches on in Settings', () => {
     afterEach(() => setUserFeatures([]));
     it('turn on only the experimental feature named, with no CLI grant', () => {
-        expect(isFeatureEnabled('guide')).toBe(false);
-        setUserFeatures(['guide']);
-        expect(isFeatureEnabled('guide')).toBe(true);
-        expect(isFeatureEnabled('custom-dashboards')).toBe(false);
+        expect(isFeatureEnabled('import')).toBe(false);
+        setUserFeatures(['import']);
+        expect(isFeatureEnabled('import')).toBe(true);
+        expect(isFeatureEnabled('ontology')).toBe(false);
     });
     it('never turn a stable feature off or an unknown id on', () => {
         setUserFeatures(['nonsense']);
         expect(isFeatureEnabled('analysis')).toBe(true);
+        expect(isFeatureEnabled('guide')).toBe(true);
+        expect(isFeatureEnabled('custom-dashboards')).toBe(true);
         expect(isFeatureEnabled('nonsense' as never)).toBe(false);
     });
 });

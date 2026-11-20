@@ -67,13 +67,13 @@ export const FEATURE_FLAGS: readonly FeatureFlag[] = [
         id: 'guide',
         label: 'Guided Pathways',
         description: 'Open the model’s method, its layer workbenches, and guidance for the next step.',
-        stage: 'experimental',
+        stage: 'stable',
     },
     {
         id: 'custom-dashboards',
         label: 'Custom Dashboards',
-        description: 'Markdown dashboards with live embeds. Off by default so the navigation lists only what the regulated workflow needs.',
-        stage: 'experimental',
+        description: 'Markdown dashboards with live embeds.',
+        stage: 'stable',
     },
     {
         id: 'analysis',
