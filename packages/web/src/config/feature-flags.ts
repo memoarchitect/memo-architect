@@ -41,9 +41,8 @@ export const FEATURE_FLAGS: readonly FeatureFlag[] = [
         label: 'AI Tools',
         description:
             'Model Assistant (model Q&A and proposed edits) and SysML Generator '
-            + '(natural language → SysML v2). Generated content is unreviewed and '
-            + 'carries no design-control provenance, so the surface stays off by default.',
-        stage: 'experimental',
+            + '(natural language → SysML v2). Nothing generated reaches a file until the engineer approves it.',
+        stage: 'stable',
     },
     {
         id: 'ontology',

@@ -94,7 +94,7 @@ separately your own default ("just for me").
 
 ## Optional assistance
 
-Where a provider is configured and AI Tools is switched on, **☰ › Model ›
+Where a provider is configured, **☰ › Model ›
 AI Tools** can answer questions about the model and draft SysML. The assistant
 cannot write to the model on its own: suggested edits are staged as proposals
 and written only when you approve them. Review generated text as carefully as

@@ -17,8 +17,7 @@ Ollama or vLLM).
 
 ### From the workbench
 
-1. Switch on AI Tools (start with `--experimental`, or **☰ › Settings › Features**),
-   then open **☰ › Model › AI Tools** and choose **Model Assistant**. (`/ask` and
+1. Open **☰ › Model › AI Tools** and choose **Model Assistant**. (`/ask` and
    `/generate` also work as direct URLs.)
 2. Click **⚙ Settings**.
 3. Pick a provider, optionally override the model, paste your key, and press **Save**.

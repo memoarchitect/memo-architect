@@ -13,7 +13,7 @@ Open the navigation with **☰** in the top-left corner. It has five sections:
 |---|---|
 | **Home** | Dashboard; Guide and Custom Dashboards when switched on |
 | **Views** | Viewpoints, Use Cases, UI Screens, Interfaces |
-| **Model** | Architecture and Assurance explorers, Traceability Matrix, Documents; Model Diff and AI Tools when switched on |
+| **Model** | Architecture and Assurance explorers, Traceability Matrix, Documents, AI Tools; Model Diff when switched on |
 | **Advanced** | Variability, Projects and Impact, Release Records, Suspect Links, Design Structure Matrix, Analysis Notebooks; Design Review and Statistics when switched on |
 | **Settings** | Settings (including Rules and Methodology); Import Model and Ontology Explorer when switched on |
 
@@ -27,10 +27,9 @@ matrix.
 | Standard | Part of the normal regulated workspace | Start Architect normally |
 | Experimental | Advanced or evolving; hidden by default | Start with `memo-architect dev --experimental`, or switch individual features on in **Settings › Features** (saved per person) |
 
-Experimental features are AI Tools, Ontology Explorer, Import Model, the Model
-Tools (Model Diff, Design Review, Statistics), the Guide and Custom Dashboards.
-Generated and transformed content from these features carries no
-design-control provenance; review it before committing it.
+Experimental features are Ontology Explorer, Import Model and the Model Tools
+(Model Diff, Design Review, Statistics). Transformed content from these
+features carries no design-control provenance; review it before committing it.
 
 ## Home
 

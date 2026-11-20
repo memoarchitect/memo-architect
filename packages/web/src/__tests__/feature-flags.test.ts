@@ -20,17 +20,17 @@ afterEach(() => {
 describe('feature flag registry', () => {
     it('hides experimental features when nothing was granted', () => {
         grant(undefined);
-        expect(isFeatureEnabled('ai-tools')).toBe(false);
+        expect(isFeatureEnabled('import')).toBe(false);
     });
 
     it('hides experimental features when the grant is absent from an existing object', () => {
         grant({});
-        expect(isFeatureEnabled('ai-tools')).toBe(false);
+        expect(isFeatureEnabled('import')).toBe(false);
     });
 
     it('reveals experimental features once --experimental granted them', () => {
         grant({ experimental: true });
-        expect(isFeatureEnabled('ai-tools')).toBe(true);
+        expect(isFeatureEnabled('import')).toBe(true);
     });
 
     it('keeps advanced workspace surfaces hidden by default and enables them together experimentally', () => {
@@ -41,6 +41,7 @@ describe('feature flag registry', () => {
         expect(isFeatureEnabled('analysis')).toBe(true);
         expect(isFeatureEnabled('guide')).toBe(true);
         expect(isFeatureEnabled('custom-dashboards')).toBe(true);
+        expect(isFeatureEnabled('ai-tools')).toBe(true);
 
         grant({ experimental: true });
         expect(isFeatureEnabled('ontology')).toBe(true);
@@ -53,7 +54,7 @@ describe('feature flag registry', () => {
 
     it('treats a non-true grant as absent, so a truthy string cannot unlock a feature', () => {
         grant({ experimental: 'false' });
-        expect(isFeatureEnabled('ai-tools')).toBe(false);
+        expect(isFeatureEnabled('import')).toBe(false);
     });
 
     it('fails closed on an unregistered id', () => {
@@ -65,7 +66,7 @@ describe('feature flag registry', () => {
         grant({ experimental: true });
         const status = featureFlagStatus();
         expect(status).toHaveLength(FEATURE_FLAGS.length);
-        expect(status.find(s => s.flag.id === 'ai-tools')?.enabled).toBe(true);
+        expect(status.find(s => s.flag.id === 'import')?.enabled).toBe(true);
     });
 
     it('gives every flag a stage and a reason it is gated', () => {
@@ -76,14 +77,15 @@ describe('feature flag registry', () => {
     });
 });
 
-// The AI surfaces are the reason the flag exists. These read the source rather
-// than rendering, so they stay honest if someone reintroduces an entry point.
-describe('AI tools stay behind the gate', () => {
+// Every AI entry point goes through the ai-tools flag, so the surface can be
+// turned off again in one place. These read the source rather than rendering,
+// so they stay honest if someone adds an entry point that bypasses it.
+describe('AI tools go through their flag', () => {
     const webSrc = resolve(__dirname, '..');
 
-    it('is registered as experimental, not stable', () => {
+    it('is registered as stable', () => {
         const aiTools = FEATURE_FLAGS.find(f => f.id === 'ai-tools');
-        expect(aiTools?.stage).toBe('experimental');
+        expect(aiTools?.stage).toBe('stable');
     });
 
     it('gates the ask and generate routes in App, not only the nav', () => {

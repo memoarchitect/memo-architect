@@ -24,7 +24,7 @@ export function resolveFeatureGrants(options: { experimental?: boolean }): Featu
 
 /** Shared `--experimental` help text, so every subcommand says the same thing. */
 export const EXPERIMENTAL_FLAG_DESCRIPTION =
-    'Enable all experimental workbench surfaces (AI Tools, Ontology, Import, and Model Tools). '
+    'Enable all experimental workbench surfaces (Ontology, Import, and Model Tools). '
     + 'Off by default: advanced and generated content workflows carry no design-control provenance';
 
 /**

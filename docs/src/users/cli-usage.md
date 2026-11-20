@@ -46,7 +46,7 @@ memo-architect dev
 | `-p, --port <port>` | `3000` | HTTP port for the workbench. |
 | `--no-open` | off | Start the server without opening a browser. |
 | `--keep-alive` | off | Keep running after the last browser tab closes. |
-| `--experimental` | off | Enable every experimental surface (AI Tools, Ontology, Import, Model Tools). |
+| `--experimental` | off | Enable every experimental surface (Ontology, Import, Model Tools). |
 | `--at <ref>` | — | Open the model as it was at a commit, tag or branch, read-only. |
 | `--release <record>` | — | Open the version a release record names, read-only. |
 

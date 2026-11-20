@@ -1,10 +1,8 @@
 // ─── AI Workspace ────────────────────────────────────────────────────────────
 //
-// Host for the experimental AI surfaces, reached from the `✦ AI` nav mode.
-// The tools used to sit as a card inside the Model Explorer sidebar, where they
-// read as part of the modelling workflow; they are gated behind
-// `--experimental` (see `config/feature-flags.ts`) and belong on their own
-// top-level mode instead.
+// Host for the AI surfaces, reached from the `✦ AI` nav mode. They sit on
+// their own top-level mode rather than inside the modelling workflow, behind the
+// `ai-tools` flag (see `config/feature-flags.ts`).
 //
 // `ask` and `sysml-generator` remain distinct view types so the existing
 // /ask and /generate deep links keep resolving — this view just selects between
@@ -72,17 +70,6 @@ export function AiWorkspace() {
                         </button>
                     );
                 })}
-                <span style={{ flex: 1 }} />
-                <span
-                    title="Enabled by --experimental. Generated content is unreviewed and carries no design-control provenance."
-                    style={{
-                        fontSize: '10px', fontWeight: 700,
-                        letterSpacing: '0.06em', color: '#92400E', background: '#FEF3C7',
-                        border: '1px solid #FDE68A', borderRadius: '4px', padding: '2px 6px',
-                    }}
-                >
-                    Experimental
-                </span>
             </div>
             <div style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
                 {current === 'ask' ? <ChatPanel /> : <SysmlGenerator />}
