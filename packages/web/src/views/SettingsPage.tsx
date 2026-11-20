@@ -14,8 +14,8 @@ import { RoleSelector } from '../components/RoleSelector';
 import { VersionSelector } from '../components/VersionSelector';
 import { WorkspaceSelector } from '../components/WorkspaceSelector';
 import { RulesEditor } from '../components/RulesEditor';
-import { sendOntologySelection } from '../store/ws-client';
-import { MODEL_PLACEHOLDER, ORIGIN_LABEL, useLlmSettingsForm } from './LlmSettings';
+import { sendAiClientsSet, sendOntologySelection } from '../store/ws-client';
+import { modelPlaceholder, ORIGIN_LABEL, useLlmSettingsForm } from './LlmSettings';
 import { EXPLORER_MODES, groupableAttributes } from '../lib/explorer-modes';
 import { experimentalGrantedByCli, FEATURE_FLAGS, isFeatureEnabled } from '../config/feature-flags';
 import { COLOR, FONT } from '../styles/tokens';
@@ -221,7 +221,7 @@ function AssistantSection() {
     const { settings, provider, setProvider, model, setModel, apiKey, setApiKey, saving, note, save, clearKey } = useLlmSettingsForm();
     const keyFixed = Boolean(settings && !settings.keyEditable && settings.configured);
     return (
-        <Group>
+        <Group title="Model Assistant">
             <Row title="Provider" hint="Which service answers the assistant.">
                 <select aria-label="Provider" value={provider} onChange={e => setProvider(e.target.value)} style={selectStyle}>
                     <option value="anthropic">Anthropic</option>
@@ -229,7 +229,7 @@ function AssistantSection() {
                 </select>
             </Row>
             <Row title="Model" hint="The model to ask. Leave empty for the provider's default.">
-                <input aria-label="Model" value={model} onChange={e => setModel(e.target.value)} placeholder={MODEL_PLACEHOLDER[provider] ?? ''} style={inputStyle} />
+                <input aria-label="Model" value={model} onChange={e => setModel(e.target.value)} placeholder={modelPlaceholder(settings, provider)} style={inputStyle} />
             </Row>
             <Row title="API key"
                 hint={keyFixed
@@ -252,29 +252,88 @@ function AssistantSection() {
 }
 
 /**
- * The experimental features, each a switch. They are off until a person turns one on, and that
- * choice is saved for them only (memo.user.yaml). Which features exist and what each is comes from
- * the registry in config/feature-flags.ts, not from a list here.
+ * The AI coding tools (Claude Code, Cursor, VS Code) that work on this model through its MCP server.
+ * Each switch adds or removes the tool's `memo` entry in the tool's own file in the project, which is
+ * safe to commit: it names no path on this machine. Proposing edits is a second switch, and even then
+ * a proposal waits under AI Tools › Pending changes until someone applies it.
+ */
+function AiCodingToolsSection() {
+    const clients = useModelStore(s => s.aiClients);
+    const error = useModelStore(s => s.aiClientsError);
+    const waiting = useModelStore(s => s.aiProposals.length);
+    const setActiveView = useModelStore(s => s.setActiveView);
+    const anyConnected = clients.some(client => client.connected);
+    const proposes = clients.some(client => client.connected && client.proposesEdits);
+    const setProposes = (on: boolean) => {
+        for (const client of clients) if (client.connected) sendAiClientsSet(client.id, true, on);
+    };
+    return (
+        <Group title="AI coding tools">
+            <p style={{ fontSize: FONT.md, color: COLOR.muted, margin: '0 0 8px', lineHeight: 1.45 }}>
+                Let an AI coding tool open on this project look up elements, follow traces and check its work against the model's rules.
+                Restart the tool after changing a switch.
+            </p>
+            {clients.map(client => (
+                <Row key={client.id} title={client.label} hint={`Writes the memo server into ${client.file}.`}>
+                    <Switch label={`Connect ${client.label}`} checked={client.connected} onChange={on => sendAiClientsSet(client.id, on, on && proposes)} />
+                </Row>
+            ))}
+            <Row title="Let AI tools propose edits"
+                hint="Connected tools may propose new elements, changes and relationships. Nothing is written until you apply it under AI Tools › Pending changes.">
+                <Switch label="Let AI tools propose edits" checked={proposes} disabled={!anyConnected} onChange={setProposes} />
+            </Row>
+            {waiting > 0 && (
+                <div style={{ padding: '12px 0', fontSize: FONT.md }}>
+                    <button onClick={() => setActiveView({ type: 'ai-pending' })}
+                        style={{ border: 0, padding: 0, background: 'none', color: COLOR.primary, textDecoration: 'underline', cursor: 'pointer', fontSize: FONT.md }}>
+                        {waiting} proposed change{waiting === 1 ? '' : 's'} waiting for review
+                    </button>
+                </div>
+            )}
+            {error && <div style={{ padding: '8px 0', fontSize: FONT.md, color: '#DC2626' }}>{error}</div>}
+        </Group>
+    );
+}
+
+/**
+ * The optional features, each a switch. Those on for everyone (AI Tools, Guided Pathways, Custom
+ * Dashboards) can be switched off, and the experimental ones switched on. The choice is saved for this
+ * person only (memo.user.yaml: `featuresOff` and `features`). Which features exist and which can be
+ * switched comes from the registry in config/feature-flags.ts, not from a list here.
  */
 function FeaturesSection() {
     const features = useModelStore(s => s.features);
+    const featuresOff = useModelStore(s => s.featuresOff);
     const setFeatureEnabled = useModelStore(s => s.setFeatureEnabled);
     const grantedByCli = experimentalGrantedByCli();
+    const onByDefault = FEATURE_FLAGS.filter(flag => flag.stage === 'stable' && flag.canTurnOff);
     const experimental = FEATURE_FLAGS.filter(flag => flag.stage === 'experimental');
     return (
-        <Group>
-            <p style={{ fontSize: FONT.md, color: COLOR.muted, margin: '0 0 8px', lineHeight: 1.45 }}>
-                Features that are not part of the regulated workflow stay off until you switch them on. Saved for you only, in memo.user.yaml.
-                {grantedByCli && ' Architect was started with --experimental, so all of them are on.'}
-            </p>
-            {experimental.map(flag => (
-                <Row key={flag.id} title={flag.label} hint={flag.description}>
-                    <Switch label={flag.label} checked={isFeatureEnabled(flag.id)} disabled={grantedByCli} onChange={on => setFeatureEnabled(flag.id, on)} />
-                </Row>
-            ))}
-            {/* Re-reads the saved list, so the switches follow a change made elsewhere. */}
-            <span hidden>{features.length}</span>
-        </Group>
+        <>
+            <Group title="On for everyone">
+                <p style={{ fontSize: FONT.md, color: COLOR.muted, margin: '0 0 8px', lineHeight: 1.45 }}>
+                    Switch one off if you do not use it. Saved for you only, in memo.user.yaml.
+                </p>
+                {onByDefault.map(flag => (
+                    <Row key={flag.id} title={flag.label} hint={flag.description}>
+                        <Switch label={flag.label} checked={!featuresOff.includes(flag.id)} onChange={on => setFeatureEnabled(flag.id, on)} />
+                    </Row>
+                ))}
+            </Group>
+            <Group title="Experimental">
+                <p style={{ fontSize: FONT.md, color: COLOR.muted, margin: '0 0 8px', lineHeight: 1.45 }}>
+                    Features that are not part of the regulated workflow stay off until you switch them on. Saved for you only, in memo.user.yaml.
+                    {grantedByCli && ' Architect was started with --experimental, so all of them are on.'}
+                </p>
+                {experimental.map(flag => (
+                    <Row key={flag.id} title={flag.label} hint={flag.description}>
+                        <Switch label={flag.label} checked={isFeatureEnabled(flag.id)} disabled={grantedByCli} onChange={on => setFeatureEnabled(flag.id, on)} />
+                    </Row>
+                ))}
+                {/* Re-reads the saved list, so the switches follow a change made elsewhere. */}
+                <span hidden>{features.length}</span>
+            </Group>
+        </>
     );
 }
 
@@ -344,7 +403,7 @@ export function SettingsPage() {
                     {section === 'explorer' && <ExplorerSection />}
                     {section === 'features' && <FeaturesSection />}
                     {section === 'documents' && <DocumentsSection />}
-                    {section === 'assistant' && <AssistantSection />}
+                    {section === 'assistant' && <><AssistantSection /><AiCodingToolsSection /></>}
                 </div>
             </main>
         </div>

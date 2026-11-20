@@ -57,6 +57,18 @@ describe('feature flag registry', () => {
         expect(isFeatureEnabled('import')).toBe(false);
     });
 
+    it('hides a feature that needs a server in a static viewer', () => {
+        grant(undefined);
+        (window as { __MEMO_DATA__?: unknown }).__MEMO_DATA__ = { model: {} };
+        try {
+            expect(isFeatureEnabled('ai-tools')).toBe(false);
+            expect(isFeatureEnabled('guide')).toBe(true);
+        } finally {
+            delete (window as { __MEMO_DATA__?: unknown }).__MEMO_DATA__;
+        }
+        expect(isFeatureEnabled('ai-tools')).toBe(true);
+    });
+
     it('fails closed on an unregistered id', () => {
         grant({ experimental: true });
         expect(isFeatureEnabled('not-a-feature' as any)).toBe(false);
@@ -96,6 +108,7 @@ describe('AI tools go through their flag', () => {
         const branch = app.slice(app.indexOf("case 'ai':"), app.indexOf("isFeatureEnabled('ai-tools')"));
         expect(branch).toContain("case 'ask':");
         expect(branch).toContain("case 'sysml-generator':");
+        expect(branch).toContain("case 'ai-pending':");
     });
 
     it('leaves no ungated entry point in the Explorer sidebar', () => {
@@ -119,6 +132,15 @@ describe('features a person switches on in Settings', () => {
         setUserFeatures(['import']);
         expect(isFeatureEnabled('import')).toBe(true);
         expect(isFeatureEnabled('ontology')).toBe(false);
+    });
+    it('turn a default feature off for this person, and only one that may be', () => {
+        setUserFeatures([], ['ai-tools', 'guide', 'analysis']);
+        expect(isFeatureEnabled('ai-tools')).toBe(false);
+        expect(isFeatureEnabled('guide')).toBe(false);
+        expect(isFeatureEnabled('custom-dashboards')).toBe(true);
+        expect(isFeatureEnabled('analysis')).toBe(true);
+        setUserFeatures([], []);
+        expect(isFeatureEnabled('ai-tools')).toBe(true);
     });
     it('never turn a stable feature off or an unknown id on', () => {
         setUserFeatures(['nonsense']);

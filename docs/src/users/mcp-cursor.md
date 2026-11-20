@@ -1,7 +1,7 @@
 # AI Coding Tools (MCP)
 
-MEMO ships a **Model Context Protocol** server. Any MCP client — Cursor, Claude Code,
-Windsurf — can use it to query your model while it edits your `.sysml` files.
+MEMO ships a **Model Context Protocol** server. Claude Code, Cursor and VS Code use it to
+query your model while they edit your `.sysml` files.
 
 This matters because a coding agent editing SysML by hand is working blind. It cannot
 see which kinds your ontology defines, which relationship types are legal, or what the
@@ -12,58 +12,36 @@ check its own work afterwards.
 
 ## Setup
 
-### Cursor
+A model created with `memo-architect init` is already connected to all three tools, read-only.
+Open the project in the tool and it finds the `memo` server.
 
-From your project directory:
+To change that, open **Settings › AI assistant** in Architect. Under **AI coding tools** each tool
+has a switch:
+
+| Tool | File the switch writes |
+|---|---|
+| Claude Code | `.mcp.json` |
+| Cursor | `.cursor/mcp.json`, plus the rules file `.cursor/rules/memo.mdc` |
+| VS Code | `.vscode/mcp.json` |
+
+A switch adds or removes only the `memo` entry; any other servers in the file are left alone.
+The entries name no path on your machine, so the files can be committed and work for everyone
+on the team. Restart the tool after changing a switch.
+
+The same switches are available from a terminal, for scripts:
 
 ```bash
 memo-architect mcp init
 ```
 
-That writes two files:
-
-| File | Purpose |
-|---|---|
-| `.cursor/mcp.json` | Registers the `memo` server with Cursor |
-| `.cursor/rules/memo.mdc` | MEMO conventions, applied when Cursor touches a `.sysml` file |
-
-Restart Cursor, then check **Settings → MCP** for a server named `memo`.
-
-If you already have MCP servers configured, `memo-architect mcp init` merges into the existing
-`.cursor/mcp.json` rather than replacing it — your other servers are left alone.
-
-To skip the rules file:
-
-```bash
-memo-architect mcp init --no-rules
-```
-
-### Claude Code
-
-```bash
-claude mcp add memo -- npx -y --package=@memoarchitect/architect memo-architect mcp --project /path/to/your/project
-```
-
-`memo-architect mcp init` prints this line with your project path already filled in.
-
-### Any other MCP client
-
-The server speaks MCP over stdio. Point your client at:
-
-```bash
-npx -y --package=@memoarchitect/architect memo-architect mcp --project /path/to/your/project
-```
-
 !!! note "No API key needed"
-    The MCP server does not call an LLM — your IDE does. It only reads your model and
-    answers the IDE's questions, so none of the provider configuration on the
+    The MCP server does not call an LLM; your coding tool does. It only reads your model and
+    answers the tool's questions, so none of the provider configuration on the
     [Intelligence & AI](ai-features.md) page applies here.
 
 ---
 
 ## Tools the server exposes
-
-Read-only by default:
 
 | Tool | What it does |
 |---|---|
@@ -74,81 +52,72 @@ Read-only by default:
 | `memo_trace` | Follow relationship chains from an element to a given depth: downstream (edges out of it), upstream (edges into it, such as what verifies it) or both |
 | `memo_validate` | Run the project's effective rule set, the one `memo validate` and Architect run, and return every violation |
 
-The two that change outcomes most are `memo_ontology` — which stops the agent inventing
-kinds your project does not define — and `memo_validate`, which lets it check its own
-edit rather than declaring success.
+The Model Assistant in Architect uses the same tools, so the tool and the assistant answer a
+question the same way. The two that change outcomes most are `memo_ontology`, which stops
+the agent inventing kinds your project does not define, and `memo_validate`, which lets it
+check its own edit rather than declaring success.
 
 ---
 
-## Read-only vs write
+## Letting a tool propose edits
 
-By default the server **cannot modify your model**. The agent reads, and writes SysML
-through your editor, where you review the diff as you would any other code change.
+By default a tool can only read the model; it changes SysML through your editor, where you
+review the diff like any other code change.
 
-To let the agent create elements directly:
+Turn on **Let AI tools propose edits** in **Settings › AI assistant** and the connected tools
+also get the Model Assistant's proposal tools:
 
-```bash
-memo-architect mcp init --write
-```
-
-That adds one more tool:
-
-| Tool | What it does |
+| Tool | Proposes |
 |---|---|
-| `memo_create_element` | Create an element and write it to the project SysML source |
+| `propose_create_element` | A new element of a kind the ontology defines |
+| `propose_update_element` | A change to an element's name, attributes or documentation |
+| `propose_create_relationship` | A relationship, checked against the ontology's end kinds |
+| `propose_delete_relationship` | Removing a relationship |
 
-It still validates the kind against your ontology and refuses an id that already exists.
-
-!!! warning "Consider whether you want this"
-    Read-only is the default deliberately. In read-only mode every change to a regulated
-    file arrives as an editor diff you approve. With `--write`, the agent writes
-    directly, and your review moves to `git diff`. For a model under design control,
-    read-only plus your normal review process is usually the right answer.
-
-Calling a write tool on a read-only server returns a clear error telling the agent to ask
-you to restart with `--write`, rather than failing silently.
+**A proposal never changes the model.** It waits under **AI Tools › Pending changes** in
+Architect, with the tool that proposed it and when, until you apply or discard it. Applying
+goes through the same checks as an edit you make by hand. The waiting proposals are kept in
+`memo.ai-proposals.json` in the project, which is kept out of git.
 
 ---
 
 ## Running the server by hand
 
-Useful when debugging a client that will not connect:
+Useful when debugging a tool that will not connect:
 
 ```bash
-memo-architect mcp --project .
+memo-architect mcp
 ```
 
 The server speaks JSON-RPC on stdout and logs to stderr, so a bare run looks like it has
-hung — it is waiting for a client. Press `Ctrl+D` to end it.
+hung: it is waiting for a client. Press `Ctrl+D` to end it.
 
 | Option | Default | Description |
 |---|---|---|
-| `--project <dir>` | current directory | Project to serve |
-| `--write` | off | Enable the model-editing tool |
+| `--project <dir>` | the model the current directory is in | Project to serve |
+| `--write` | off | Offer the proposal tools |
 
 ---
 
 ## The Cursor rules file
 
-`.cursor/rules/memo.mdc` applies whenever Cursor works on a `.sysml` file. It tells the
-agent to check the ontology before editing, to use exact element ids, to treat terms
-drawn from a standard as regulated vocabulary rather than paraphrasing them, and to run
-`memo_validate` afterwards.
+`.cursor/rules/memo.mdc` applies whenever Cursor works on a `.sysml` file. It carries the
+same guidance the server gives every tool when it connects: check the ontology before
+editing, use exact element ids, treat terms drawn from a standard as regulated vocabulary,
+and run `memo_validate` afterwards.
 
-It is a normal file — edit it to suit your team's conventions. `memo-architect mcp init` overwrites
-it, so keep local changes elsewhere or re-apply them after re-running init.
+Connecting Cursor again rewrites it, so keep team conventions in a rules file of your own.
 
 ---
 
 ## Troubleshooting
 
-**The server does not appear in Cursor.** Restart Cursor after `memo-architect mcp init` —
-it reads `.cursor/mcp.json` at startup.
+**The server does not appear in the tool.** Restart the tool after changing a switch; it
+reads its MCP file at startup.
 
-**"No MEMO project found."** The `--project` path must contain the native entrypoint
-`model/methodology/project.sysml`. Run `memo-architect mcp init` from the project root so the
-generated path is correct.
+**"No MEMO project found."** The tool started the server outside the model. Open the
+model's folder in the tool, the one holding `memo.package.yaml`.
 
-**Answers look stale.** The server reloads when your `.sysml` files change, checked per
-request. If an answer looks wrong, confirm the agent is not quoting an earlier reply
-from its own context rather than calling the tool again.
+**Answers look stale.** The server reloads when the model's files, its settings or its
+ontology change, checked per request. If an answer looks wrong, confirm the agent is not
+quoting an earlier reply from its own context rather than calling the tool again.

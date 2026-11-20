@@ -372,19 +372,28 @@ export function ChatPanel() {
 
 // ─── Proposed change review ──────────────────────────────────────────────────
 
-function ProposedChanges({ changes, approved, onToggle, onApply, onDiscard, applying }: {
+/**
+ * The review card for proposed changes: the chat's, and the ones AI coding tools made over MCP
+ * (Pending changes). `sourceOf` names who proposed a change and when; `failures` shows why one could
+ * not be applied.
+ */
+export function ProposedChanges({ changes, approved, onToggle, onApply, onDiscard, applying, inset = true, sourceOf, failures, discardLabel = 'Discard all' }: {
     changes: ProposedChange[];
     approved: Set<string>;
     onToggle: (id: string) => void;
     onApply: () => void;
     onDiscard: () => void;
     applying: boolean;
+    inset?: boolean;
+    sourceOf?: (change: ProposedChange) => string | undefined;
+    failures?: Record<string, string>;
+    discardLabel?: string;
 }) {
     const selectedCount = changes.filter(c => approved.has(c.id)).length;
 
     return (
         <div style={{
-            marginLeft: '32px', border: '1px solid #FCD34D', borderRadius: '10px',
+            marginLeft: inset ? '32px' : 0, border: '1px solid #FCD34D', borderRadius: '10px',
             background: '#FFFBEB', overflow: 'hidden',
         }}>
             <div style={{
@@ -414,6 +423,8 @@ function ProposedChanges({ changes, approved, onToggle, onApply, onDiscard, appl
                             <div style={{ fontWeight: 600, color: '#1B3A4B' }}>{changeTitle(change)}</div>
                             <div style={{ color: '#92400E', marginTop: '2px' }}>{change.summary}</div>
                             <ChangeDetail change={change} />
+                            {sourceOf?.(change) && <div style={{ color: '#6B7280', marginTop: '4px', fontSize: '11px' }}>{sourceOf(change)}</div>}
+                            {failures?.[change.id] && <div style={{ color: '#B91C1C', marginTop: '4px', fontSize: '11px' }}>Not applied: {failures[change.id]}</div>}
                         </div>
                     </label>
                 ))}
@@ -441,7 +452,7 @@ function ProposedChanges({ changes, approved, onToggle, onApply, onDiscard, appl
                         color: '#92400E', fontSize: '11px', cursor: 'pointer',
                     }}
                 >
-                    Discard all
+                    {discardLabel}
                 </button>
             </div>
         </div>

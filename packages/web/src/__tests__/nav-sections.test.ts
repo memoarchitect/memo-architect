@@ -20,7 +20,7 @@ function declaredViewTypes(): string[] {
  */
 const REACHED_FROM_A_PAGE = new Set([
     'diagram', 'element-detail', 'ontology-detail', 'dhf-document', 'custom-dashboard',
-    'tabular', 'ask', 'sysml-generator', 'dhf-dashboard-legacy', 'welcome', 'feature',
+    'tabular', 'ask', 'sysml-generator', 'ai-pending', 'dhf-dashboard-legacy', 'welcome', 'feature',
     // Opened from Settings > Model.
     'rules', 'pathway',
 ]);

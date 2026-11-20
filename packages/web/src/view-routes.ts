@@ -39,6 +39,7 @@ const STATIC_VIEW_PATHS: Record<string, string> = {
     ai: '/ai',
     ask: '/ask',
     'sysml-generator': '/generate',
+    'ai-pending': '/ai/pending',
     'review-dashboard': '/review',
     guide: '/method',
     import: '/import',

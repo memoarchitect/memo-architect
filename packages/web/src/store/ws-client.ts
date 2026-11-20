@@ -514,6 +514,22 @@ function handleMessage(msg: ExtendedServerMessage): void {
         case 'llm:settings':
             store.setLlmSettings(msg.payload.settings);
             break;
+        case 'ai:proposals':
+            store.setAiProposals(msg.payload.proposals);
+            break;
+        case 'ai:clients':
+            store.setAiClients(msg.payload.clients, msg.payload.error);
+            break;
+        case 'ai:proposals:result':
+            if (msg.payload.error) {
+                store.rejectLlmRequest(msg.payload.requestId, msg.payload.error);
+            } else {
+                store.resolveLlmRequest(msg.payload.requestId, {
+                    applied: msg.payload.applied ?? [],
+                    failed: msg.payload.failed ?? [],
+                });
+            }
+            break;
         case 'toolchain:settings':
             store.setToolchainSettings(msg.payload.settings);
             break;
@@ -1218,6 +1234,20 @@ export function sendLlmChat(
 ): void {
     if (ws && ws.readyState === WebSocket.OPEN) {
         ws.send(JSON.stringify({ type: 'llm:chat', payload: { requestId, question, history, allowEdits, workspace: useModelStore.getState().workspace ?? undefined } }));
+    }
+}
+
+/** Apply, or discard, proposals AI coding tools made over MCP. */
+export function sendAiProposals(requestId: string, action: 'apply' | 'discard', ids: string[]): void {
+    if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: `ai:proposals:${action}`, payload: { requestId, ids } }));
+    }
+}
+
+/** Connect or disconnect an AI coding tool, or change whether it may propose edits. */
+export function sendAiClientsSet(id: string, connected: boolean, proposesEdits: boolean): void {
+    if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: 'ai:clients:set', payload: { requestId: `ai-clients-${Date.now()}`, id, connected, proposesEdits } }));
     }
 }
 

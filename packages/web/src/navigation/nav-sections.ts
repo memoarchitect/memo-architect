@@ -44,6 +44,7 @@ export const SECTION_OF_VIEW: Record<ActiveView['type'], NavSectionId> = {
     ai: 'model',
     ask: 'model',
     'sysml-generator': 'model',
+    'ai-pending': 'model',
     diagram: 'views',
     tabular: 'views',
     'ui-screens': 'views',

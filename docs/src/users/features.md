@@ -27,6 +27,11 @@ matrix.
 | Standard | Part of the normal regulated workspace | Start Architect normally |
 | Experimental | Advanced or evolving; hidden by default | Start with `memo-architect dev --experimental`, or switch individual features on in **Settings › Features** (saved per person) |
 
+AI Tools, Guided Pathways and Custom Dashboards are standard and on for everyone. A person
+who does not use one can switch it off in **Settings › Features**; the choice is saved in
+their `memo.user.yaml` as `featuresOff`, and a project can make that the team's default with
+`preferences: featuresOff: [...]` in `memo.package.yaml`.
+
 Experimental features are Ontology Explorer, Import Model and the Model Tools
 (Model Diff, Design Review, Statistics). Transformed content from these
 features carries no design-control provenance; review it before committing it.

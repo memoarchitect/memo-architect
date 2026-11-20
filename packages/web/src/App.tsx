@@ -112,6 +112,7 @@ function UnifiedCanvas() {
             case 'ai':
             case 'ask':
             case 'sysml-generator':
+            case 'ai-pending':
                 // Gated here too, not only in the nav: /ask and /generate are
                 // bookmarkable, so the flag has to hold at the view level.
                 return isFeatureEnabled('ai-tools') ? <AiWorkspace /> : <Dashboard />;
@@ -362,6 +363,7 @@ export function App() {
         && activeView.type !== 'ai'
         && activeView.type !== 'ask'
         && activeView.type !== 'sysml-generator'
+        && activeView.type !== 'ai-pending'
         && activeView.type !== 'analysis'
         && activeView.type !== 'ui-screens';
 
@@ -526,6 +528,7 @@ export function App() {
                     && activeView.type !== 'ai'
                     && activeView.type !== 'ask'
                     && activeView.type !== 'sysml-generator'
+                    && activeView.type !== 'ai-pending'
                     && activeView.type !== 'analysis'
                     && !isCatalogRoute
                     && activeMode !== 'dhf'

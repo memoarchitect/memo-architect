@@ -12,6 +12,7 @@
 import { useModelStore } from '../store/model-store';
 import { ChatPanel } from './ChatPanel';
 import { SysmlGenerator } from './SysmlGenerator';
+import { PendingAiChanges } from './PendingAiChanges';
 
 const TABS = [
     {
@@ -24,13 +25,19 @@ const TABS = [
         label: 'SysML Generator',
         description: 'Natural language → SysML v2',
     },
+    {
+        view: 'ai-pending',
+        label: 'Pending changes',
+        description: 'Changes AI coding tools proposed, waiting for you to apply them',
+    },
 ] as const;
 
 export function AiWorkspace() {
     const activeView = useModelStore(s => s.activeView);
     const setActiveView = useModelStore(s => s.setActiveView);
     // 'ai' is the mode's landing view; it opens on the assistant.
-    const current = activeView.type === 'sysml-generator' ? 'sysml-generator' : 'ask';
+    const current = activeView.type === 'sysml-generator' || activeView.type === 'ai-pending' ? activeView.type : 'ask';
+    const waiting = useModelStore(s => s.aiProposals.length);
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
@@ -67,12 +74,15 @@ export function AiWorkspace() {
                             }}
                         >
                             {tab.label}
+                            {tab.view === 'ai-pending' && waiting > 0 && (
+                                <span style={{ marginLeft: 6, padding: '0 6px', borderRadius: 9, background: '#92400E', color: '#fff', fontSize: 11, fontWeight: 700 }}>{waiting}</span>
+                            )}
                         </button>
                     );
                 })}
             </div>
             <div style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
-                {current === 'ask' ? <ChatPanel /> : <SysmlGenerator />}
+                {current === 'ask' ? <ChatPanel /> : current === 'ai-pending' ? <PendingAiChanges /> : <SysmlGenerator />}
             </div>
         </div>
     );

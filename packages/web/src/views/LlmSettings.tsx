@@ -21,10 +21,10 @@ export const ORIGIN_LABEL: Record<LlmSettingsOrigin, string> = {
     'default': 'the default',
 };
 
-export const MODEL_PLACEHOLDER: Record<string, string> = {
-    anthropic: 'claude-opus-5',
-    openai: 'gpt-4o',
-};
+/** The provider's default model, which the server reports, as a field's placeholder. */
+export function modelPlaceholder(settings: LlmSettingsStatus | null | undefined, provider: string): string {
+    return (settings?.defaultModels as Record<string, string> | undefined)?.[provider] ?? '';
+}
 
 /** The provider, model and key form: what is typed, and saving or removing it. Shared by the chat panel and Settings. */
 export function useLlmSettingsForm() {
@@ -127,7 +127,7 @@ export function LlmSettings({ onClose }: { onClose: () => void }) {
                     <input
                         value={model}
                         onChange={e => setModel(e.target.value)}
-                        placeholder={MODEL_PLACEHOLDER[provider] ?? ''}
+                        placeholder={modelPlaceholder(settings, provider)}
                         style={fieldStyle}
                     />
                 </div>

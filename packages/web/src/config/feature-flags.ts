@@ -6,7 +6,9 @@
 //
 // A person switches an experimental feature on in Settings (Features); that is
 // saved with their other choices and is the normal way to get one. The CLI grant
-// below remains for a developer who wants every one at once.
+// below remains for a developer who wants every one at once. A stable feature
+// marked `canTurnOff` is on for everyone and a person may switch it off there
+// (`featuresOff` in memo.user.yaml; a project may set that default for its team).
 //
 // Grants arrive from the CLI. `memo-architect --experimental` (and
 // `memo-architect dev --experimental`, `build --experimental`) makes the server
@@ -31,6 +33,13 @@ export interface FeatureFlag {
     /** Why the feature is gated. */
     description: string;
     stage: FeatureStage;
+    /**
+     * Works only against a running server (`memo-architect dev`), so it is hidden in a static viewer built
+     * by `memo-architect build`, which has the model but nothing to answer a request.
+     */
+    needsServer?: boolean;
+    /** A stable feature a person may switch off for themselves in Settings › Features. */
+    canTurnOff?: boolean;
 }
 
 export type FeatureId = 'ai-tools' | 'ontology' | 'import' | 'model-tools' | 'analysis' | 'guide' | 'custom-dashboards';
@@ -43,6 +52,8 @@ export const FEATURE_FLAGS: readonly FeatureFlag[] = [
             'Model Assistant (model Q&A and proposed edits) and SysML Generator '
             + '(natural language → SysML v2). Nothing generated reaches a file until the engineer approves it.',
         stage: 'stable',
+        needsServer: true,
+        canTurnOff: true,
     },
     {
         id: 'ontology',
@@ -67,12 +78,14 @@ export const FEATURE_FLAGS: readonly FeatureFlag[] = [
         label: 'Guided Pathways',
         description: 'Open the model’s method, its layer workbenches, and guidance for the next step.',
         stage: 'stable',
+        canTurnOff: true,
     },
     {
         id: 'custom-dashboards',
         label: 'Custom Dashboards',
         description: 'Markdown dashboards with live embeds.',
         stage: 'stable',
+        canTurnOff: true,
     },
     {
         id: 'analysis',
@@ -94,6 +107,11 @@ declare global {
     }
 }
 
+/** A viewer built by `memo-architect build` carries its model inline and has no server behind it. */
+function isStaticViewer(): boolean {
+    return typeof window !== 'undefined' && Boolean((window as { __MEMO_DATA__?: unknown }).__MEMO_DATA__);
+}
+
 function grants(): FeatureGrants {
     if (typeof window === 'undefined') return {};
     return window.__MEMO_FLAGS__ ?? {};
@@ -110,7 +128,8 @@ export function isFeatureEnabled(id: FeatureId): boolean {
     const flag = FEATURE_FLAGS.find(f => f.id === id);
     // An unregistered id is a typo, not a hidden feature — fail closed.
     if (!flag) return false;
-    if (flag.stage === 'stable') return true;
+    if (flag.needsServer && isStaticViewer()) return false;
+    if (flag.stage === 'stable') return !(flag.canTurnOff && userFeaturesOff.has(id));
     return grants().experimental === true || userFeatures.has(id);
 }
 
@@ -121,8 +140,11 @@ export function isFeatureEnabled(id: FeatureId): boolean {
  * also subscribe to the store's `features`, which is what re-renders them.
  */
 let userFeatures: ReadonlySet<string> = new Set();
-export function setUserFeatures(ids: readonly string[]): void {
+/** The stable features this person switched off. */
+let userFeaturesOff: ReadonlySet<string> = new Set();
+export function setUserFeatures(ids: readonly string[], off: readonly string[] = []): void {
     userFeatures = new Set(ids);
+    userFeaturesOff = new Set(off);
 }
 
 /** True when the CLI granted every experimental feature, so Settings cannot switch them off. */

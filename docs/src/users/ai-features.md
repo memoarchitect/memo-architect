@@ -42,7 +42,7 @@ A `.env` file in the project root is read automatically:
 ```bash
 # .env
 ANTHROPIC_API_KEY=sk-ant-...
-MEMO_LLM_MODEL=claude-opus-5
+MEMO_LLM_MODEL=claude-opus-5-5
 ```
 
 !!! warning "Keep `.env` out of version control"
@@ -72,7 +72,7 @@ effect, because the higher-precedence source would still win.
 
 | Setting | Default | Notes |
 |---|---|---|
-| Anthropic | `claude-opus-5` | Override with `MEMO_LLM_MODEL` or in Settings |
+| Anthropic | `claude-opus-5-5` | Override with `MEMO_LLM_MODEL` or in Settings |
 | OpenAI-compatible | `gpt-4o` | Point `OPENAI_BASE_URL` at a local server if you self-host |
 
 ---
@@ -159,13 +159,16 @@ Templates are tuned for ISO 14971, IEC 62304, and IEC 60601.
 
 ---
 
-## 5. Using MEMO from Cursor or Claude Code
+## 5. Using MEMO from Claude Code, Cursor or VS Code
 
 Architect is not the only way to work with an AI on your model. MEMO ships an MCP server
-that exposes the model to any Model Context Protocol client, so Cursor can look up
-elements, follow traceability, and check validation while it edits your `.sysml` files.
+that lets an AI coding tool look up elements, follow traceability and check validation
+while it edits your `.sysml` files. A new model is connected to Claude Code, Cursor and
+VS Code already; **Settings › AI assistant › AI coding tools** turns each one on or off, and
+decides whether they may propose edits. Proposals wait under **AI Tools › Pending
+changes** until you apply them.
 
-See **[AI Coding Tools (MCP)](mcp-cursor.md)** for setup.
+See **[AI Coding Tools (MCP)](mcp-cursor.md)** for the details.
 
 ---
 
@@ -177,5 +180,5 @@ See **[AI Coding Tools (MCP)](mcp-cursor.md)** for setup.
 | Model Assistant (Suggest edits) | Yes | Only what you approve |
 | SysML Generator | Ontology only | Only what you commit |
 | DHF draft | Yes | Writes a draft document |
-| MCP server (default) | Yes | Never |
-| MCP server (`--write`) | Yes | Yes — see the MCP guide |
+| AI coding tools (default) | Yes | Never |
+| AI coding tools, proposing edits | Yes | Only what you apply under Pending changes |

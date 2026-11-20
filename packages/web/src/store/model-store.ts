@@ -18,7 +18,7 @@ import type {
     PackageMutationResultMessage,
 } from '@memoarchitect/tools/browser';
 import { elementIdOf, savedRef } from '../lib/element-refs';
-import type { ValidationResult, CompletenessReport, LlmSettingsStatus, UserToolchainStatus, DashboardDTO, DashboardScope, ClauseFact, FavoriteDTO, UserPreferencesDTO } from '@memoarchitect/tools/browser';
+import type { ValidationResult, CompletenessReport, LlmSettingsStatus, UserToolchainStatus, QueuedProposal, AiClientStatus, DashboardDTO, DashboardScope, ClauseFact, FavoriteDTO, UserPreferencesDTO } from '@memoarchitect/tools/browser';
 import type {
     OntologyRegistriesDTO,
     RelationshipCreateRequest,
@@ -26,7 +26,7 @@ import type {
     RelationshipDiagnostic,
     RelationshipDirection,
 } from '@memoarchitect/tools/browser';
-import { setUserFeatures } from '../config/feature-flags';
+import { FEATURE_FLAGS, setUserFeatures } from '../config/feature-flags';
 import { affectingFiles, changeAffects, findRelationshipDefinition, type RelationshipEndScopes } from '@memoarchitect/tools/browser';
 import {
     sendElementUpdate, sendElementCreate, sendDiagramCreate, sendDiagramUpdate, sendDiagramDelete,
@@ -167,6 +167,7 @@ export type ActiveView =
     | { type: 'ai' }                     // E: AI workspace landing (gated: ai-tools)
     | { type: 'ask' }                    // E: model Q&A (#52) (gated: ai-tools)
     | { type: 'sysml-generator' }        // E: NL → SysML (#54) (gated: ai-tools)
+    | { type: 'ai-pending' }             // E: proposals from AI coding tools, waiting for approval (gated: ai-tools)
     | { type: 'dashboard' }           // N1: home dashboard (replaces welcome after model loads)
     | { type: 'dashboards' }          // custom dashboards: list
     | { type: 'custom-dashboard'; dashboardId: string; scope?: DashboardScope } // one markdown dashboard
@@ -601,6 +602,9 @@ export interface ModelState {
     explorerAllocation: AllocationFilter;
     setExplorerAllocation: (filter: AllocationFilter) => void;
     features: string[];
+    /** The features that are on by default and this person switched off. */
+    featuresOff: string[];
+    /** Switch a feature on or off for this person: an experimental one is listed when on, a default one when off. */
     setFeatureEnabled: (id: string, enabled: boolean) => void;
     /** The attribute the Model Explorer splits its folders by ('' for none); saved with the person's choices. */
     explorerSplit: string;
@@ -655,6 +659,13 @@ export interface ModelState {
     registerLlmRequest: (requestId: string, resolve: (v: any) => void, reject: (e: Error) => void) => void;
     resolveLlmRequest: (requestId: string, value: any) => void;
     rejectLlmRequest: (requestId: string, error: string) => void;
+    /** Proposals AI coding tools made over MCP, waiting for the engineer (memo.ai-proposals.json). */
+    aiProposals: QueuedProposal[];
+    setAiProposals: (proposals: QueuedProposal[]) => void;
+    /** The AI coding tools connected to this model, and why the last change to them failed, if it did. */
+    aiClients: AiClientStatus[];
+    aiClientsError: string | undefined;
+    setAiClients: (clients: AiClientStatus[], error?: string) => void;
 }
 
 const restoredActiveView = restoreActiveView();
@@ -664,7 +675,7 @@ const RECENT_LIMIT = 10;
 
 /** The choices one person keeps for this model, as they are saved. */
 export function preferencesOf(state: {
-    role: string | null; workspace: string | null; explorerSplit: string; features: string[]; packageFolders: boolean;
+    role: string | null; workspace: string | null; explorerSplit: string; features: string[]; featuresOff?: string[]; packageFolders: boolean;
     lastStep: string | null; favorites: FavoriteDTO[]; recentViews: string[]; recentlyVisited: string[];
     model?: MemoModelDTO | null;
 }): UserPreferencesDTO {
@@ -672,6 +683,7 @@ export function preferencesOf(state: {
         ...(state.packageFolders ? {} : { packageFolders: false }),
         ...(state.lastStep ? { lastStep: savedRef(state.model, state.lastStep) } : {}),
         ...(state.features.length > 0 ? { features: state.features } : {}),
+        ...(state.featuresOff?.length ? { featuresOff: state.featuresOff } : {}),
         ...(state.role ? { role: state.role } : {}),
         ...(state.workspace ? { workspace: savedRef(state.model, state.workspace) } : {}),
         ...(state.explorerSplit ? { explorerSplit: state.explorerSplit } : {}),
@@ -836,6 +848,7 @@ export const useModelStore = create<ModelState>((set, get) => ({
         saveChoices(get());
     },
     features: [],
+    featuresOff: [],
     favorites: [],
     recentViews: [],
     preferencesLoaded: false,
@@ -849,10 +862,11 @@ export const useModelStore = create<ModelState>((set, get) => ({
         saveChoices(get());
     },
     applyUserPreferences: (preferences) => {
-        setUserFeatures(preferences.features ?? []);
+        setUserFeatures(preferences.features ?? [], preferences.featuresOff ?? []);
         set({
             role: preferences.role ?? null, explorerSplit: preferences.explorerSplit ?? '',
             features: preferences.features ?? [],
+            featuresOff: preferences.featuresOff ?? [],
             packageFolders: preferences.packageFolders !== false,
             recentViews: preferences.recentViews ?? [],
             preferencesLoaded: true,
@@ -863,9 +877,18 @@ export const useModelStore = create<ModelState>((set, get) => ({
         });
     },
     setFeatureEnabled: (id, enabled) => {
-        const features = enabled ? [...new Set([...get().features, id])] : get().features.filter(entry => entry !== id);
-        setUserFeatures(features);
-        set({ features });
+        const flag = FEATURE_FLAGS.find(entry => entry.id === id);
+        let { features, featuresOff } = get();
+        if (flag?.stage === 'stable') {
+            if (!flag.canTurnOff) return;
+            featuresOff = enabled ? featuresOff.filter(entry => entry !== id) : [...new Set([...featuresOff, id])];
+            // A new list, so every component that re-renders on `features` sees the change.
+            features = [...features];
+        } else {
+            features = enabled ? [...new Set([...features, id])] : features.filter(entry => entry !== id);
+        }
+        setUserFeatures(features, featuresOff);
+        set({ features, featuresOff });
         saveChoices(get());
     },
     // A save replaces the person's choices, so every one is sent with the others.
@@ -916,6 +939,11 @@ export const useModelStore = create<ModelState>((set, get) => ({
     llmPending: new Map(),
     toolchainSettings: null,
     setToolchainSettings: (settings) => set({ toolchainSettings: settings }),
+    aiProposals: [],
+    setAiProposals: (proposals) => set({ aiProposals: proposals }),
+    aiClients: [],
+    aiClientsError: undefined,
+    setAiClients: (clients, error) => set({ aiClients: clients, aiClientsError: error }),
     llmSettings: null,
     setLlmSettings: (settings) => set({
         llmSettings: settings,
