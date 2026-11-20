@@ -71,6 +71,31 @@ describe('favorites and recents in the saved choices', () => {
     });
 });
 
+describe('saved choices name elements by short id', () => {
+    beforeEach(() => { reset(); sendUserPreferencesSave.mockClear(); useModelStore.setState({ model: null }); });
+    const at = (id: string) => ({ id, name: id, kind: 'System', attributes: {}, shortId: 'SYS-7' });
+    const modelWith = (id: string) => ({ elements: { [id]: at(id), 'pkg::loose': { id: 'pkg::loose', name: 'loose', kind: 'Part', attributes: {} } }, relationships: [], errors: [] }) as unknown as MemoModelDTO;
+
+    it('saves the short id and reads it back after the element moved package', () => {
+        useModelStore.setState({ model: modelWith('old::Gen') });
+        useModelStore.getState().applyUserPreferences({});
+        useModelStore.getState().toggleFavorite({ type: 'element', ref: 'old::Gen' });
+        useModelStore.getState().selectElement('old::Gen');
+        useModelStore.getState().setWorkspace('old::Gen');
+        expect(sendUserPreferencesSave).toHaveBeenLastCalledWith(expect.objectContaining({
+            workspace: 'SYS-7', favorites: [{ type: 'element', ref: 'SYS-7' }], recentElements: ['SYS-7'],
+        }));
+
+        reset();
+        useModelStore.getState().applyUserPreferences({ workspace: 'SYS-7', favorites: [{ type: 'element', ref: 'SYS-7' }], recentElements: ['SYS-7', 'pkg::loose'] });
+        useModelStore.getState().setModel(modelWith('new::Gen'));
+        const state = useModelStore.getState();
+        expect(state.workspace).toBe('new::Gen');
+        expect(state.favorites).toEqual([{ type: 'element', ref: 'new::Gen' }]);
+        expect(state.recentlyVisited).toEqual(['new::Gen', 'pkg::loose']);
+    });
+});
+
 describe('reading a favorite against the model', () => {
     const model = {
         elements: {

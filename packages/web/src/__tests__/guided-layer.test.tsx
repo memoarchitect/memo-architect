@@ -138,8 +138,10 @@ describe('the guided layer workspace', () => {
         expect(related.textContent).toContain('Loose activity · not placed in a clinical or operational workflow');
     });
 
-    it('opens exact scoped endpoints from Functional and Logical', async () => {
+    it('opens exact scoped endpoints from Functional and Logical, naming the system by short id', async () => {
         prepareFunctionalWorkbench();
+        const scoped = useModelStore.getState().model!;
+        useModelStore.setState({ model: { ...scoped, elements: { ...scoped.elements, host: { ...scoped.elements.host, shortId: 'SYS-1' } } } });
         answer.layers.push({ ...answer.layers[0], id: 'logical', name: 'layerLogical', label: 'Logical', workbench: undefined, tasks: [] });
         await render();
         await click('Compute signal');
@@ -147,10 +149,10 @@ describe('the guided layer workspace', () => {
         const logical = container.querySelector('[aria-label="Selected responsibility"]')!;
         expect(logical.textContent).toContain('Allocated to Controller');
         expect(logical.textContent).toContain('Linked');
-        expect(container.querySelector('[data-testid="location"]')?.textContent).toBe('/method/layerLogical?artifact=implementation&workspace=host');
+        expect(container.querySelector('[data-testid="location"]')?.textContent).toBe('/method/layerLogical?artifact=implementation&workspace=SYS-1');
         await click('Compute signal');
         expect(container.querySelector('[aria-label="Current functional task"] h2')?.textContent).toBe('Compute signal');
-        expect(container.querySelector('[data-testid="location"]')?.textContent).toBe('/method/layerWork?artifact=fn&workspace=host');
+        expect(container.querySelector('[data-testid="location"]')?.textContent).toBe('/method/layerWork?artifact=fn&workspace=SYS-1');
     });
 
     it('switches between function BDDs, flow activity diagrams and the step table', async () => {

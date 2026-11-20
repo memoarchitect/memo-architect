@@ -1,4 +1,5 @@
 import { useEffect, lazy, Suspense, useMemo, useRef, useState } from 'react';
+import { elementIdOf, savedRef } from './lib/element-refs';
 import { Routes, Route, useParams, useNavigate, useLocation, useNavigationType, useSearchParams } from 'react-router-dom';
 import { useModelStore } from './store/model-store';
 import { isPermalinkPath, isRouteOwnedPath, pathToView, slug, staticViewPaths, viewToPath } from './view-routes';
@@ -649,7 +650,7 @@ function DiagramPermalinkRoute() {
  */
 /**
  * What the pages are showing, in the address: `?domain=architecture` for the explorer's domain and
- * `?workspace=<system>` for the chosen workspace. A pasted link opens the same slice of the model, and
+ * `?workspace=<system's short id>` for the chosen workspace. A pasted link opens the same slice of the model, and
  * Back and Forward move between slices. The paths themselves stay as they are, so /catalog is still
  * /catalog with the domain beside it.
  *
@@ -663,6 +664,7 @@ function ScopeUrlSync() {
     const setDomain = useModelStore(s => s.setExplorerDomain);
     const workspace = useModelStore(s => s.workspace);
     const setWorkspace = useModelStore(s => s.setWorkspace);
+    const modelLoaded = useModelStore(s => s.model !== null);
     const navigate = useNavigate();
     const location = useLocation();
     const navigationType = useNavigationType();
@@ -694,15 +696,18 @@ function ScopeUrlSync() {
         lastUrl.current = { domain: urlDomain, workspace: urlWorkspace };
         // Strict Mode can replay this effect with the render that preceded an
         // adoption. Read the live scope before writing it back to the address.
-        const { explorerDomain: currentDomain, workspace: currentWorkspace } = useModelStore.getState();
+        const { explorerDomain: currentDomain, workspace: currentWorkspace, model } = useModelStore.getState();
+        // The address names the workspace by short id, as memo.user.yaml does; the store keeps the element id.
+        const linkedWorkspace = urlWorkspace && elementIdOf(model, urlWorkspace);
         const adoptDomain = domainLed && urlDomain !== currentDomain;
-        const adoptWorkspace = workspaceLed && urlWorkspace !== currentWorkspace;
+        const adoptWorkspace = workspaceLed && linkedWorkspace !== currentWorkspace;
         if (adoptDomain) setDomain(urlDomain);
-        if (adoptWorkspace) setWorkspace(urlWorkspace);
+        if (adoptWorkspace) setWorkspace(linkedWorkspace);
         if (adoptDomain || adoptWorkspace) return;
 
         let changed = false;
-        for (const [name, value] of [['domain', currentDomain], ['workspace', currentWorkspace]] as const) {
+        const workspaceRef = currentWorkspace && savedRef(model, currentWorkspace);
+        for (const [name, value] of [['domain', currentDomain], ['workspace', workspaceRef]] as const) {
             if ((params.get(name) ?? null) === (value ?? null)) continue;
             if (value) params.set(name, value); else params.delete(name);
             changed = true;
@@ -712,7 +717,7 @@ function ScopeUrlSync() {
             navigate({ pathname: here.pathname, search: query ? `?${query}` : '', hash: here.hash }, { replace: true });
         }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [location.pathname, location.search, domain, workspace, preferencesLoaded]);
+    }, [location.pathname, location.search, domain, workspace, preferencesLoaded, modelLoaded]);
 
     return null;
 }

@@ -1,4 +1,5 @@
 import { ContextWorkbench } from './ContextWorkbench';
+import { savedRef } from '../lib/element-refs';
 import { OperationalWorkbench } from './OperationalWorkbench';
 import { FunctionalWorkbench } from './FunctionalWorkbench';
 import { LogicalResponsibilities } from './LogicalResponsibilities';
@@ -209,7 +210,7 @@ export function GuidedLayer({ layer }: { layer: string }) {
         const scope = memberships?.length && (!workspace || !memberships.includes(workspace)) ? memberships[0] : workspace;
         if (scope && scope !== workspace) setWorkspace(scope);
         setActiveView(view);
-        navigate(scope ? `${path}&workspace=${encodeURIComponent(scope)}` : path);
+        navigate(scope ? `${path}&workspace=${encodeURIComponent(savedRef(model, scope))}` : path);
     };
     const goToFunctional = (artifactId?: string) => {
         const functional = guide?.layers.find(candidate => candidate.workbench === 'functional');
@@ -225,7 +226,7 @@ export function GuidedLayer({ layer }: { layer: string }) {
         }
         if (scope !== workspace) setWorkspace(scope);
         setActiveView(view);
-        navigate(scope ? `${path}${path.includes('?') ? '&' : '?'}workspace=${encodeURIComponent(scope)}` : path);
+        navigate(scope ? `${path}${path.includes('?') ? '&' : '?'}workspace=${encodeURIComponent(savedRef(model, scope))}` : path);
     };
     const goToStructuralArtifact = (layerName: 'layerLogical' | 'layerImplementation' | 'layerRealization', artifactId: string) => {
         const view = { type: 'pathway' as const, layer: layerName, artifactId };
@@ -238,7 +239,7 @@ export function GuidedLayer({ layer }: { layer: string }) {
         }
         if (scope !== workspace) setWorkspace(scope);
         setActiveView(view);
-        navigate(scope ? `${path}&workspace=${encodeURIComponent(scope)}` : path);
+        navigate(scope ? `${path}&workspace=${encodeURIComponent(savedRef(model, scope))}` : path);
     };
     const goToLogical = (id: string) => goToStructuralArtifact('layerLogical', id);
     const goToImplementation = (id: string) => goToStructuralArtifact('layerImplementation', id);
@@ -285,7 +286,7 @@ export function GuidedLayer({ layer }: { layer: string }) {
             <ContextWorkbench key={workspace ?? ''} model={model} workspace={workspace} canWrite={canWrite} guided
                 boundaryId={boundaryId} onBoundary={setBoundaryChoice}
                 diagram={contextDiagram} diagramSubject={contextView?.distance ? contextView.subject : undefined}
-                diagramHref={contextDiagram ? `${diagramUrl(contextDiagram.diagramType ?? 'context', contextDiagram.id)}${workspace ? `?workspace=${encodeURIComponent(workspace)}` : ''}` : undefined}
+                diagramHref={contextDiagram ? `${diagramUrl(contextDiagram.diagramType ?? 'context', contextDiagram.id)}${workspace ? `?workspace=${encodeURIComponent(savedRef(model, workspace))}` : ''}` : undefined}
                 onOperational={operationalLayer ? goToOperational : undefined}
                 onView={!contextDiagram && canWrite && boundaryId && row.viewpoints[0] && !creating ? () => void newView(row.viewpoints[0]) : undefined}
                 canvas={contextDiagram ? <Suspense fallback={<p role="status">Opening context diagram…</p>}>
@@ -298,7 +299,7 @@ export function GuidedLayer({ layer }: { layer: string }) {
                 setWorkspace(systemId);
                 const view = { type: 'pathway' as const, layer: 'layerContext' };
                 setActiveView(view);
-                navigate(`${viewToPath(view)}?workspace=${encodeURIComponent(systemId)}`);
+                navigate(`${viewToPath(view)}?workspace=${encodeURIComponent(savedRef(model, systemId))}`);
             } : undefined} /> : row.workbench === 'functional' ? <FunctionalWorkbench key={operationalKey} model={model} row={row} workspace={workspace} canWrite={canWrite}
             artifactId={requestedArtifact} onSelection={follow} onFunctional={goToFunctional} onLogical={guide.layers.some(candidate => candidate.name === 'layerLogical') ? goToLogical : undefined} onOperational={operationalLayer ? id => { const level = operationalWorkLevel(model, id); if (level) goToOperational(level, id); } : undefined} /> : <div style={{ flex: 1, display: 'flex', overflow: 'hidden', minHeight: 0 }}>
             {steps.length > 0 && railOpen && <aside aria-label="Layer guidance" data-testid="guide-rail" style={{ ...panel, width: 270, borderRight: `1px solid ${COLOR.border}` }}>

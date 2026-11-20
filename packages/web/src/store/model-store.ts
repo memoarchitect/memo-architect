@@ -17,6 +17,7 @@ import type {
     EditConflictMessage,
     PackageMutationResultMessage,
 } from '@memoarchitect/tools/browser';
+import { elementIdOf, savedRef } from '../lib/element-refs';
 import type { ValidationResult, CompletenessReport, LlmSettingsStatus, UserToolchainStatus, DashboardDTO, DashboardScope, ClauseFact, FavoriteDTO, UserPreferencesDTO } from '@memoarchitect/tools/browser';
 import type {
     OntologyRegistriesDTO,
@@ -665,17 +666,18 @@ const RECENT_LIMIT = 10;
 export function preferencesOf(state: {
     role: string | null; workspace: string | null; explorerSplit: string; features: string[]; packageFolders: boolean;
     lastStep: string | null; favorites: FavoriteDTO[]; recentViews: string[]; recentlyVisited: string[];
+    model?: MemoModelDTO | null;
 }): UserPreferencesDTO {
     return {
         ...(state.packageFolders ? {} : { packageFolders: false }),
-        ...(state.lastStep ? { lastStep: state.lastStep } : {}),
+        ...(state.lastStep ? { lastStep: savedRef(state.model, state.lastStep) } : {}),
         ...(state.features.length > 0 ? { features: state.features } : {}),
         ...(state.role ? { role: state.role } : {}),
-        ...(state.workspace ? { workspace: state.workspace } : {}),
+        ...(state.workspace ? { workspace: savedRef(state.model, state.workspace) } : {}),
         ...(state.explorerSplit ? { explorerSplit: state.explorerSplit } : {}),
-        ...(state.favorites.length > 0 ? { favorites: state.favorites } : {}),
+        ...(state.favorites.length > 0 ? { favorites: state.favorites.map(favorite => favorite.type === 'element' ? { ...favorite, ref: savedRef(state.model, favorite.ref) } : favorite) } : {}),
         ...(state.recentViews.length > 0 ? { recentViews: state.recentViews.slice(0, RECENT_LIMIT) } : {}),
-        ...(state.recentlyVisited.length > 0 ? { recentElements: state.recentlyVisited.slice(0, RECENT_LIMIT) } : {}),
+        ...(state.recentlyVisited.length > 0 ? { recentElements: state.recentlyVisited.slice(0, RECENT_LIMIT).map(id => savedRef(state.model, id)) } : {}),
     };
 }
 
@@ -686,6 +688,29 @@ export function sameFavorite(a: FavoriteDTO, b: FavoriteDTO): boolean {
 
 /** `id` first, then the rest without it, at most RECENT_LIMIT. */
 const pushRecent = (list: readonly string[], id: string): string[] => [id, ...list.filter(x => x !== id)].slice(0, RECENT_LIMIT);
+
+type SavedElements = Pick<ModelState, 'workspace' | 'lastStep' | 'favorites' | 'recentlyVisited'>;
+
+/**
+ * The choices that name elements, as element ids of `model`. Each goes through its short id in `previous`,
+ * the model they were last read against, so an element renamed or moved by a rebuild is still found.
+ * Unchanged parts stay the same objects.
+ */
+function savedElements(model: MemoModelDTO | null, saved: SavedElements, previous?: MemoModelDTO | null): SavedElements {
+    const idOf = (ref: string) => elementIdOf(model, savedRef(previous, ref));
+    const favorites = saved.favorites.map(favorite => {
+        if (favorite.type !== 'element') return favorite;
+        const ref = idOf(favorite.ref);
+        return ref === favorite.ref ? favorite : { ...favorite, ref };
+    });
+    const recentlyVisited = saved.recentlyVisited.map(idOf);
+    return {
+        workspace: saved.workspace && idOf(saved.workspace),
+        lastStep: saved.lastStep && idOf(saved.lastStep),
+        favorites: favorites.every((favorite, i) => favorite === saved.favorites[i]) ? saved.favorites : favorites,
+        recentlyVisited: recentlyVisited.every((id, i) => id === saved.recentlyVisited[i]) ? saved.recentlyVisited : recentlyVisited,
+    };
+}
 
 /** Save the person's choices, all of them, once the saved ones have arrived. */
 function saveChoices(state: ModelState): void {
@@ -826,14 +851,15 @@ export const useModelStore = create<ModelState>((set, get) => ({
     applyUserPreferences: (preferences) => {
         setUserFeatures(preferences.features ?? []);
         set({
-            role: preferences.role ?? null, workspace: preferences.workspace ?? null, explorerSplit: preferences.explorerSplit ?? '',
+            role: preferences.role ?? null, explorerSplit: preferences.explorerSplit ?? '',
             features: preferences.features ?? [],
             packageFolders: preferences.packageFolders !== false,
-            favorites: preferences.favorites ?? [],
             recentViews: preferences.recentViews ?? [],
-            recentlyVisited: preferences.recentElements ?? [],
             preferencesLoaded: true,
-            lastStep: preferences.lastStep ?? null,
+            ...savedElements(get().model, {
+                workspace: preferences.workspace ?? null, lastStep: preferences.lastStep ?? null,
+                favorites: preferences.favorites ?? [], recentlyVisited: preferences.recentElements ?? [],
+            }),
         });
     },
     setFeatureEnabled: (id, enabled) => {
@@ -1133,7 +1159,7 @@ export const useModelStore = create<ModelState>((set, get) => ({
             && Object.keys(model.elements).length > 0) {
             activeView = { type: 'dashboard' };
         }
-        return { model, activeView, selectedDiagramId, selectedViewpointId };
+        return { model, activeView, selectedDiagramId, selectedViewpointId, ...savedElements(model, s, s.model) };
     }),
     setValidation: (validation) => set({ validation }),
     setCompleteness: (completeness) => set({ completeness }),
