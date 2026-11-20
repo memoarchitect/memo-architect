@@ -15,6 +15,7 @@ import type { ChatMessage, ProposedChange } from '@memoarchitect/tools/browser';
 import { useModelStore } from '../store/model-store';
 import { sendLlmChat, sendLlmApply } from '../store/ws-client';
 import { LlmSettings } from './LlmSettings';
+import { useNavigate } from 'react-router-dom';
 
 /** One rendered bubble. Distinct from the wire transcript, which also has tool traffic. */
 interface Bubble {
@@ -274,7 +275,7 @@ export function ChatPanel() {
                                 border: msg.role === 'assistant' ? `1px solid ${msg.error ? '#fecaca' : '#E5E5E0'}` : 'none',
                                 whiteSpace: 'pre-wrap',
                             }}>
-                                {msg.content}
+                                {msg.role === 'assistant' ? <AnswerText text={msg.content} /> : msg.content}
                             </div>
                         </div>
 
@@ -368,6 +369,31 @@ export function ChatPanel() {
             </div>
         </div>
     );
+}
+
+/**
+ * An answer's text, with each markdown link to a page of Architect (`[name](/catalog/…)`, which the
+ * assistant writes for the elements it names) opening that page here. Other text is shown as written.
+ */
+function AnswerText({ text }: { text: string }) {
+    const navigate = useNavigate();
+    const parts: React.ReactNode[] = [];
+    const link = /\[([^\]\n]+)\]\((\/[^)\s]+)\)/g;
+    let last = 0;
+    for (let match = link.exec(text); match; match = link.exec(text)) {
+        if (match.index > last) parts.push(text.slice(last, match.index));
+        const href = match[2];
+        parts.push(
+            <a key={match.index} href={href}
+                onClick={event => { event.preventDefault(); navigate(href); }}
+                style={{ color: '#065F46', textDecoration: 'underline', cursor: 'pointer' }}>
+                {match[1]}
+            </a>,
+        );
+        last = match.index + match[0].length;
+    }
+    if (last < text.length) parts.push(text.slice(last));
+    return <>{parts}</>;
 }
 
 // ─── Proposed change review ──────────────────────────────────────────────────

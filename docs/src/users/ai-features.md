@@ -94,6 +94,10 @@ it can answer questions about a model far larger than any context window.
 - "What changed about the alarm subsystem's risk profile?"
 - "List every SOUP component and its safety classification."
 
+The assistant also reads the method (where each layer stands and what is still open), what is
+allocated to what, a part's interfaces, and what your uncommitted change reaches. The elements it
+names are links: click one to open it.
+
 Conversation history is kept for the session, so follow-ups work: ask a question, then
 "and which of those are software?" without restating context. **Clear conversation**
 starts fresh.

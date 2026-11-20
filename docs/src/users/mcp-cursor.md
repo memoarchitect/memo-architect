@@ -50,7 +50,17 @@ memo-architect mcp init
 | `memo_search_elements` | Find elements by name/id substring, kind, or layer |
 | `memo_get_element` | One element in full: attributes, docs, source file, every relationship, its violations |
 | `memo_trace` | Follow relationship chains from an element to a given depth: downstream (edges out of it), upstream (edges into it, such as what verifies it) or both |
-| `memo_validate` | Run the project's effective rule set, the one `memo validate` and Architect run, and return every violation |
+| `memo_validate` | Run the project's effective rule set, the one `memo validate` and Architect run, and return the violations; narrow it to one element to see what it still lacks, or to one rule |
+| `memo_allocation` | What is allocated to an element and what it is allocated to |
+| `memo_interfaces` | The interfaces and flows of a part and its ports, with the element at the other end |
+| `memo_guide` | Where the model stands against its method, layer by layer: each step's objective, criteria, the kinds it uses and produces, and what is still open |
+| `memo_change_impact` | What your uncommitted change reaches, measured from a git ref: changed and reached elements, broken interface contracts, releases and method steps it reopens |
+| `memo_systems` | The systems and systems of systems the model declares |
+| `memo_select_system` | Scope every later answer in the session to one system |
+
+Every element in an answer carries a `link` that opens it in Architect. The links assume Architect's
+default address, `http://localhost:3000`; set `MEMO_ARCHITECT_URL` in the tool's MCP entry if you run it
+elsewhere.
 
 The Model Assistant in Architect uses the same tools, so the tool and the assistant answer a
 question the same way. The two that change outcomes most are `memo_ontology`, which stops
