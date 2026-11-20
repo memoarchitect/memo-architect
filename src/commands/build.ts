@@ -6,9 +6,9 @@ import {
     rmSync,
     writeFileSync,
 } from 'node:fs';
-import { dirname, resolve } from 'node:path';
+import { basename, dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { buildProjectSnapshot, serializeForInlineScript } from '@memoarchitect/tools';
+import { agentIndex, agentModelMarkdown, buildProjectSnapshot, serializeForInlineScript } from '@memoarchitect/tools';
 import { injectFeatureGrants, type FeatureGrants } from '../feature-grants.js';
 
 function architectPackageRoot(): string {
@@ -55,5 +55,14 @@ export async function architectBuildCommand(options: {
     if (options.featureGrants) html = injectFeatureGrants(html, options.featureGrants);
     writeFileSync(indexPath, html);
 
+    // The same model as text, for an AI agent reading the build without an MCP client.
+    const exported = {
+        name: snapshot.config.modelName || basename(snapshot.projectRoot),
+        model: snapshot.model, validation: snapshot.validation, completeness: snapshot.completeness,
+    };
+    writeFileSync(resolve(outputDir, 'llms.txt'), agentIndex(exported));
+    writeFileSync(resolve(outputDir, 'model.md'), agentModelMarkdown(exported));
+
     process.stdout.write(`Architect viewer built at ${indexPath}\n`);
+    process.stdout.write(`For AI agents: ${resolve(outputDir, 'llms.txt')} and model.md\n`);
 }
