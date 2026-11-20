@@ -510,6 +510,8 @@ function changeTitle(change: ProposedChange): string {
             return `Relate · ${change.sourceId} → ${change.targetId}`;
         case 'delete-relationship':
             return `Remove relationship · ${change.relationshipId}`;
+        case 'update-view':
+            return `Change view · ${change.viewName}`;
     }
 }
 
@@ -560,6 +562,15 @@ function ChangeDetail({ change }: { change: ProposedChange }) {
 
     if (change.kind === 'create-relationship') {
         return <div style={rowStyle}>{change.sourceId} —{change.relationshipType}→ {change.targetId}</div>;
+    }
+
+    if (change.kind === 'update-view') {
+        return (
+            <div style={rowStyle}>
+                {change.add.map(id => <div key={`+${id}`} style={{ color: '#059669' }}>+ show {id}</div>)}
+                {change.remove.map(id => <div key={`-${id}`} style={{ color: '#dc2626' }}>− hide {id}</div>)}
+            </div>
+        );
     }
 
     return <div style={rowStyle}>{change.sourceId} —{change.relationshipType}→ {change.targetId}</div>;

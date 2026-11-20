@@ -59,6 +59,7 @@ memo-architect mcp init
 | `memo_interfaces` | The interfaces and flows of a part and its ports, with the element at the other end |
 | `memo_guide` | Where the model stands against its method, layer by layer: each step's objective, criteria, the kinds it uses and produces, and what is still open |
 | `memo_change_impact` | What your uncommitted change reaches, measured from a git ref: changed and reached elements, broken interface contracts, releases and method steps it reopens |
+| `memo_views` | The views (diagrams) the model declares, the ones that show an element, or the elements one view shows |
 | `memo_systems` | The systems and systems of systems the model declares |
 | `memo_select_system` | Scope every later answer in the session to one system |
 
@@ -96,6 +97,7 @@ also get the Model Assistant's proposal tools:
 | `propose_update_element` | A change to an element's name, attributes or documentation |
 | `propose_create_relationship` | A relationship, checked against the ontology's end kinds |
 | `propose_delete_relationship` | Removing a relationship |
+| `propose_update_view` | Showing or hiding elements in a hand-curated view; a view that fills itself from its packages and query is refused, since one element cannot be added to it on its own |
 
 **A proposal never changes the model.** It waits under **AI Tools › Pending changes** in
 Architect, with the tool that proposed it and when, until you apply or discard it. Applying
