@@ -11,13 +11,14 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import type { NotationLayoutNode as Node, NotationLayoutEdge as Edge } from '../../diagram/notation-scene';
-import type { MemoElement, MemoModelDTO } from '@memoarchitect/tools/browser';
+import type { DiagramLayout, MemoElement, MemoModelDTO } from '@memoarchitect/tools/browser';
 import { EDGE, FONT } from '../../styles/tokens';
 import {
     elk, finishConnectorRoutes,
     type LayoutResult, type RouteObstacle,
 } from '../layout';
 import { buildCompositionTree, type CompositionTree } from './composition-tree';
+import { savedBoxes } from './layout-rules';
 
 // ─── Classification ──────────────────────────────────────────────────────────
 
@@ -230,6 +231,8 @@ export interface StateTransitionOptions extends StateNestingOptions {
     onToggleCollapse?: (id: string) => void;
     /** Drill into a composite state's sub-machine (drill-down mode). */
     onDrillIn?: (id: string) => void;
+    /** The boxes the view saved. When it saved every state this machine draws, the machine is drawn as saved. */
+    saved?: Pick<DiagramLayout, 'nodes'>;
 }
 
 export async function computeStateTransitionLayout(
@@ -325,7 +328,18 @@ export async function computeStateTransitionLayout(
         })),
     };
 
-    const layouted = await elk.layout(elkGraph, { providerId: options?.layoutProviderId }) as ElkNode;
+    // A machine whose every state the view saved, in the frame it is drawn in, is drawn as saved: nothing is laid out.
+    const drawn: Array<{ id: string; parent?: string }> = [];
+    const visit = (node: ElkNode, parent?: string) => {
+        drawn.push({ id: node.id, parent });
+        for (const child of node.children ?? []) visit(child, node.id);
+    };
+    for (const root of elkGraph.children ?? []) visit(root);
+    const asSaved = savedBoxes(drawn, options?.saved?.nodes);
+    const placeSaved = (node: ElkNode): ElkNode => ({ ...node, ...asSaved!.get(node.id), children: node.children?.map(placeSaved) });
+    const layouted = asSaved
+        ? { ...elkGraph, children: elkGraph.children?.map(placeSaved) }
+        : await elk.layout(elkGraph, { providerId: options?.layoutProviderId }) as ElkNode;
 
     // ── Flatten to ReactFlow nodes ──
     const nodes: Node[] = [];

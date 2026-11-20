@@ -95,6 +95,7 @@ import {
 } from './templates/interconnection-view';
 import { assignLanes, collectActionFlowActions, commonDisplayLevels, findFloatingActions, LANE_OUTER_MARGIN, laneBoxRect, parameterOfHandle, type ActionFlowDisplayLevel, type ActionFlowLaneGrouping, type ActionFlowLaneStyle, type ActionFlowNesting } from './templates/actionflow-view';
 import { isStateElement } from './templates/statetransition-view';
+import { drawsUnsavedGeometry } from './templates/layout-rules';
 import { bendConnector, type Wall } from './templates/connector-bend';
 import { useCaseActorOptions, useCaseMaxDepth, useCaseSubjectOptions, useCaseViewOptions, type UseCaseEdgeStyle } from './templates/use-case-view';
 import { templateRegistry } from '../diagram/templates';
@@ -1566,7 +1567,7 @@ function DiagramCanvasInner() {
             const previous = useModelStore.getState().diagramLayouts[selectedDiagramId] ?? { nodes: {}, edges: {} };
             const viewport = getViewport();
             const layout = withContextChildCoordinates(mergeRenderedLayout(previous, {
-                nodes: autoLayoutEnabled ? previous.nodes : Object.fromEntries(nodes.filter(node => node.type !== 'annotationNode').map(node => [node.id, {
+                nodes: Object.fromEntries(nodes.filter(node => node.type !== 'annotationNode').map(node => [node.id, {
                     ...(previous.nodes[node.id] ?? {}),
                     x: node.position.x,
                     y: node.position.y,
@@ -3286,6 +3287,11 @@ function DiagramCanvasInner() {
             const sameDiagram = laidOutDiagramRef.current === (selectedDiagramId ?? null);
             laidOutDiagramRef.current = selectedDiagramId ?? null;
             setIsLayouting(false);
+            // A view keeps the geometry it is drawn with. What this drawing shows that the view has not saved is
+            // written by the same lazy save as an edit, so the next opening draws it and computes nothing.
+            if (!readOnly && selectedDiagramId && drawsUnsavedGeometry(toNodes, toEdges, savedLayout)) {
+                setLayoutEditVersion(version => version + 1);
+            }
             const moves = viewKind === 'actionflow' || viewKind === 'statetransition' || viewKind === 'interconnection';
             if (moves && sameDiagram && !embed && !prefersReducedMotion() && layoutsDiffer(nodesRef.current, toNodes)) {
                 layoutAnimatingRef.current = true;
@@ -3332,6 +3338,8 @@ function DiagramCanvasInner() {
         const dispatch = () => {
             const provider = templateRegistry.select({ diagramProfile });
             const treeCallbacks = { onToggleExpand: toggleExpand, onToggleDirection: toggleDirection };
+            // What the view saved is what `apply` draws, so a template need not lay out what the view places entirely.
+            const savedGeometry = selectedDiagramId ? useModelStore.getState().diagramLayouts[selectedDiagramId] : undefined;
             const options: TemplateOptionSlices = {
                 useCase: {
                     // A UCD selection can be derived before relationship endpoints
@@ -3365,7 +3373,7 @@ function DiagramCanvasInner() {
                     forcedPortSize: activeRenderer.forcedPortSize,
                     portWalls,
                     // What the view saved is what `apply` draws, so the template need not arrange or route it again.
-                    saved: selectedDiagramId ? useModelStore.getState().diagramLayouts[selectedDiagramId] : undefined,
+                    saved: savedGeometry,
                     beforeComputing: showProgress,
                     // `apply` routes every connector the view saved no route for, against the geometry it draws.
                     // In manual routing the template's routes are the ones kept, so there it still plans them.
@@ -3411,9 +3419,11 @@ function DiagramCanvasInner() {
                     childViewIds: childViewIndex,
                     nesting: actionFlowNesting,
                     layoutProviderId,
+                    saved: savedGeometry,
                 },
                 statetransition: {
                     viewpointFilter,
+                    saved: savedGeometry,
                     collapsedStateIds: collapsedStateNodes,
                     onToggleCollapse: toggleStateCollapse,
                     onDrillIn: drillIntoState,

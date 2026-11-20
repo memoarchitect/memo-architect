@@ -67,6 +67,59 @@ export const shouldRunAutoLayout = (canvas?: { autoLayout?: boolean }): boolean 
     canvas?.autoLayout !== false;
 
 /**
+ * Whether a drawing shows anything its view has not saved: a box without a
+ * position, a port without a place, or a routed connector without its route.
+ * Every view keeps the geometry it was drawn with, so a drawing that shows
+ * something unsaved is saved, and one that shows nothing new is not written.
+ * What the view saved for elements no longer shown does not count.
+ */
+export function drawsUnsavedGeometry(
+    nodes: ReadonlyArray<{ id: string; type?: string; data?: unknown }>,
+    edges: ReadonlyArray<{ id: string; data?: unknown }>,
+    saved?: {
+        nodes?: Record<string, { x?: number; y?: number; ports?: Record<string, unknown> } | undefined>;
+        edges?: Record<string, { points?: unknown[] } | undefined>;
+    },
+): boolean {
+    for (const node of nodes) {
+        if (node.type === 'annotationNode') continue;
+        const entry = saved?.nodes?.[node.id];
+        if (!entry || !Number.isFinite(entry.x) || !Number.isFinite(entry.y)) return true;
+        const ports = (node.data as { ports?: Array<{ id: string; nested?: boolean }> } | undefined)?.ports ?? [];
+        if (ports.some(port => !port.nested && !entry.ports?.[port.id])) return true;
+    }
+    return edges.some(edge => {
+        const points = (edge.data as { points?: unknown[] } | undefined)?.points;
+        return Boolean(points?.length) && !saved?.edges?.[edge.id]?.points?.length;
+    });
+}
+
+/** A saved box: where it is, in the frame of `parent`, and how big. */
+export interface SavedBox { x: number; y: number; width: number; height: number }
+
+/**
+ * Where the view saved each of `boxes`, or undefined unless it saved every one
+ * of them with a size, in the frame it is drawn in now. A view that places all
+ * of its boxes is drawn as saved and not laid out; one box new to it, or drawn
+ * in another frame, and the view is laid out.
+ */
+export function savedBoxes(
+    boxes: ReadonlyArray<{ id: string; parent?: string }>,
+    saved?: Record<string, { x?: number; y?: number; width?: number; height?: number; parent?: string | null } | undefined>,
+): Map<string, SavedBox> | undefined {
+    if (!saved || boxes.length === 0) return undefined;
+    const placed = new Map<string, SavedBox>();
+    for (const box of boxes) {
+        const entry = saved[box.id];
+        if (!entry || !Number.isFinite(entry.x) || !Number.isFinite(entry.y) || !entry.width || !entry.height) return undefined;
+        // A box on the board is saved with no parent, or an empty one.
+        if ((entry.parent || undefined) !== (box.parent || undefined)) return undefined;
+        placed.set(box.id, { x: entry.x!, y: entry.y!, width: entry.width, height: entry.height });
+    }
+    return placed;
+}
+
+/**
  * A route the author placed by hand is not the router's to replace.
  *
  * Authored `points` count as manual unless the view explicitly says otherwise,

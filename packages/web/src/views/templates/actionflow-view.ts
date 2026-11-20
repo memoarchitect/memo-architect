@@ -8,11 +8,12 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import type { NotationLayoutNode as Node, NotationLayoutEdge as Edge } from '../../diagram/notation-scene';
-import type { ActivityNodeType, MemoElement, MemoModelDTO, MemoRelationship, OntologyRegistriesDTO } from '@memoarchitect/tools/browser';
+import type { ActivityNodeType, DiagramLayout, MemoElement, MemoModelDTO, MemoRelationship, OntologyRegistriesDTO } from '@memoarchitect/tools/browser';
 import { activityNodeType, carriedItem, isControlNode } from '@memoarchitect/tools/browser';
 import { LAYER_COLORS } from '../../constants';
 import { EDGE, FONT } from '../../styles/tokens';
 import { elk, type LayoutResult } from '../layout';
+import { savedBoxes } from './layout-rules';
 import type { ActionFlowNodeData } from '../ActionFlowNode';
 import { CONTROL_IN, CONTROL_OUT } from '../ActionFlowNode';
 import { COMPOSITION_REL_TYPES, definitionIndex, resolveDefinition } from './composition-tree';
@@ -593,6 +594,8 @@ export interface ActionFlowViewOptions {
     focusActionId?: string;
     /** Draw an expanded composite's steps inline, or nested inside its frame. */
     nesting?: ActionFlowNesting;
+    /** The boxes the view saved. When it saved every box this flow draws, the flow is drawn as saved. */
+    saved?: Pick<DiagramLayout, 'nodes'>;
     /** Left-to-right or top-to-bottom reading direction for the flow. */
     direction?: 'horizontal' | 'vertical';
     /** Visible connection categories. Omit to render all flow categories. */
@@ -848,10 +851,18 @@ export async function computeActionFlowViewLayout(
         rootEdges.push(...allElkEdges);
     }
 
+    // A view that saved every box it draws, in the frame it draws it in, is drawn as saved: nothing is laid out.
+    // Flat mode draws every box on the board; nested mode inside its frame.
+    const drawnIds = [...new Set([
+        ...pseudoIds, ...actions.map(el => el.id), ...frameChildren.keys(), ...[...frameChildren.values()].flat(),
+    ])];
+    const asSaved = savedBoxes(drawnIds.map(id => ({ id, parent: nesting === 'nested' ? frameOfNode.get(id) : undefined })),
+        options?.saved?.nodes);
+
     // Pass 1: layout each flat-mode container's children to determine its size.
     const containerSizes = new Map<string, { width: number; height: number }>();
     const containerLayouts = new Map<string, ElkActionNode>();
-    if (frameChildren.size > 0 && nesting !== 'nested') {
+    if (!asSaved && frameChildren.size > 0 && nesting !== 'nested') {
         const PAD_TOP = GROUP_HEADER + GROUP_PADDING;
         const PAD_SIDE = GROUP_PADDING;
         const PAD_BOTTOM = GROUP_PADDING;
@@ -921,7 +932,7 @@ export async function computeActionFlowViewLayout(
         edges: rootEdges,
     };
 
-    const layouted = await elk.layout(elkGraph, { providerId: options?.layoutProviderId }) as ElkActionNode;
+    const layouted = asSaved ? undefined : await elk.layout(elkGraph, { providerId: options?.layoutProviderId }) as ElkActionNode;
     // Positions stay in each node's own frame of reference: top-level nodes are
     // absolute, nested ones are parent-relative — which is exactly what
     // ReactFlow's `parentId` expects.
@@ -933,7 +944,10 @@ export async function computeActionFlowViewLayout(
         });
         for (const child of node.children ?? []) collectPositions(child);
     };
-    for (const child of layouted.children ?? []) collectPositions(child);
+    if (asSaved) {
+        for (const [id, box] of asSaved) positions.set(id, box);
+        if (nesting !== 'nested') frameOfNode.clear();
+    } else for (const child of layouted?.children ?? []) collectPositions(child);
 
     if (nesting !== 'nested' && containerLayouts.size > 0) {
         for (const [containerId, innerResult] of containerLayouts) {
