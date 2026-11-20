@@ -15,7 +15,7 @@ check its own work afterwards.
 A model created with `memo-architect init` is already connected to all three tools, read-only.
 Open the project in the tool and it finds the `memo` server.
 
-To change that, open **Settings › AI assistant** in Architect. Under **AI coding tools** each tool
+To change that, open **Settings › Jupyter and AI tools** in Architect. Under **AI coding tools** each tool
 has a switch:
 
 | Tool | File the switch writes |
@@ -25,6 +25,10 @@ has a switch:
 | VS Code | `.vscode/mcp.json` |
 
 A switch adds or removes only the `memo` entry; any other servers in the file are left alone.
+**Check**, next to a connected tool, runs that tool's entry exactly as the tool would and reports
+the Architect version it runs and its tools. The first check may take a minute while `npx`
+downloads Architect. If it reports an Architect older than the approval step, whose edit tool
+writes straight to the model, update Architect in the project before letting tools propose edits.
 The entries name no path on your machine, so the files can be committed and work for everyone
 on the team. Restart the tool after changing a switch.
 
@@ -58,9 +62,8 @@ memo-architect mcp init
 | `memo_systems` | The systems and systems of systems the model declares |
 | `memo_select_system` | Scope every later answer in the session to one system |
 
-Every element in an answer carries a `link` that opens it in Architect. The links assume Architect's
-default address, `http://localhost:3000`; set `MEMO_ARCHITECT_URL` in the tool's MCP entry if you run it
-elsewhere.
+Every element in an answer carries a `link` that opens it in Architect: the Architect running on
+the project, wherever it is, or `http://localhost:3000` when none is running.
 
 The Model Assistant in Architect uses the same tools, so the tool and the assistant answer a
 question the same way. The two that change outcomes most are `memo_ontology`, which stops
@@ -74,7 +77,7 @@ check its own edit rather than declaring success.
 By default a tool can only read the model; it changes SysML through your editor, where you
 review the diff like any other code change.
 
-Turn on **Let AI tools propose edits** in **Settings › AI assistant** and the connected tools
+Turn on **Let AI tools propose edits** in **Settings › Jupyter and AI tools** and the connected tools
 also get the Model Assistant's proposal tools:
 
 | Tool | Proposes |

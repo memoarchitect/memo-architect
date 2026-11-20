@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { execFile, spawn } from 'node:child_process';
 import { once } from 'node:events';
 import { promisify } from 'node:util';
-import { startProjectServer, type PinnedInfo } from '@memoarchitect/tools';
+import { setUserSetting, startProjectServer, userSetting, type PinnedInfo } from '@memoarchitect/tools';
 import { injectFeatureGrants, type FeatureGrants } from '../feature-grants.js';
 import { JupyterManager } from '../jupyter.js';
 import {
@@ -160,8 +160,13 @@ export async function architectDevCommand(options: ArchitectDevOptions): Promise
         // The supervisor owns the session's life, so it owns Jupyter: a relaunch of the runtime
         // child (exit 75) must not restart it, and every way out of this function stops it.
         const appOrigins = [`http://127.0.0.1:${port}`, `http://localhost:${port}`];
-        const jupyter = new JupyterManager({ root: resolve(process.cwd(), 'analysis'), appOrigins });
-        const jupyterControl = await startJupyterControl(jupyter, appOrigins);
+        // Which `jupyter` runs is this machine's choice, kept in the user settings file and set in Settings.
+        const jupyterSetting = {
+            get: () => userSetting(['jupyter', 'bin']),
+            set: (bin: string | undefined) => { setUserSetting(['jupyter', 'bin'], bin); },
+        };
+        const jupyter = new JupyterManager({ root: resolve(process.cwd(), 'analysis'), appOrigins, setting: jupyterSetting.get });
+        const jupyterControl = await startJupyterControl(jupyter, appOrigins, { setting: jupyterSetting });
         process.once('exit', () => jupyter.stopSync());
         let stopping = false;
         let firstStart = true;

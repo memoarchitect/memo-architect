@@ -520,6 +520,9 @@ function handleMessage(msg: ExtendedServerMessage): void {
         case 'ai:clients':
             store.setAiClients(msg.payload.clients, msg.payload.error);
             break;
+        case 'ai:clients:check:result':
+            store.resolveLlmRequest(msg.payload.requestId, msg.payload.check);
+            break;
         case 'ai:proposals:result':
             if (msg.payload.error) {
                 store.rejectLlmRequest(msg.payload.requestId, msg.payload.error);
@@ -1248,6 +1251,13 @@ export function sendAiProposals(requestId: string, action: 'apply' | 'discard', 
 export function sendAiClientsSet(id: string, connected: boolean, proposesEdits: boolean): void {
     if (ws && ws.readyState === WebSocket.OPEN) {
         ws.send(JSON.stringify({ type: 'ai:clients:set', payload: { requestId: `ai-clients-${Date.now()}`, id, connected, proposesEdits } }));
+    }
+}
+
+/** Run one AI coding tool's entry as the tool would, and report what answers. */
+export function sendAiClientsCheck(requestId: string, id: string): void {
+    if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: 'ai:clients:check', payload: { requestId, id } }));
     }
 }
 

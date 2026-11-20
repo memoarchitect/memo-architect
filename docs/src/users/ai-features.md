@@ -168,7 +168,7 @@ Templates are tuned for ISO 14971, IEC 62304, and IEC 60601.
 Architect is not the only way to work with an AI on your model. MEMO ships an MCP server
 that lets an AI coding tool look up elements, follow traceability and check validation
 while it edits your `.sysml` files. A new model is connected to Claude Code, Cursor and
-VS Code already; **Settings › AI assistant › AI coding tools** turns each one on or off, and
+VS Code already; **Settings › Jupyter and AI tools** turns each one on or off, and
 decides whether they may propose edits. Proposals wait under **AI Tools › Pending
 changes** until you apply them.
 

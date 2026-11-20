@@ -62,3 +62,44 @@ export function jupyterNotebookLink(connection: JupyterConnection, fileName: str
     const query = connection.token ? `?token=${encodeURIComponent(connection.token)}` : '';
     return `${connection.url}/lab/tree/${encodeURIComponent(fileName)}${query}`;
 }
+
+// ─── Managing JupyterLab from Settings ───────────────────────────────────────
+
+/** What Settings shows about JupyterLab: its state, and which executable a start runs and why. */
+export interface JupyterReport {
+    state: 'stopped' | 'ready' | 'not-installed' | 'failed';
+    url?: string;
+    token?: string;
+    /** False for a server Architect found running and did not start, which it never stops. */
+    owned?: boolean;
+    message?: string;
+    /** The folder it serves. */
+    root?: string;
+    bin?: string;
+    source?: 'environment' | 'setting' | 'path' | 'detected';
+    /** The executable chosen in Settings, if one is. */
+    setting?: string;
+}
+
+async function control(path: string, method: 'GET' | 'POST', body?: unknown): Promise<JupyterReport> {
+    const info = window.__MEMO_JUPYTER__;
+    if (!info) throw new JupyterUnavailableError('This page was not opened by memo-architect dev, so it cannot manage JupyterLab.', 'unreachable');
+    let response: Response;
+    try {
+        response = await fetch(`${info.url}${path}`, {
+            method,
+            headers: { 'x-memo-token': info.token, ...(body === undefined ? {} : { 'Content-Type': 'application/json' }) },
+            ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+        });
+    } catch {
+        throw new JupyterUnavailableError('Architect could not be reached. Restart Architect and reload this page.', 'unreachable');
+    }
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok) throw new JupyterUnavailableError(result.error ?? `HTTP ${response.status}`, 'failed');
+    return result as JupyterReport;
+}
+
+export const jupyterStatus = () => control('/jupyter/status', 'GET');
+export const jupyterAction = (action: 'start' | 'stop' | 'restart') => control(`/jupyter/${action}`, 'POST');
+/** Choose the `jupyter` executable for this machine; none goes back to finding it. */
+export const saveJupyterBin = (bin: string | undefined) => control('/jupyter/settings', 'POST', { bin });

@@ -21,14 +21,19 @@ export interface JupyterControl extends JupyterControlInfo {
     close(): Promise<void>;
 }
 
-export async function startJupyterControl(manager: JupyterManager, appOrigins: string[]): Promise<JupyterControl> {
+export interface JupyterControlOptions {
+    /** This machine's chosen `jupyter` executable, read and saved from Settings. */
+    setting?: { get(): string | undefined; set(bin: string | undefined): void };
+}
+
+export async function startJupyterControl(manager: JupyterManager, appOrigins: string[], options: JupyterControlOptions = {}): Promise<JupyterControl> {
     const token = randomBytes(24).toString('hex');
     const server: Server = createServer((request, response) => {
         const origin = request.headers.origin;
         const allowed = typeof origin === 'string' && appOrigins.includes(origin);
         if (allowed) {
             response.setHeader('Access-Control-Allow-Origin', origin);
-            response.setHeader('Access-Control-Allow-Headers', 'x-memo-token');
+            response.setHeader('Access-Control-Allow-Headers', 'x-memo-token, content-type');
             response.setHeader('Access-Control-Allow-Methods', 'GET, POST');
             response.setHeader('Vary', 'Origin');
         }
@@ -41,10 +46,40 @@ export async function startJupyterControl(manager: JupyterManager, appOrigins: s
             if (allowed && request.method === 'OPTIONS') return send(204);
             return send(403, { error: 'forbidden' });
         }
+        // What Settings shows: the server's state, and which executable a start runs and why.
+        const report = (status = manager.status()) => {
+            const location = manager.location();
+            return {
+                ...(status ?? { state: 'stopped' }),
+                root: manager.root,
+                bin: location?.bin,
+                source: location?.source,
+                setting: options.setting?.get(),
+            };
+        };
         if (request.method === 'POST' && request.url === '/jupyter/start') {
-            void manager.start().then(status => send(200, status));
+            void manager.start().then(status => send(200, report(status)));
+        } else if (request.method === 'POST' && request.url === '/jupyter/restart') {
+            void manager.restart().then(status => send(200, report(status)));
+        } else if (request.method === 'POST' && request.url === '/jupyter/stop') {
+            // A server Architect did not start is left running; the report says it is not Architect's.
+            void manager.stop().then(() => send(200, report()));
         } else if (request.method === 'GET' && request.url === '/jupyter/status') {
-            send(200, manager.status() ?? { state: 'stopped' });
+            send(200, report());
+        } else if (request.method === 'POST' && request.url === '/jupyter/settings') {
+            let body = '';
+            request.on('data', chunk => { body = (body + chunk).slice(0, 10_000); });
+            request.on('end', () => {
+                try {
+                    const { bin } = JSON.parse(body || '{}') as { bin?: unknown };
+                    if (!options.setting) return send(400, { error: 'This Architect cannot save the Jupyter setting.' });
+                    options.setting.set(typeof bin === 'string' && bin.trim() ? bin.trim() : undefined);
+                    manager.clearFailure();
+                    send(200, report());
+                } catch (error) {
+                    send(400, { error: error instanceof Error ? error.message : String(error) });
+                }
+            });
         } else {
             send(404, { error: 'not found' });
         }

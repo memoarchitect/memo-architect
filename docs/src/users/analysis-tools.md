@@ -35,10 +35,16 @@ There is nothing to run.
 - **It stops with Architect.** When `memo-architect dev` exits (Ctrl-C, SIGTERM, or the
   browser closing) the JupyterLab it started is stopped, kernels included. A JupyterLab
   you started yourself, serving the same `analysis` folder, is reused and never stopped.
-- **Not installed.** If JupyterLab cannot be found the view says so and how to install it
-  (`pip install jupyterlab`). Architect looks for `jupyter` on `PATH`; set
-  `MEMO_JUPYTER_BIN` to the executable when it is installed somewhere else (for example
-  `pip install --user` on macOS puts it in `~/Library/Python/<version>/bin`).
+- **Manage it in Settings.** **Settings › Jupyter and AI tools** shows whether JupyterLab is
+  running and where, with **Open**, **Start**, **Restart** and **Stop**, and which `jupyter`
+  program Architect runs and how it found it.
+- **Not installed, or installed elsewhere.** Architect looks for `jupyter` in this order:
+  `MEMO_JUPYTER_BIN`, the program chosen in Settings, `PATH`, then the project's `.venv`
+  or `venv`, `~/.local/bin`, and on macOS `~/Library/Python/<version>/bin`, where
+  `pip install --user` puts it. If none is found, Settings shows the install command
+  (`pip install jupyterlab`) with **Check again**, and a field for the program's path. The
+  path is saved for this machine in your user settings file (`jupyter: bin:` in
+  `~/.config/memo/settings.yaml`), not in the project.
 - **Static viewers.** A viewer made with `memo-architect build` has no Architect process
   to run Jupyter, so it connects to a JupyterLab you started on `http://127.0.0.1:8888`:
   `cd analysis && jupyter lab --port 8888`.

@@ -7,15 +7,17 @@
 //   - A server Architect did not start is never stopped. One already serving
 //     this project's `analysis` folder is reused and marked not-owned.
 //   - Nothing is hard-coded: the port is whatever was free, the token is
-//     random, and the executable is found on PATH (MEMO_JUPYTER_BIN overrides).
+//     random, and the executable is MEMO_JUPYTER_BIN, else the one set in
+//     Settings (this machine's `jupyter.bin`), else the first on PATH, else one
+//     in the project's virtual environment or Python's per-user folder.
 //   - Missing Jupyter is a state with a message, never a thrown stack.
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { spawn, spawnSync, execFile, type ChildProcess } from 'node:child_process';
 import { randomBytes } from 'node:crypto';
-import { existsSync, mkdirSync, realpathSync, statSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, realpathSync, statSync } from 'node:fs';
 import { createServer } from 'node:net';
-import { delimiter, join } from 'node:path';
+import { delimiter, dirname, join } from 'node:path';
 
 export type JupyterStatus =
     | { state: 'ready'; url: string; token: string; owned: boolean }
@@ -51,6 +53,44 @@ export function findJupyter(
         }
     }
     return undefined;
+}
+
+/** Where the `jupyter` executable came from, as Settings shows it. */
+export type JupyterSource = 'environment' | 'setting' | 'path' | 'detected';
+
+export interface JupyterLocation { bin: string; source: JupyterSource }
+
+/**
+ * The `jupyter` executable and where it was found. Beyond `findJupyter`, this machine's setting
+ * (`jupyter.bin` in the user settings file) and the places pip puts it off PATH: the project's
+ * `.venv`/`venv`, `~/.local/bin`, and macOS's `~/Library/Python/<version>/bin`.
+ */
+export function locateJupyter(options: {
+    env?: NodeJS.ProcessEnv; platform?: NodeJS.Platform; setting?: string; projectDir?: string; home?: string;
+} = {}): JupyterLocation | undefined {
+    const env = options.env ?? process.env;
+    const platform = options.platform ?? process.platform;
+    if (env[JUPYTER_BIN_ENV]) {
+        const bin = findJupyter(env, platform);
+        return bin ? { bin, source: 'environment' } : undefined;
+    }
+    if (options.setting) return existsSync(options.setting) ? { bin: options.setting, source: 'setting' } : undefined;
+    const onPath = findJupyter(env, platform);
+    if (onPath) return { bin: onPath, source: 'path' };
+    const windows = platform === 'win32';
+    const name = windows ? 'jupyter.exe' : 'jupyter';
+    const binDir = windows ? 'Scripts' : 'bin';
+    const candidates: string[] = [];
+    if (options.projectDir) for (const venv of ['.venv', 'venv']) candidates.push(join(options.projectDir, venv, binDir, name));
+    // The home folder of the environment given, so a caller that passes its own environment sees only that.
+    const home = options.home ?? env.HOME ?? env.USERPROFILE;
+    if (home && !windows) candidates.push(join(home, '.local', 'bin', name));
+    const userPython = home ? join(home, 'Library', 'Python') : '';
+    if (platform === 'darwin' && userPython && existsSync(userPython)) {
+        for (const version of readdirSync(userPython).sort().reverse()) candidates.push(join(userPython, version, 'bin', name));
+    }
+    const found = candidates.find(candidate => { try { return statSync(candidate).isFile(); } catch { return false; } });
+    return found ? { bin: found, source: 'detected' } : undefined;
 }
 
 function freePort(): Promise<number> {
@@ -92,6 +132,8 @@ export interface JupyterManagerOptions {
     startupTimeoutMs?: number;
     /** Lines of server output, for the standalone command. */
     onOutput?: (line: string) => void;
+    /** This machine's chosen `jupyter` executable, read each time Jupyter starts so a change in Settings applies. */
+    setting?: () => string | undefined;
 }
 
 export class JupyterManager {
@@ -107,6 +149,26 @@ export class JupyterManager {
 
     /** What the last `start` concluded, without starting anything. */
     status(): JupyterStatus | undefined { return this.current; }
+
+    /** The executable a start would run, and where it was found. */
+    location(): JupyterLocation | undefined {
+        return locateJupyter({ env: this.env, setting: this.options.setting?.(), projectDir: dirname(this.options.root) });
+    }
+
+    /** Forget why the last start failed, so a changed program is judged afresh. A running server is kept. */
+    clearFailure(): void {
+        if (this.current && this.current.state !== 'ready') this.current = undefined;
+    }
+
+    /** The folder Jupyter serves. */
+    get root(): string { return this.options.root; }
+
+    /** Stop the server Architect started, if it did, and start again: how a changed executable takes effect. */
+    async restart(): Promise<JupyterStatus> {
+        await this.stop();
+        this.current = undefined;
+        return this.start();
+    }
 
     /** Start Jupyter, or return the one already running. Concurrent callers share one start. */
     start(): Promise<JupyterStatus> {
@@ -126,8 +188,14 @@ export class JupyterManager {
     }
 
     private async launch(): Promise<JupyterStatus> {
-        const bin = findJupyter(this.env);
-        if (!bin) return { state: 'not-installed', message: notInstalledMessage('JupyterLab was not found.') };
+        const location = this.location();
+        const setting = this.options.setting?.();
+        if (!location) {
+            return { state: 'not-installed', message: setting && !this.env[JUPYTER_BIN_ENV]
+                ? notInstalledMessage(`The JupyterLab set in Settings, ${setting}, does not exist.`)
+                : notInstalledMessage('JupyterLab was not found.') };
+        }
+        const bin = location.bin;
         // `jupyter` can exist without `jupyter-lab`, so ask for the part we run.
         const lab = await run(bin, ['lab', '--version'], this.env);
         if (!lab.ok) {

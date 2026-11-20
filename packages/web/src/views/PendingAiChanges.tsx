@@ -1,6 +1,6 @@
 // ─── Pending changes from AI coding tools ────────────────────────────────────
 //
-// Claude Code, Cursor or VS Code, connected to the model in Settings › Assistant, propose edits over
+// Claude Code, Cursor or VS Code, connected to the model in Settings › Jupyter and AI tools, propose edits over
 // MCP with the Model Assistant's own tools. The proposals wait in memo.ai-proposals.json; this view
 // lists them with the chat's review card and applies the chosen ones through the same server path as
 // an approved chat proposal. Nothing reaches the SysML source until it is applied here.
@@ -67,9 +67,9 @@ export function PendingAiChanges() {
                 <p style={{ fontSize: 13, color: '#4B5563', margin: '0 0 16px', lineHeight: 1.5 }}>
                     Changes that Claude Code, Cursor or VS Code proposed while working on this model. They are not in the model
                     until you apply them here. Connect a tool, and choose whether it may propose edits, in{' '}
-                    <button onClick={() => setActiveView({ type: 'settings', section: 'assistant' })}
+                    <button onClick={() => setActiveView({ type: 'settings', section: 'integrations' })}
                         style={{ border: 0, padding: 0, background: 'none', color: '#065F46', textDecoration: 'underline', cursor: 'pointer', fontSize: 13 }}>
-                        Settings › Assistant
+                        Settings › Jupyter and AI tools
                     </button>.
                 </p>
                 {proposals.length === 0 ? (

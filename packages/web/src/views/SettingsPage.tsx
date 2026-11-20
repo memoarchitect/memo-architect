@@ -7,20 +7,22 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { confirmDialog } from '../components/AppDialogs';
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useModelStore, type DhfSettings } from '../store/model-store';
 import { CompilerSettings } from '../components/CompilerSettings';
 import { RoleSelector } from '../components/RoleSelector';
 import { VersionSelector } from '../components/VersionSelector';
 import { WorkspaceSelector } from '../components/WorkspaceSelector';
 import { RulesEditor } from '../components/RulesEditor';
-import { sendAiClientsSet, sendOntologySelection } from '../store/ws-client';
+import { sendAiClientsCheck, sendAiClientsSet, sendOntologySelection } from '../store/ws-client';
+import { jupyterAction, jupyterIsManaged, jupyterStatus, saveJupyterBin, type JupyterReport } from '../analysis/jupyter-client';
+import type { AiClientCheck } from '@memoarchitect/tools/browser';
 import { modelPlaceholder, ORIGIN_LABEL, useLlmSettingsForm } from './LlmSettings';
 import { EXPLORER_MODES, groupableAttributes } from '../lib/explorer-modes';
 import { experimentalGrantedByCli, FEATURE_FLAGS, isFeatureEnabled } from '../config/feature-flags';
 import { COLOR, FONT } from '../styles/tokens';
 
-type SectionId = 'model' | 'rules' | 'methodology' | 'explorer' | 'features' | 'compiler' | 'documents' | 'assistant';
+type SectionId = 'model' | 'rules' | 'methodology' | 'explorer' | 'features' | 'compiler' | 'documents' | 'assistant' | 'integrations';
 
 /** The sections, grouped by what they act on: the model itself, the workbench around it, and what comes out of it. */
 const SECTION_GROUPS: { label: string; sections: { id: SectionId; label: string; icon: string }[] }[] = [
@@ -37,6 +39,7 @@ const SECTION_GROUPS: { label: string; sections: { id: SectionId; label: string;
     { label: 'Output and assistance', sections: [
         { id: 'documents', label: 'Documents', icon: '⊞' },
         { id: 'assistant', label: 'AI assistant', icon: '◉' },
+        { id: 'integrations', label: 'Jupyter and AI tools', icon: '⇄' },
     ] },
 ];
 const SECTIONS = SECTION_GROUPS.flatMap(group => group.sections);
@@ -267,6 +270,25 @@ function AiCodingToolsSection() {
     const setProposes = (on: boolean) => {
         for (const client of clients) if (client.connected) sendAiClientsSet(client.id, true, on);
     };
+    const registerLlmRequest = useModelStore(s => s.registerLlmRequest);
+    const [checks, setChecks] = useState<Record<string, AiClientCheck | { error: string }>>({});
+    const [checking, setChecking] = useState<string | null>(null);
+    const check = async (id: string) => {
+        setChecking(id);
+        const requestId = `ai-check-${Date.now()}`;
+        try {
+            const result = await new Promise<AiClientCheck>((resolve, reject) => {
+                registerLlmRequest(requestId, resolve, reject);
+                sendAiClientsCheck(requestId, id);
+                setTimeout(() => reject(new Error('No answer within 2 minutes.')), 130_000);
+            });
+            setChecks(prev => ({ ...prev, [id]: result }));
+        } catch (e: any) {
+            setChecks(prev => ({ ...prev, [id]: { error: e?.message ?? String(e) } }));
+        } finally {
+            setChecking(null);
+        }
+    };
     return (
         <Group title="AI coding tools">
             <p style={{ fontSize: FONT.md, color: COLOR.muted, margin: '0 0 8px', lineHeight: 1.45 }}>
@@ -274,8 +296,16 @@ function AiCodingToolsSection() {
                 Restart the tool after changing a switch.
             </p>
             {clients.map(client => (
-                <Row key={client.id} title={client.label} hint={`Writes the memo server into ${client.file}.`}>
-                    <Switch label={`Connect ${client.label}`} checked={client.connected} onChange={on => sendAiClientsSet(client.id, on, on && proposes)} />
+                <Row key={client.id} title={client.label} hint={checkHint(client.file, checks[client.id], checking === client.id)}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                        {client.connected && (
+                            <button style={buttonStyle} disabled={checking !== null} onClick={() => check(client.id)}
+                                title="Runs the server as the tool would. The first run may download Architect.">
+                                {checking === client.id ? 'Checking…' : 'Check'}
+                            </button>
+                        )}
+                        <Switch label={`Connect ${client.label}`} checked={client.connected} onChange={on => sendAiClientsSet(client.id, on, on && proposes)} />
+                    </div>
                 </Row>
             ))}
             <Row title="Let AI tools propose edits"
@@ -289,6 +319,105 @@ function AiCodingToolsSection() {
                         {waiting} proposed change{waiting === 1 ? '' : 's'} waiting for review
                     </button>
                 </div>
+            )}
+            {error && <div style={{ padding: '8px 0', fontSize: FONT.md, color: '#DC2626' }}>{error}</div>}
+        </Group>
+    );
+}
+
+/** What a tool's row says under its name: where it is written, and what the last check found. */
+function checkHint(file: string, result: AiClientCheck | { error: string } | undefined, running: boolean): string {
+    const where = `Writes the memo server into ${file}.`;
+    if (running) return `${where} Checking: the first run may download Architect, which can take a minute.`;
+    if (!result) return where;
+    if (!('ok' in result) || !result.ok) return `${where} Check failed: ${result.error}`;
+    const runs = `Works: runs Architect ${result.version ?? '(version unknown)'} with ${result.tools?.length ?? 0} tools.`;
+    if (result.writesDirectly) return `${where} ${runs} That Architect is older than the approval step: its edit tool writes straight to the model. Update Architect in this project.`;
+    return `${where} ${runs}${result.proposesEdits ? ' It may propose edits, which wait for you.' : ''}`;
+}
+
+const JUPYTER_SOURCE: Record<string, string> = {
+    environment: 'set by MEMO_JUPYTER_BIN',
+    setting: 'chosen here',
+    path: 'found on PATH',
+    detected: 'found in a Python environment',
+};
+
+/**
+ * JupyterLab for the Analysis view: whether it runs, starting and stopping it, and which `jupyter`
+ * Architect runs, chosen for this machine (the `jupyter.bin` user setting). Only a page that
+ * `memo-architect dev` opened can manage it.
+ */
+function JupyterSection() {
+    const managed = jupyterIsManaged();
+    const [report, setReport] = useState<JupyterReport | null>(null);
+    const [busy, setBusy] = useState<string | null>(null);
+    const [error, setError] = useState<string | null>(null);
+    const [bin, setBin] = useState('');
+    const run = async (label: string, action: () => Promise<JupyterReport>) => {
+        setBusy(label);
+        setError(null);
+        try {
+            const next = await action();
+            setReport(next);
+            setBin(next.setting ?? '');
+        } catch (e: any) {
+            setError(e?.message ?? String(e));
+        } finally {
+            setBusy(null);
+        }
+    };
+    useEffect(() => { if (managed) void run('status', jupyterStatus); }, [managed]);
+
+    if (!managed) {
+        return (
+            <Group title="JupyterLab">
+                <p style={{ fontSize: FONT.md, color: COLOR.muted, lineHeight: 1.45 }}>
+                    Architect manages JupyterLab when it is started with <code>memo-architect dev</code>. This page was opened another way,
+                    so the Analysis view uses a JupyterLab you start yourself at http://127.0.0.1:8888.
+                </p>
+            </Group>
+        );
+    }
+    const state = report?.state ?? 'stopped';
+    const running = state === 'ready';
+    const describe = !report ? 'Checking…'
+        : running ? `Running at ${report.url}${report.owned === false ? ', started outside Architect, so Architect leaves it running' : ''}.`
+        : state === 'stopped' ? 'Not running. It starts by itself when you open Analysis.'
+        : report.message ?? state;
+    const notInstalled = state === 'not-installed';
+    return (
+        <Group title="JupyterLab">
+            <p style={{ fontSize: FONT.md, color: COLOR.muted, margin: '0 0 8px', lineHeight: 1.45 }}>
+                The notebooks in the Analysis view run in JupyterLab, serving the model's <code>analysis</code> folder. Architect stops it when Architect exits.
+            </p>
+            <Row title="Status" hint={describe}>
+                <div style={{ display: 'flex', gap: 8 }}>
+                    {running && report?.url && (
+                        <a style={{ ...buttonStyle, textDecoration: 'none' }} target="_blank" rel="noreferrer"
+                            href={`${report.url}/lab${report.token ? `?token=${encodeURIComponent(report.token)}` : ''}`}>Open</a>
+                    )}
+                    {!running && <button style={buttonStyle} disabled={busy !== null} onClick={() => run('start', () => jupyterAction('start'))}>{busy === 'start' ? 'Starting…' : 'Start'}</button>}
+                    {running && report?.owned !== false && <button style={buttonStyle} disabled={busy !== null} onClick={() => run('restart', () => jupyterAction('restart'))}>{busy === 'restart' ? 'Restarting…' : 'Restart'}</button>}
+                    {running && report?.owned !== false && <button style={buttonStyle} disabled={busy !== null} onClick={() => run('stop', () => jupyterAction('stop'))}>{busy === 'stop' ? 'Stopping…' : 'Stop'}</button>}
+                </div>
+            </Row>
+            <Row title="JupyterLab program"
+                hint={report?.bin ? `${report.bin} (${JUPYTER_SOURCE[report.source ?? ''] ?? report.source}). Leave the field empty to find it automatically. Saved for this machine, in your user settings file.`
+                    : 'Not found. Enter the path of the jupyter program, or install JupyterLab and check again.'}>
+                <div style={{ display: 'flex', gap: 8 }}>
+                    <input aria-label="JupyterLab program" value={bin} onChange={e => setBin(e.target.value)} placeholder="Find automatically" style={inputStyle} />
+                    <button style={buttonStyle} disabled={busy !== null} onClick={() => run('save', () => saveJupyterBin(bin || undefined))}>Save</button>
+                </div>
+            </Row>
+            {notInstalled && (
+                <Row title="Install JupyterLab" hint="Run this in the Python environment you use, then check again.">
+                    <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                        <code style={{ fontSize: FONT.md, padding: '4px 8px', background: COLOR.surfaceAlt, borderRadius: 6 }}>pip install jupyterlab</code>
+                        <button style={buttonStyle} onClick={() => void navigator.clipboard?.writeText('pip install jupyterlab')}>Copy</button>
+                        <button style={buttonStyle} disabled={busy !== null} onClick={() => run('status', jupyterStatus)}>Check again</button>
+                    </div>
+                </Row>
             )}
             {error && <div style={{ padding: '8px 0', fontSize: FONT.md, color: '#DC2626' }}>{error}</div>}
         </Group>
@@ -403,7 +532,8 @@ export function SettingsPage() {
                     {section === 'explorer' && <ExplorerSection />}
                     {section === 'features' && <FeaturesSection />}
                     {section === 'documents' && <DocumentsSection />}
-                    {section === 'assistant' && <><AssistantSection /><AiCodingToolsSection /></>}
+                    {section === 'assistant' && <AssistantSection />}
+                    {section === 'integrations' && <><JupyterSection /><AiCodingToolsSection /></>}
                 </div>
             </main>
         </div>

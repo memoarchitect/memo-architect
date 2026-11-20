@@ -3,7 +3,7 @@ import { chmodSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync 
 import { createServer, type Server } from 'node:http';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { findJupyter, JupyterManager } from '../jupyter.js';
+import { findJupyter, JupyterManager, locateJupyter } from '../jupyter.js';
 import { injectJupyterControl, startJupyterControl } from '../jupyter-control.js';
 import { architectJupyterCommand } from '../commands/jupyter.js';
 
@@ -200,5 +200,36 @@ describe.skipIf(!posix)('memo-architect jupyter', () => {
             expect(await architectJupyterCommand({ env: { ...env, MEMO_JUPYTER_BIN: join(dir, 'nope') } })).toBe(1);
             expect(errors.join('\n')).toContain('pip install jupyterlab');
         } finally { console.error = error; }
+    });
+});
+
+describe('locateJupyter', () => {
+    const place = (...parts: string[]) => {
+        const path = join(dir, ...parts);
+        mkdirSync(join(path, '..'), { recursive: true });
+        writeFileSync(path, '');
+        return path;
+    };
+
+    it('goes environment, then the setting, then PATH, then the Python install places', () => {
+        const onPath = place('bin', 'jupyter');
+        const chosen = place('chosen', 'jupyter');
+        const venv = place('project', '.venv', 'bin', 'jupyter');
+        const home = join(dir, 'home');
+        expect(locateJupyter({ env: { MEMO_JUPYTER_BIN: fake, PATH: join(dir, 'bin') }, platform: 'linux', setting: chosen, home }))
+            .toEqual({ bin: fake, source: 'environment' });
+        expect(locateJupyter({ env: { PATH: join(dir, 'bin') }, platform: 'linux', setting: chosen, home }))
+            .toEqual({ bin: chosen, source: 'setting' });
+        expect(locateJupyter({ env: { PATH: join(dir, 'bin') }, platform: 'linux', home }))
+            .toEqual({ bin: onPath, source: 'path' });
+        expect(locateJupyter({ env: { PATH: '' }, platform: 'linux', projectDir: join(dir, 'project'), home }))
+            .toEqual({ bin: venv, source: 'detected' });
+    });
+
+    it('finds pip --user on macOS and refuses a setting that does not exist', () => {
+        const home = join(dir, 'home');
+        const user = place('home', 'Library', 'Python', '3.12', 'bin', 'jupyter');
+        expect(locateJupyter({ env: { PATH: '' }, platform: 'darwin', home })).toEqual({ bin: user, source: 'detected' });
+        expect(locateJupyter({ env: { PATH: '' }, platform: 'darwin', home, setting: join(dir, 'nope') })).toBeUndefined();
     });
 });
